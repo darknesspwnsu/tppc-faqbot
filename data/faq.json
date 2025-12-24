@@ -101,6 +101,232 @@
         "haven't received contest prize"
       ],
       "response": "Contest prize delivery can vary.\n\n• Some prizes are delivered **instantly**\n• Others may take **some time**, depending on the contest\n• Mods often **transfer prizes directly to your account**\n\nIf you haven’t received a trade notification, **check your account** — the prize may already be there."
-    }
+    },
+
+    {
+    "id": "getting_started",
+    "triggers": [
+      "how do i get started",
+      "how do i start",
+      "getting started",
+      "new player help",
+      "i am new",
+      "new here",
+      "beginner help",
+      "how to begin"
+    ],
+    "response": "Great question, here are some useful resources:\n\n• **Explore the wiki**: https://wiki.tppc.info/Getting_Started\n• **Quests and freebies**: https://forums.tppc.info/showthread.php?t=621060\n• **Written guides**: https://forums.tppc.info/showthread.php?p=11516673#post11516673"
+  },
+    
+  {
+    "id": "best_training_pokemon",
+    "triggers": [
+      "what are the best training pokemon",
+      "best training pokemon",
+      "best pokemon to train with",
+      "training pokemon",
+      "good training pokemon",
+      "what pokemon should i train with"
+    ],
+    "response": "That’s debatable, but popular choices include **Breloom**, **Blaziken**, **Gallade**, and **Heracross**.\n\nThe best option can also depend on the **time of day** you train.\n\nFor more detailed breakdowns, see:\nhttps://wiki.tppc.info/Training_Guide"
+  },
+
+  {
+    "id": "promo_powerplant_limit",
+    "triggers": [
+      "how many promos can i get",
+      "how many power plant prizes can i get",
+      "promo limit",
+      "power plant prize limit",
+      "how many power plant prizes",
+      "promo cap"
+    ],
+    "response": "You may receive **one promo / Power Plant prize per account**.\n\nThis applies across all **legitimate active accounts**, of which you are allowed **up to 5**."
+  },
+
+  {
+    "id": "link_rpg_forum_account",
+    "triggers": [
+      "how do i link my rpg id to my forum account",
+      "link rpg id",
+      "link rpg to forum",
+      "link forum account",
+      "rpg forum link",
+      "how to link rpg and forum"
+    ],
+    "response": "It can be a bit tricky.\n\nFollow the instructions in this guide:\nhttps://forums.tppc.info/showthread.php?t=95"
+  },
+
+  {
+    "id": "discord_verification",
+    "triggers": [
+      "how do i become discord verified",
+      "discord verified",
+      "discord verification",
+      "how to get discord verified",
+      "verify discord",
+      "discord verify"
+    ],
+    "response": "To become **Discord verified**:\n\n• Send your **Discord ID** to a **forum moderator**\n• Examples include **Space Cowboy** or **Jigglypuff**\n\nA moderator will handle the verification from there."
+  },
+
+  {
+    "id": "new_starter_quests",
+    "triggers": [
+      "what are new starter quests",
+      "new starter quests",
+      "starter quests",
+      "returning player quests",
+      "new player quests",
+      "starter quest info"
+    ],
+    "response": "New Starter Quests are a way for **new and returning players** who have little or nothing to get started collecting Pokémon.\n\nFor more information, see:\nhttps://forums.tppc.info/showthread.php?t=621060"
+  },
+
+  {
+    "id": "account_banned_or_hacked",
+    "triggers": [
+      "my account has been banned",
+      "my account is banned",
+      "i am banned",
+      "account banned",
+      "my account has been hacked",
+      "my account was hacked",
+      "account hacked",
+      "someone hacked my account"
+    ],
+    "response": "If your account has been **banned or hacked**, please contact a **moderator** for more information.\n\nYou can find a list of **active staff members** here:\nhttps://wiki.tppc.info/TPPC_Staff"
+  },
+
+  {
+    "id": "forgot_password_or_lockdown",
+    "triggers": [
+      "i forgot my password",
+      "forgot my password",
+      "lost my password",
+      "password reset",
+      "i lost my lockdown password",
+      "lost my lockdown password",
+      "forgot lockdown password",
+      "lockdown password reset"
+    ],
+    "response": "If you’ve **forgotten your password or lockdown password**, please contact a **moderator** for assistance.\n\nYou can find a list of **active staff members** here:\nhttps://wiki.tppc.info/TPPC_Staff"
+  },
+
+  {
+    "id": "box_limit",
+    "triggers": [
+      "why can't i catch more pokemon",
+      "cant catch more pokemon",
+      "cannot catch more pokemon",
+      "box limit",
+      "pokemon box full",
+      "storage full"
+    ],
+    "response": "TPPC has a **box limit**.\n\nThe maximum is **756 Pokémon**.\n\nIf your box is full, you’ll need to **trade some Pokémon out** to make space before you can catch more."
+  },
+
+  {
+    "id": "quest_completion_issue",
+    "triggers": [
+      "why can't I complete this quest",
+      "quest not completing",
+      "cannot complete quest",
+      "quest in roster/box"
+    ],
+    "response": "Uh oh! Have you tried putting the **quest Pokémon** in your **box or roster**?"
+  },
+
+  {
+    "id": "stat_bonuses",
+    "triggers": [
+      "what are stat bonuses",
+      "stat bonuses",
+      "gold pokemon stats",
+      "dark pokemon stats",
+      "shiny pokemon stats",
+      "gold dark shiny stats"
+    ],
+    "response": "Here are the **stat bonuses** for different Pokémon types:\n\n• **Shiny Pokémon**: +5 to all Stats at all times.\n• **Dark Pokémon**: -4 to all Stats during the **day**, +15 to all Stats during the **night**.\n• **Golden Pokémon**: +15 to all Stats at all times."
+  },
+
+  {
+    "id": "get_golden_pokemon",
+    "triggers": [
+      "how do I get golden pokemon",
+      "getting golden pokemon",
+      "golden pokemon",
+      "how to obtain golden pokemon"
+    ],
+    "response": "You can get **Golden Pokémon** through:\n\n• **Trading**\n• **Buying**\n• **Events**\n• **Contests**\n• **Golden Day**\n\nSee here for more information: https://wiki.tppc.info/Golden_Pok%C3%A9mon"
+  },
+
+  {
+    "id": "trade_caps",
+    "triggers": [
+      "what are trade caps",
+      "trade caps",
+      "max trade level",
+      "trading limits"
+    ],
+    "response": "Here are the **trade caps** based on rank:\n\n| Rank       | Points Required To Unlock | Max Trade Level Allowed |\n|------------|--------------------------|------------------------|\n| Grunt      | 1                        | 2,500                  |\n| Private    | 10                       | 2,500                  |\n| Specialist | 100                      | 2,500                  |\n| Corporal   | 1,000                    | 2,500                  |\n| Sergeant   | 10,000                   | 2,500                  |\n| Lieutenant | 100,000                  | 2,500                  |\n| Captain    | 1,000,000                | 4,000                  |\n| Major      | 10,000,000               | 5,500                  |\n| Colonel    | 100,000,000              | 7,000                  |\n| General    | 1,000,000,000            | 8,500                  |\n| Commander  | 10,000,000,000           | 10,000                 |"
+  },
+
+  {
+    "id": "maintenance_time",
+    "triggers": [
+      "when is maintenance",
+      "maintenance time",
+      "server maintenance",
+      "maintenance schedule"
+    ],
+    "response": "Maintenance occurs at **5 AM EST** and usually lasts for **1 hour**."
+  },
+  
+  {
+    "id": "day_night_tpcc",
+    "triggers": [
+      "when is day/night on TPPC",
+      "day night times",
+      "TPPC day night",
+      "day time TPPC",
+      "night time TPPC"
+    ],
+    "response": "On TPPC:\n\n• **Day** refers to **6 AM - 6 PM** TPPC time.\n• **Night** refers to **6 PM - 6 AM** TPPC time."
+  },
+
+  {
+    "id": "power_plant_perks",
+    "triggers": [
+      "what are the power plant perks",
+      "power plant perks",
+      "power hour",
+      "power plant benefits"
+    ],
+    "response": "Power Plant perks include:\n\n• **Faster egg hatching** (half the usual time)\n• **Discounted Pokémon** on the buy page (~33% off)\n• **Discounted Team Stat rewards** (~25% off)\n• And possibly **additional Team Rewards**!\n\nSee here for more info: https://wiki.tppc.info/Power_Plant"
+  },
+
+  {
+    "id": "glossary_terms",
+    "triggers": [
+      "what does UL, b/o, nft, etc mean",
+      "glossary",
+      "pokemon terms",
+      "TPPC abbreviations",
+      "TPPC acronyms"
+    ],
+    "response": "Here are common TPPC terms and their meanings:\n\n• **TPPCRPG** – The Pokémon PokeCenter Role Playing Game\n• **LF** – \"Looking For\" ____ Pokémon\n• **FT / NFT** – Pokémon is \"For Trade\" or \"Not For Trade\"\n• **FS** – Pokémon is \"For Sale\"\n• **'x' / 'kx'** – Non-official rating system; 1 'x' historically = Level 2499, 'kx' = thousands of 'x'\n• **NG / OG** – \"New Gold\" (latest Golden Pokémon) / \"Old Gold\" (released long ago)\n• **GDay** – Day Golden Pokémon can be created (e.g., August 2nd, Christmas/New Years)\n• **B/O** – \"Best Offer\" auction; offer accepted at original time without reserve\n• **UE / UG** – \"Unevolved / Ungoldenised\"; Pokémon may become Golden later\n• **E / G** – \"Evolved / Goldenised\"; Pokémon cannot become Golden later\n• **PPP** – Power Plant Prize\n• **Unob** – Unobtainable Pokémon\n• **SS** – Secret Swap\n• **TC** – Trainer's Corner forum or Training Challenge\n• **S / D / G** – Bonus of Pokémon: Shiny, Dark, Golden\n• **U** – Ungendered Pokémon\n• **G** – Genderless Pokémon (example: Deoxys G 2499)\n• **TPs** – Team Points (see Team Stats)\n• **HTT** – Hard To Trade; difficult or undesirable Pokémon\n• **ETT** – Easy To Trade; desirable Pokémon\n• **UL** – Underleveled Pokémon\n• **CAT / C.A.T** – Create A Trade\n• **1k** – Pokémon level in thousands (1k = Level 1000, 2k = Level 2000, etc.)\n• **Base** – Lowest level available for a Pokémon\n• **NB** – Non-base; higher than base level\n• **Up / Downgrade** – Consolidate multiple Pokémon into one valuable Pokémon, or vice versa\n• **Maps** – Pokémon caught on maps\n• **Swaps** – Pokémon obtained via Secret Swap\n• **Promo** – Promotional Pokémon from team stats (1 per account/week, up to 5 if multiple accounts)\n• **nty** – \"No thank you\"\n• **SFOM** – Sack Full of Muck (forum off-topic)\n• **ig** – In game; refers to rarity list"
+  },
+
+  {
+    "id": "pokemon_sale_price",
+    "triggers": [
+      "why didnt I receive the full price for the pokemon I sold",
+      "pokemon sale price",
+      "pokemon sold for less",
+      "half price pokemon sold"
+    ],
+    "response": "Once your Pokémon is bought, you will receive **half of its market value** — you have to pay the tax man! Players on the team which is currently in control of the **Power Plant** receive **33% off** on the Buy Pokémon page. This discount only applies to the buyer; the seller still ends up making **half of the market value of the original, non-discounted price**.\n\nSee here for more info: https://wiki.tppc.info/Buying_and_Selling_Guide"
+  }      
   ]
 }
