@@ -51,6 +51,24 @@ function canReload(message) {
   );
 }
 
+// Channel allowlist for specific commands
+// guildId -> array of allowed channelIds
+const AWESOME_CHANNELS = {
+  "329934860388925442": ["331114564966154240", "551243336187510784"]
+};
+
+function isAllowedChannel(message, allowlist) {
+  if (!message.guild) return true; // DMs allowed by default
+
+  const guildId = message.guild.id;
+  const allowedChannels = allowlist[guildId];
+
+  // No restriction for this guild
+  if (!Array.isArray(allowedChannels)) return true;
+
+  return allowedChannels.includes(message.channel.id);
+}
+
 // Load NG list ONCE (do not reload per command)
 function loadNgsOnce() {
   const filePath = path.join(process.cwd(), "data", "ngs.json");
@@ -176,6 +194,10 @@ export function buildCommandRegistry() {
   // }, "!choose a b c — randomly chooses one option");
 
   register("!awesome", async ({ message }) => {
+    if (!isAllowedChannel(message, AWESOME_CHANNELS)) {
+      return;
+    }
+
     const uid = targetUserId(message);
     const x = randIntInclusive(0, 101);
     await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
