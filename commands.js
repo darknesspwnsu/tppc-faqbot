@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createFaqService } from "./faq.js";
 import { createWikiService } from "./wiki.js";
+import { registerCalculator } from "./calculator.js";
 
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
@@ -71,6 +72,7 @@ export function buildCommandRegistry() {
   // Services (FAQ engine etc.)
   const faq = createFaqService();
   const wiki = createWikiService();
+  registerCalculator(register);
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
@@ -100,7 +102,6 @@ export function buildCommandRegistry() {
       }
     }
   }
-
 
   /* ------------------------------ Commands ------------------------------ */
 
@@ -197,7 +198,7 @@ export function buildCommandRegistry() {
     for (const { help, admin, canonical } of registry.values()) {
       if (!canonical) continue; // hide aliases
       if (!help) continue;
-      if (admin && !isAdmin) continue; // hide admin commands
+      if (admin) continue; // hide admin commands
       lines.push(help);
     }
 

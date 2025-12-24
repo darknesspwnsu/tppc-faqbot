@@ -1,0 +1,212 @@
+// calculator.js
+
+function parseNum(raw) {
+  // Accept: "123", "1,234", "42.5", "42_500", "  100162  "
+  const s = String(raw ?? "")
+    .trim()
+    .replace(/[, _]/g, ""); // remove commas, spaces, underscores
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatInt(n) {
+  const x = Math.round(n);
+  return x.toLocaleString("en-US");
+}
+
+function toBillions(exp) {
+  return exp / 1e9;
+}
+
+function formatBillionsFromExp(exp) {
+  return `${toBillions(exp).toFixed(2)} bil`;
+}
+
+function formatBillions(bil) {
+  return `${bil.toFixed(2)} bil`;
+}
+
+function levelToExp(level) {
+  // Exp = Level^3 + 1
+  return Math.pow(level, 3) + 1;
+}
+
+function expToLevel(exp) {
+  // Inverse-ish of Exp = L^3 + 1:
+  // Return largest integer L such that L^3 + 1 <= exp
+  if (exp < 1) return 0;
+  const t = exp - 1;
+  const approx = Math.cbrt(t);
+  let L = Math.floor(approx);
+
+  // Correct for floating error / non-perfect cubes
+  while (levelToExp(L + 1) <= exp) L++;
+  while (L > 0 && levelToExp(L) > exp) L--;
+
+  return L;
+}
+
+function fromBillions(bil) {
+  return bil * 1e9;
+}
+
+function helpText() {
+  // Keep this as plain text; Discord will render it nicely.
+  return [
+    "**Calculator help**",
+    "",
+    "**Usage:**",
+    "• `!calc <function> <inputs>`",
+    "• `!calc help`",
+    "",
+    "**Functions:**",
+    "• `l2e <level>` — Level → Exp (`Exp = Level^3 + 1`)",
+    "• `l2eb <level>` — Level → Exp (in billions)",
+    "• `e2l <exp>` — Exp → Level",
+    "• `eb2l <exp_in_billions>` — Exp (billions) → Level",
+    "• `la <lvl...>` — Add Levels (sum exp(levels) → level)",
+    "• `ea <exp...>` — Add Exp values → level",
+    "• `eba <exp_bil...>` — Add Exp values in billions → level",
+    "",
+    "**Examples:**",
+    "• `!calc l2e 125`",
+    "• `!calc l2eb 3500`",
+    "• `!calc e2l 100,162`",
+    "• `!calc eb2l 42.5`",
+    "• `!calc la 100 200 300`",
+    "• `!calc ea 100000 200000 300000`",
+    "• `!calc eba 42.5 10 1.25`"
+  ].join("\n");
+}
+
+export function registerCalculator(register) {
+  // One-line help for !help list:
+  const helpOneLiner =
+    "!calc — useful calculator functions for summing or converting levels or exp. For more info, type `!calc help`";
+
+  async function handleCalc(message, rest) {
+    const parts = rest.trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length === 0) {
+      // brief usage; don’t spam
+      await message.reply("Usage: `!calc <function> <inputs>` (try `!calc help`)");
+      return;
+    }
+
+    const fn = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    if (fn === "help") {
+      await message.reply(helpText());
+      return;
+    }
+
+    const parseList = () => {
+      if (args.length === 0) return null;
+      const nums = [];
+      for (const a of args) {
+        const n = parseNum(a);
+        if (n === null) return null;
+        nums.push(n);
+      }
+      return nums;
+    };
+
+    const one = () => (args.length === 1 ? parseNum(args[0]) : null);
+
+    // l2e / l2eb
+    if (fn === "l2e" || fn === "l2eb") {
+      const lvlRaw = one();
+      if (lvlRaw === null) return;
+
+      const lvl = Math.floor(lvlRaw);
+      if (!Number.isFinite(lvl) || lvl < 0) return;
+
+      const exp = levelToExp(lvl);
+      if (fn === "l2eb") {
+        await message.reply(`Level ${lvl} → Exp: ${formatBillionsFromExp(exp)}`);
+      } else {
+        await message.reply(`Level ${lvl} → Exp: ${formatInt(exp)}`);
+      }
+      return;
+    }
+
+    // e2l / eb2l
+    if (fn === "e2l" || fn === "eb2l") {
+      const expRaw = one();
+      if (expRaw === null) return;
+
+      const exp = fn === "eb2l" ? fromBillions(expRaw) : expRaw;
+      if (!Number.isFinite(exp) || exp < 0) return;
+
+      const lvl = expToLevel(exp);
+      await message.reply(
+        `${fn === "eb2l" ? `Exp ${formatBillions(expRaw)}` : `Exp ${formatInt(exp)}`} → Level: ${lvl}`
+      );
+      return;
+    }
+
+    // la: sum exp(levels) -> level
+    if (fn === "la") {
+      const lvlsRaw = parseList();
+      if (!lvlsRaw) return;
+
+      const lvls = lvlsRaw.map((x) => Math.floor(x));
+      if (lvls.some((x) => !Number.isFinite(x) || x < 0)) return;
+
+      const totalExp = lvls.reduce((sum, L) => sum + levelToExp(L), 0);
+      const totalLvl = expToLevel(totalExp);
+
+      await message.reply(
+        `Levels [${lvls.join(", ")}] → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(totalExp)}) → Level: ${totalLvl}`
+      );
+      return;
+    }
+
+    // ea / eba: sum exp -> level
+    if (fn === "ea" || fn === "eba") {
+      const expsRaw = parseList();
+      if (!expsRaw) return;
+
+      const exps = expsRaw.map((x) => (fn === "eba" ? fromBillions(x) : x));
+      if (exps.some((x) => !Number.isFinite(x) || x < 0)) return;
+
+      const totalExp = exps.reduce((sum, e) => sum + e, 0);
+      const totalLvl = expToLevel(totalExp);
+
+      const listLabel =
+        fn === "eba"
+          ? `Exps [${expsRaw.map(formatBillions).join(", ")}]`
+          : `Exps [${expsRaw.map((n) => formatInt(n)).join(", ")}]`;
+
+      await message.reply(
+        `${listLabel} → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(totalExp)}) → Level: ${totalLvl}`
+      );
+      return;
+    }
+
+    // Unknown function: point to help
+    await message.reply("Unknown function. Try `!calc help`");
+  }
+
+  // Main command: !calculate (alias !calc)
+  register(
+    "!calculate",
+    async ({ message, rest }) => handleCalc(message, rest),
+    helpOneLiner,
+    { aliases: ["!calc"] }
+  );
+
+  // Help command: !calculator help (and also allow plain !calculator)
+  register(
+    "!calculator",
+    async ({ message, rest }) => {
+      const arg = rest.trim().toLowerCase();
+      if (!arg || arg === "help") {
+        await message.reply(helpText());
+      }
+    },
+    "" // keep it out of !help list; !calc is the advertised entry
+  );
+}
