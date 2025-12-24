@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "defaultThreshold": 0.95,
+  "entries": [
+    {
+      "id": "new_goldens",
+      "threshold": 0.95,
+      "triggers": [
+        "what are the ngs",
+        "what are the new goldens",
+        "what are the new golds",
+        "what are the goldens",
+        "what are the golds",
+        "new goldens",
+        "new golds",
+        "ngs"
+      ],
+      "response": "NGs (New Goldens) for the event are: <PUT LIST HERE>.\n\nTip: If you mean *today’s* NGs, check #event-announcements or the pinned NG list."
+    },
+    {
+      "id": "goldenize_how",
+      "threshold": 0.95,
+      "triggers": [
+        "how do i goldenize",
+        "how to goldenize",
+        "goldenize how",
+        "how do you goldenize"
+      ],
+      "response": "To goldenize: <YOUR STEPS HERE>.\n\nCommon gotchas: <X> / <Y>."
+    },
+    {
+      "id": "golden_day_sets",
+      "threshold": 0.95,
+      "triggers": [
+        "what are the golden day sets",
+        "golden day sets",
+        "golden sets list",
+        "day sets"
+      ],
+      "response": "Golden Day Sets are: <LIST/EXPLANATION HERE>.\n\nIf you want the current rotation, check the pinned post in #<channel>."
+    },
+    {
+      "id": "keep_level_5",
+      "threshold": 0.95,
+      "triggers": [
+        "how do i keep it at level 5 when goldenizing",
+        "keep level 5 goldenize",
+        "stay level 5 goldenizing",
+        "keep it level 5"
+      ],
+      "response": "Keeping Level 5 while goldenizing: <YOUR SPECIFIC METHOD HERE>.\n\nIf your mon gains levels, it’s usually because <COMMON CAUSE>."
+    }
+  ]
+}
