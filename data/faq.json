@@ -1,10 +1,9 @@
 {
   "version": 2,
-  "defaultThreshold": 0.95,
+  "defaultThreshold": 0.75,
   "entries": [
     {
       "id": "goldenize_keep_base",
-      "threshold": 0.95,
       "triggers": [
         "how do i goldenize and keep it base",
         "how do i goldenize and keep it level 4",
@@ -20,7 +19,6 @@
 
     {
       "id": "current_golden_day_golds",
-      "threshold": 0.95,
       "triggers": [
         "what are the current golden day golds",
         "current golden day golds",
@@ -33,14 +31,17 @@
         "current goldens today",
         "current goldens",
         "current ngs",
-        "today's goldens"
+        "today's goldens",
+        "new goldens",
+        "new golds",
+        "ngs",
+        "ng"
       ],
       "response": "The **current Golden Day golds** are listed in:\n\n• The **pinned messages** in the Trades channel\n• The **event announcements** on Discord\n\nAlways check those locations for the most up-to-date list."
     },
 
     {
       "id": "goldenize_how",
-      "threshold": 0.95,
       "triggers": [
         "how do i goldenize",
         "how to goldenize",
@@ -55,7 +56,6 @@
 
     {
       "id": "christmas_newyears_goldenize",
-      "threshold": 0.95,
       "triggers": [
         "can i goldenize on christmas and new years",
         "goldenize on christmas and new years",
@@ -68,7 +68,6 @@
 
     {
       "id": "how_many_goldens",
-      "threshold": 0.95,
       "triggers": [
         "how many goldens can i make",
         "how many golds can i make",
@@ -82,7 +81,6 @@
 
     {
       "id": "golden_days",
-      "threshold": 0.95,
       "triggers": [
         "what days can i make golds",
         "what days can i goldenize",
@@ -95,7 +93,6 @@
 
     {
       "id": "contest_prize_delivery",
-      "threshold": 0.95,
       "triggers": [
         "i won a contest when will i receive my prize",
         "when do i get my contest prize",
