@@ -299,10 +299,9 @@ export function buildCommandRegistry() {
   
   // !organizer
   register("!organizer", async ({ message }) => {
-    await message.reply("https://coldsp33d.github.io/box_organizer");
-  }, "!organizer — returns the organizer page link");
-  
-    
+    await message.reply("https://coldsp33d.github.io");
+  }, "!organizer — returns the organizer index link");
+
   /* ------------------------------ Public API ----------------------------- */
 
   return {
