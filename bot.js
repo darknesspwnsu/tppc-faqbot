@@ -1,6 +1,6 @@
 import "dotenv/config";
 import process from "node:process";
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 
 function mustEnv(name) {
@@ -33,7 +33,7 @@ const client = new Client({
 
 const commands = buildCommandRegistry({ client });
 
-client.once("ready", () => {
+client.once(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user?.tag}`);
   console.log(
     ALLOWED_CHANNEL_IDS.length
