@@ -24,10 +24,15 @@
       "triggers": [
         "what are the current golden day golds",
         "current golden day golds",
+        "what are the ngs",
+        "what are the new golds",
+        "what are the new goldens",
         "active golden day golds",
         "what golds are active",
         "which golds are active",
         "current goldens today",
+        "current goldens",
+        "current ngs",
         "today's goldens"
       ],
       "response": "The **current Golden Day golds** are listed in:\n\n• The **pinned messages** in the Trades channel\n• The **event announcements** on Discord\n\nAlways check those locations for the most up-to-date list."
