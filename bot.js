@@ -26,9 +26,15 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Channel]
+  partials: [
+    Partials.Channel,
+    Partials.Message,   
+    Partials.Reaction,  
+    Partials.User       
+  ]
 });
 
 const commands = buildCommandRegistry({ client });

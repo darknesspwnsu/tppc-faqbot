@@ -24,6 +24,7 @@ import path from "node:path";
 import { createFaqService } from "./faq.js";
 import { createWikiService } from "./wiki.js";
 import { registerCalculator } from "./calculator.js";
+import { registerContests } from "./contests.js";
 
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
@@ -94,6 +95,7 @@ export function buildCommandRegistry() {
   const faq = createFaqService();
   const wiki = createWikiService();
   registerCalculator(register);
+  registerContests(register);
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
