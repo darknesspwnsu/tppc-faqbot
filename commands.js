@@ -219,7 +219,7 @@ export function buildCommandRegistry() {
 
     const lines = results.map(r => `• [${r.title}](${r.url})`);
     await message.reply(lines.join("\n"));
-  }, "!wiki <term> — links matching TPPC wiki pages");
+  }, "!wiki <term> — links matching TPPC wiki pages", { aliases: ["!w"] });
 
   // !ng — read from data/ngs.json (loaded once)
   register(
@@ -245,14 +245,16 @@ export function buildCommandRegistry() {
   register("!rig", async ({ message }) => {
     const uid = targetUserId(message);
     await message.channel.send(`${mention(uid)} has now been blessed by rnjesus.`);
-  }, "!rig — bless someone with RNG");
+    }, "!rig — bless someone with RNG"
+  );
 
   // !coinflip — heads/tails
   register("!coinflip", async ({ message }) => {
     const uid = targetUserId(message);
     const result = Math.random() < 0.5 ? "Heads" : "Tails";
     await message.channel.send(`${mention(uid)} ${result}!`);
-  }, "!coinflip — flips a coin (Heads/Tails)");
+    }, "!coinflip — flips a coin (Heads/Tails)", { aliases: ["!flip", "!coin"] }
+  );
 
   /* ------------------------------ Public API ----------------------------- */
 
