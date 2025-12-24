@@ -265,6 +265,44 @@ export function buildCommandRegistry() {
     }, "!coinflip — flips a coin (Heads/Tails)", { aliases: ["!flip", "!coin"] }
   );
 
+    // !rules <discord/rpg/forums>
+  register("!rules", async ({ message, rest }) => {
+    const arg = rest.trim().toLowerCase();
+    const links = {
+      discord: "https://wiki.tppc.info/Discord%23Rules",
+      rpg: "https://forums.tppc.info/forumdisplay.php?f=6",
+      forums: "https://forums.tppc.info/showthread.php?t=42"
+    };
+  
+    if (arg) {
+      const url = links[arg];
+      if (!url) {
+        await message.reply(
+          "Invalid argument. Usage: `!rules <discord/rpg/forums>` — returns the corresponding rules link."
+        );
+        return;
+      }
+      await message.reply(url);
+    } else {
+      // No argument provided — show all links
+      const allLinks = Object.entries(links)
+        .map(([key, url]) => `• **${key}**: ${url}`)
+        .join("\n");
+      await message.reply(`Here are all the rules links:\n${allLinks}`);
+    }
+  }, "!rules <discord/rpg/forums> — returns rules link(s)");
+  
+  // !calculators
+  register("!calculators", async ({ message }) => {
+    await message.reply("https://wiki.tppc.info/TPPC_Calculators");
+  }, "!calculators — returns the calculators page link");
+  
+  // !organizer
+  register("!organizer", async ({ message }) => {
+    await message.reply("https://coldsp33d.github.io/box_organizer");
+  }, "!organizer — returns the organizer page link");
+  
+    
   /* ------------------------------ Public API ----------------------------- */
 
   return {
