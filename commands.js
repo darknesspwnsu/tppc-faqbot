@@ -81,12 +81,26 @@ export function buildCommandRegistry() {
 
   // Helper to register commands
   function register(name, handler, help = "", opts = {}) {
-    registry.set(name.toLowerCase(), {
+    const entry = {
       handler,
       help,
-      admin: Boolean(opts.admin)
-    });
+      admin: Boolean(opts.admin),
+      canonical: true
+    };
+
+    registry.set(name.toLowerCase(), entry);
+
+    // Register aliases (if any)
+    if (Array.isArray(opts.aliases)) {
+      for (const alias of opts.aliases) {
+        registry.set(alias.toLowerCase(), {
+          ...entry,
+          canonical: false
+        });
+      }
+    }
   }
+
 
   /* ------------------------------ Commands ------------------------------ */
 
@@ -180,7 +194,8 @@ export function buildCommandRegistry() {
 
     const lines = [];
 
-    for (const { help, admin } of registry.values()) {
+    for (const { help, admin, canonical } of registry.values()) {
+      if (!canonical) continue; // hide aliases
       if (!help) continue;
       if (admin && !isAdmin) continue; // hide admin commands
       lines.push(help);
@@ -207,16 +222,24 @@ export function buildCommandRegistry() {
   }, "!wiki <term> — links matching TPPC wiki pages");
 
   // !ng — read from data/ngs.json (loaded once)
-  register("!ng", async ({ message }) => {
-    if (ngs.length === 0) return; // no output if empty
-    // Keep it readable and not too spammy
-    const maxShow = 25;
-    const shown = ngs.slice(0, maxShow);
-    const extra = ngs.length - shown.length;
+  register(
+    "!ng",
+    async ({ message }) => {
+      if (ngs.length === 0) return;
 
-    const body = shown.map(x => `• ${x}`).join("\n") + (extra > 0 ? `\n…and ${extra} more.` : "");
-    await message.reply(`**Current NGs:**\n${body}`);
-  }, "!ng — shows the current NG list");
+      const maxShow = 5;
+      const shown = ngs.slice(0, maxShow);
+      const extra = ngs.length - shown.length;
+
+      const body =
+        shown.map(x => `• ${x}`).join("\n") +
+        (extra > 0 ? `\n…and ${extra} more.` : "");
+
+      await message.reply(`**Current NGs:**\n${body}`);
+    },
+    "!ng — shows the current NG list",
+    { aliases: ["!ngs"] }
+  );
 
   // !rig — bless a user
   register("!rig", async ({ message }) => {
