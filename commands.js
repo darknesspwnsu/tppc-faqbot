@@ -66,6 +66,27 @@ function loadNgsOnce() {
     .filter(Boolean);
 }
 
+// Load Glossary ONCE (do not reload per command)
+function loadGlossaryOnce() {
+  const filePath = path.join(process.cwd(), "data", "glossary.json");
+  const raw = fs.readFileSync(filePath, "utf8");
+  const data = JSON.parse(raw);
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("data/glossary.json must be an object map: { \"key\": \"definition\", ... }");
+  }
+
+  // Normalize keys to lowercase trimmed strings
+  const map = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (typeof k !== "string" || typeof v !== "string") continue;
+    const kk = k.trim().toLowerCase();
+    if (!kk) continue;
+    map[kk] = v;
+  }
+  return map;
+}
+
 export function buildCommandRegistry() {
   const registry = new Map();
 
@@ -76,6 +97,10 @@ export function buildCommandRegistry() {
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
+
+  // Load Glossary once at startup
+  const glossary = loadGlossaryOnce();
+
 
   // Config
   const MAX_ROLL_N = Number(process.env.MAX_ROLL_N ?? 50);
@@ -292,15 +317,29 @@ export function buildCommandRegistry() {
     }
   }, "!rules <discord/rpg/forums> — returns rules link(s)");
   
-  // !calculators
-  register("!calculators", async ({ message }) => {
-    await message.reply("https://wiki.tppc.info/TPPC_Calculators");
-  }, "!calculators — returns the calculators page link");
-  
-  // !organizer
-  register("!organizer", async ({ message }) => {
-    await message.reply("https://coldsp33d.github.io");
-  }, "!organizer — returns the organizer index link");
+  // !boxorganizer
+  register("!boxorganizer", async ({ message }) => {
+    await message.reply("https://coldsp33d.github.io/box_organizer");
+  }, "!boxorganizer — returns the organizer page link");
+
+    // !tools
+  register("!tools", async ({ message }) => {
+    await message.reply("https://wiki.tppc.info/TPPC_Tools_and_Calculators");
+  }, "!tools — returns a wiki link to several helpful TPPC tools, calculators and other utilties.",
+  { aliases: ["!calculators", "!organizers"] });
+    
+  // !glossary <key> — quick definition lookup
+  register("!glossary", async ({ message, rest }) => {
+    const keyRaw = rest.trim();
+    if (!keyRaw) return; // user didn't provide a key; show nothing (per your request)
+
+    const key = keyRaw.toLowerCase();
+
+    const def = glossary[key];
+    if (!def) return; // key doesn't exist; show nothing (per your request)
+
+    await message.reply(`**${key}** — ${def}`);
+  }, "!glossary <key> — looks up a TPPC term (example: !glossary ul)", { aliases: ["!g"] });
 
   /* ------------------------------ Public API ----------------------------- */
 
