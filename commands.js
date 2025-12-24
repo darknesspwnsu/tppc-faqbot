@@ -156,7 +156,15 @@ export function buildCommandRegistry() {
 
   register("!faq", async ({ message, rest }) => {
     const qRaw = rest.trim();
-    if (!qRaw) return; // no output if no question
+
+    if (!qRaw) {
+      await message.reply(
+        "Please ask a specific question, like: `!faq how do I goldenize?`\n" +
+        "You can also browse helpful FAQs here: https://forums.tppc.info/showthread.php?p=11516674#post11516674"
+      );
+      return;
+    }
+
     const out = faq.matchAndRender({ message, questionRaw: qRaw });
     if (!out) return; // no output if no confident match
     await message.reply(out);
