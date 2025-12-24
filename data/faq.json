@@ -1,22 +1,38 @@
 {
-  "version": 1,
+  "version": 2,
   "defaultThreshold": 0.95,
   "entries": [
     {
-      "id": "new_goldens",
+      "id": "goldenize_keep_base",
       "threshold": 0.95,
       "triggers": [
-        "what are the ngs",
-        "what are the new goldens",
-        "what are the new golds",
-        "what are the goldens",
-        "what are the golds",
-        "new goldens",
-        "new golds",
-        "ngs"
+        "how do i goldenize and keep it base",
+        "how do i goldenize and keep it level 4",
+        "keep it base when goldenizing",
+        "keep level 4 when goldenizing",
+        "goldenize keep base",
+        "goldenize keep level 4",
+        "goldenize without leveling",
+        "goldenize but keep base"
       ],
-      "response": "NGs (New Goldens) for the event are: <PUT LIST HERE>.\n\nTip: If you mean *today’s* NGs, check #event-announcements or the pinned NG list."
+      "response": "To goldenize and keep a Pokémon base/Level 4:\n\n1) Teach the Pokémon a **non-damaging move** (for example: Haze).\n2) Let that Pokémon **faint** in the battle.\n3) Switch to a **higher-level Pokémon** to defeat the Eevee.\n\nBecause the goldenized Pokémon did not deal damage, it will remain base/Level 4."
     },
+
+    {
+      "id": "current_golden_day_golds",
+      "threshold": 0.95,
+      "triggers": [
+        "what are the current golden day golds",
+        "current golden day golds",
+        "active golden day golds",
+        "what golds are active",
+        "which golds are active",
+        "current goldens today",
+        "today's goldens"
+      ],
+      "response": "The **current Golden Day golds** are listed in:\n\n• The **pinned messages** in the Trades channel\n• The **event announcements** on Discord\n\nAlways check those locations for the most up-to-date list."
+    },
+
     {
       "id": "goldenize_how",
       "threshold": 0.95,
@@ -24,31 +40,65 @@
         "how do i goldenize",
         "how to goldenize",
         "goldenize how",
-        "how do you goldenize"
+        "how do you goldenize",
+        "how do you make a pokemon golden",
+        "how to make a golden pokemon",
+        "make pokemon golden"
       ],
-      "response": "To goldenize: <YOUR STEPS HERE>.\n\nCommon gotchas: <X> / <Y>."
+      "response": "To goldenize a Pokémon:\n\n• Solve the **community riddle** to find **3 Pokémon and 3 items**.\n• Place the Pokémon in the **first three slots** of your roster.\n• Attach the **corresponding items** to those Pokémon in the correct order.\n• Go to the **Evolution Gym**.\n• Defeat the Eevee.\n\nAfter the battle, the **first Pokémon in your roster becomes golden**."
     },
+
     {
-      "id": "golden_day_sets",
+      "id": "christmas_newyears_goldenize",
       "threshold": 0.95,
       "triggers": [
-        "what are the golden day sets",
-        "golden day sets",
-        "golden sets list",
-        "day sets"
+        "can i goldenize on christmas and new years",
+        "goldenize on christmas and new years",
+        "christmas and new years goldenize",
+        "do christmas and new years count separately",
+        "are christmas and new years separate golden days"
       ],
-      "response": "Golden Day Sets are: <LIST/EXPLANATION HERE>.\n\nIf you want the current rotation, check the pinned post in #<channel>."
+      "response": "Yes. **Christmas and New Year’s count as separate Golden Days**.\n\nEven though they usually share the same goldens, you may goldenize your **full allowed amount on each day**."
     },
+
     {
-      "id": "keep_level_5",
+      "id": "how_many_goldens",
       "threshold": 0.95,
       "triggers": [
-        "how do i keep it at level 5 when goldenizing",
-        "keep level 5 goldenize",
-        "stay level 5 goldenizing",
-        "keep it level 5"
+        "how many goldens can i make",
+        "how many golds can i make",
+        "golden limit",
+        "golden cap",
+        "how many goldens per day",
+        "golden day limit"
       ],
-      "response": "Keeping Level 5 while goldenizing: <YOUR SPECIFIC METHOD HERE>.\n\nIf your mon gains levels, it’s usually because <COMMON CAUSE>."
+      "response": "Golden limits depend on activity:\n\n**Active users**:\n• 1 golden per account per Golden Day\n• Up to **5 total per Golden Day**\n• Applies separately to:\n  – Christmas\n  – New Year’s\n  – August 2nd\n\n**Inactive users**:\n• 1 golden per Golden Day\n• Total of **2** during Christmas/New Year’s\n• **1** on August 2nd"
+    },
+
+    {
+      "id": "golden_days",
+      "threshold": 0.95,
+      "triggers": [
+        "what days can i make golds",
+        "what days can i goldenize",
+        "golden days",
+        "when are golden days",
+        "golden day dates"
+      ],
+      "response": "You can goldenize on the following **Golden Days**:\n\n• **Christmas Day** — December 25\n• **New Year’s Eve + Day** — December 31 & January 1 (counts as **one** Golden Day)\n• **Shrimpy’s Birthday** — August 2"
+    },
+
+    {
+      "id": "contest_prize_delivery",
+      "threshold": 0.95,
+      "triggers": [
+        "i won a contest when will i receive my prize",
+        "when do i get my contest prize",
+        "contest prize when",
+        "how long does contest prize take",
+        "haven't received contest prize"
+      ],
+      "response": "Contest prize delivery can vary.\n\n• Some prizes are delivered **instantly**\n• Others may take **some time**, depending on the contest\n• Mods often **transfer prizes directly to your account**\n\nIf you haven’t received a trade notification, **check your account** — the prize may already be there."
     }
   ]
 }
