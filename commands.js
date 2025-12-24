@@ -253,7 +253,7 @@ export function buildCommandRegistry() {
   // !rig — bless a user
   register("!rig", async ({ message }) => {
     const uid = targetUserId(message);
-    await message.channel.send(`${mention(uid)} has now been blessed by rnjesus.`);
+    await message.channel.send(`${mention(uid)} has now been blessed by rngesus.`);
     }, "!rig — bless someone with RNG"
   );
 
