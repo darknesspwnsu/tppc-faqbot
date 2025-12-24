@@ -73,6 +73,9 @@
         "how many golds can i make",
         "golden limit",
         "golden cap",
+        "max golds",
+        "max goldens",
+        "how many golds for golden day",
         "how many goldens per day",
         "golden day limit"
       ],
@@ -84,6 +87,8 @@
       "triggers": [
         "what days can i make golds",
         "what days can i goldenize",
+        "when can i goldenize",
+        "when can i make golds",
         "golden days",
         "when are golden days",
         "golden day dates"
@@ -113,7 +118,30 @@
       "i am new",
       "new here",
       "beginner help",
-      "how to begin"
+      "how to begin",
+      "how do i get started",
+      "how to get started",
+      "getting started",
+      "where do i start",
+      "where should i start",
+      "how do i begin",
+      "how to begin",
+      "how do i start",
+      "im new how do i start",
+      "im new where do i start",
+      "new player how do i start",
+      "new here how do i start",
+      "first time playing how do i start",
+      "just started what do i do",
+      "how do i start playing",
+      "how do i play",
+      "what do i do first",
+      "what should i do first",
+      "what do i do at the start",
+      "start guide",
+      "starter guide",
+      "getting started guide",
+      "start here"
     ],
     "response": "Great question, here are some useful resources:\n\n• **Explore the wiki**: https://wiki.tppc.info/Getting_Started\n• **Quests and freebies**: https://forums.tppc.info/showthread.php?t=621060\n• **Written guides**: https://forums.tppc.info/showthread.php?p=11516673#post11516673"
   },
@@ -125,6 +153,7 @@
       "best training pokemon",
       "best pokemon to train with",
       "training pokemon",
+      "best trainer",
       "good training pokemon",
       "what pokemon should i train with"
     ],
@@ -190,6 +219,7 @@
       "my account is banned",
       "i am banned",
       "account banned",
+      "banned help",
       "my account has been hacked",
       "my account was hacked",
       "account hacked",
@@ -269,7 +299,7 @@
       "max trade level",
       "trading limits"
     ],
-    "response": "Here are the **trade caps** based on rank:\n\n| Rank       | Points Required To Unlock | Max Trade Level Allowed |\n|------------|--------------------------|------------------------|\n| Grunt      | 1                        | 2,500                  |\n| Private    | 10                       | 2,500                  |\n| Specialist | 100                      | 2,500                  |\n| Corporal   | 1,000                    | 2,500                  |\n| Sergeant   | 10,000                   | 2,500                  |\n| Lieutenant | 100,000                  | 2,500                  |\n| Captain    | 1,000,000                | 4,000                  |\n| Major      | 10,000,000               | 5,500                  |\n| Colonel    | 100,000,000              | 7,000                  |\n| General    | 1,000,000,000            | 8,500                  |\n| Commander  | 10,000,000,000           | 10,000                 |"
+    "response": "Here are the **trade caps** based on rank:\n\n```text\nRank        | Points Required To Unlock | Max Trade Level Allowed\n------------|--------------------------|------------------------\nGrunt       | 1                        | 2,500\nPrivate     | 10                       | 2,500\nSpecialist  | 100                      | 2,500\nCorporal    | 1,000                    | 2,500\nSergeant    | 10,000                   | 2,500\nLieutenant  | 100,000                  | 2,500\nCaptain     | 1,000,000                | 4,000\nMajor       | 10,000,000               | 5,500\nColonel     | 100,000,000              | 7,000\nGeneral     | 1,000,000,000            | 8,500\nCommander   | 10,000,000,000           | 10,000\n```"
   },
 
   {
@@ -315,7 +345,7 @@
       "TPPC abbreviations",
       "TPPC acronyms"
     ],
-    "response": "Here are common TPPC terms and their meanings:\n\n• **TPPCRPG** – The Pokémon PokeCenter Role Playing Game\n• **LF** – \"Looking For\" ____ Pokémon\n• **FT / NFT** – Pokémon is \"For Trade\" or \"Not For Trade\"\n• **FS** – Pokémon is \"For Sale\"\n• **'x' / 'kx'** – Non-official rating system; 1 'x' historically = Level 2499, 'kx' = thousands of 'x'\n• **NG / OG** – \"New Gold\" (latest Golden Pokémon) / \"Old Gold\" (released long ago)\n• **GDay** – Day Golden Pokémon can be created (e.g., August 2nd, Christmas/New Years)\n• **B/O** – \"Best Offer\" auction; offer accepted at original time without reserve\n• **UE / UG** – \"Unevolved / Ungoldenised\"; Pokémon may become Golden later\n• **E / G** – \"Evolved / Goldenised\"; Pokémon cannot become Golden later\n• **PPP** – Power Plant Prize\n• **Unob** – Unobtainable Pokémon\n• **SS** – Secret Swap\n• **TC** – Trainer's Corner forum or Training Challenge\n• **S / D / G** – Bonus of Pokémon: Shiny, Dark, Golden\n• **U** – Ungendered Pokémon\n• **G** – Genderless Pokémon (example: Deoxys G 2499)\n• **TPs** – Team Points (see Team Stats)\n• **HTT** – Hard To Trade; difficult or undesirable Pokémon\n• **ETT** – Easy To Trade; desirable Pokémon\n• **UL** – Underleveled Pokémon\n• **CAT / C.A.T** – Create A Trade\n• **1k** – Pokémon level in thousands (1k = Level 1000, 2k = Level 2000, etc.)\n• **Base** – Lowest level available for a Pokémon\n• **NB** – Non-base; higher than base level\n• **Up / Downgrade** – Consolidate multiple Pokémon into one valuable Pokémon, or vice versa\n• **Maps** – Pokémon caught on maps\n• **Swaps** – Pokémon obtained via Secret Swap\n• **Promo** – Promotional Pokémon from team stats (1 per account/week, up to 5 if multiple accounts)\n• **nty** – \"No thank you\"\n• **SFOM** – Sack Full of Muck (forum off-topic)\n• **ig** – In game; refers to rarity list"
+    "response": "Type !glossary <term> for a definition of a particular term. Also see https://forums.tppc.info/showthread.php?p=11516674#post11516674 for more information."
   },
 
   {
