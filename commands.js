@@ -344,7 +344,7 @@ export function buildCommandRegistry() {
   // !boxorganizer
   register("!boxorganizer", async ({ message }) => {
     await message.reply("https://coldsp33d.github.io/box_organizer");
-  }, "!boxorganizer — returns the organizer page link");
+  }, "!boxorganizer — returns the organizer page link", { aliases: ["!organizers"]});
 
     // !tools
   register("!tools", async ({ message }) => {
