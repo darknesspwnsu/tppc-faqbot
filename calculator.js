@@ -68,6 +68,7 @@ function helpText() {
     "• `la <lvl...>` — Add Levels (sum exp(levels) → level)",
     "• `ea <exp...>` — Add Exp values → level",
     "• `eba <exp_bil...>` — Add Exp values in billions → level",
+    "• `ld <lvl1> <lvl2>` — Level difference (Exp diff → level)",
     "",
     "**Examples:**",
     "• `!calc l2e 125`",
@@ -76,7 +77,8 @@ function helpText() {
     "• `!calc eb2l 42.5`",
     "• `!calc la 100 200 300`",
     "• `!calc ea 100000 200000 300000`",
-    "• `!calc eba 42.5 10 1.25`"
+    "• `!calc eba 42.5 10 1.25`",
+    "• `!calc ld 1500 1200`"
   ].join("\n");
 }
 
@@ -89,7 +91,6 @@ export function registerCalculator(register) {
     const parts = rest.trim().split(/\s+/).filter(Boolean);
 
     if (parts.length === 0) {
-      // brief usage; don’t spam
       await message.reply("Usage: `!calc <function> <inputs>` (try `!calc help`)");
       return;
     }
@@ -147,6 +148,31 @@ export function registerCalculator(register) {
       return;
     }
 
+    // ld: level difference (absolute)
+    if (fn === "ld") {
+      if (args.length !== 2) return;
+
+      const a = parseNum(args[0]);
+      const b = parseNum(args[1]);
+      if (a === null || b === null) return;
+
+      const l1 = Math.floor(a);
+      const l2 = Math.floor(b);
+      if (!Number.isFinite(l1) || !Number.isFinite(l2) || l1 < 0 || l2 < 0) return;
+
+      const exp1 = levelToExp(l1);
+      const exp2 = levelToExp(l2);
+      const diffExp = Math.abs(exp1 - exp2);
+      const diffLvl = expToLevel(diffExp);
+
+      await message.reply(
+        `Level diff (${l1} ↔ ${l2}) → Exp: ${formatInt(diffExp)} (${formatBillionsFromExp(
+          diffExp
+        )}) → Level: ${diffLvl}`
+      );
+      return;
+    }
+
     // la: sum exp(levels) -> level
     if (fn === "la") {
       const lvlsRaw = parseList();
@@ -159,7 +185,9 @@ export function registerCalculator(register) {
       const totalLvl = expToLevel(totalExp);
 
       await message.reply(
-        `Levels [${lvls.join(", ")}] → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(totalExp)}) → Level: ${totalLvl}`
+        `Levels [${lvls.join(", ")}] → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(
+          totalExp
+        )}) → Level: ${totalLvl}`
       );
       return;
     }
@@ -181,16 +209,16 @@ export function registerCalculator(register) {
           : `Exps [${expsRaw.map((n) => formatInt(n)).join(", ")}]`;
 
       await message.reply(
-        `${listLabel} → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(totalExp)}) → Level: ${totalLvl}`
+        `${listLabel} → Total Exp: ${formatInt(totalExp)} (${formatBillionsFromExp(
+          totalExp
+        )}) → Level: ${totalLvl}`
       );
       return;
     }
 
-    // Unknown function: point to help
     await message.reply("Unknown function. Try `!calc help`");
   }
 
-  // Main command: !calculate (alias !calc)
   register(
     "!calculate",
     async ({ message, rest }) => handleCalc(message, rest),
@@ -198,7 +226,6 @@ export function registerCalculator(register) {
     { aliases: ["!calc"] }
   );
 
-  // Help command: !calculator help (and also allow plain !calculator)
   register(
     "!calculator",
     async ({ message, rest }) => {
@@ -207,6 +234,6 @@ export function registerCalculator(register) {
         await message.reply(helpText());
       }
     },
-    "" // keep it out of !help list; !calc is the advertised entry
+    ""
   );
 }
