@@ -15,6 +15,8 @@
  * - After time, ping the contest creator with the UNIQUE list of people who reacted
  */
 
+import { PermissionsBitField } from "discord.js";
+
 // guildId -> {
 //   client, guildId, channelId, messageId, creatorId, endsAtMs, timeout,
 //   entrants:Set<string>,
@@ -23,6 +25,20 @@
 const activeByGuild = new Map();
 
 let reactionHooksInstalled = false;
+
+function isAdmin(message) {
+  if (!message.member) return false;
+  return (
+    message.member.permissions?.has(PermissionsBitField.Flags.ManageGuild) ||
+    message.member.permissions?.has(PermissionsBitField.Flags.Administrator)
+  );
+}
+
+function canManageContest(message, state) {
+  if (!state) return false;
+  if (isAdmin(message)) return true;
+  return message.author?.id && message.author.id === state.creatorId;
+}
 
 function parseDurationToMs(raw) {
   const s = (raw ?? "").trim().toLowerCase();
@@ -51,7 +67,7 @@ function camelizeIfNeeded(name) {
   return name
     .split(/\s+/)
     .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w) => (w.charAt(0).toUpperCase() + w.slice(1)))
     .join("");
 }
 
@@ -242,6 +258,11 @@ export function registerContests(register) {
       return;
     }
 
+    if (!canManageContest(message, state)) {
+      await message.reply("Nope — only admins or the contest starter can use that.");
+      return;
+    }
+
     const nameList = await buildNameList(
       message.client,
       [...state.entrants]
@@ -261,6 +282,11 @@ export function registerContests(register) {
       return;
     }
 
+    if (!canManageContest(message, state)) {
+      await message.reply("Nope — only admins or the contest starter can use that.");
+      return;
+    }
+
     clearTimeout(state.timeout);
     activeByGuild.delete(message.guildId);
     await message.channel.send("Contest cancelled.");
@@ -270,6 +296,11 @@ export function registerContests(register) {
     const state = activeByGuild.get(message.guildId);
     if (!state) {
       await message.reply("No active contest to close.");
+      return;
+    }
+
+    if (!canManageContest(message, state)) {
+      await message.reply("Nope — only admins or the contest starter can use that.");
       return;
     }
 
