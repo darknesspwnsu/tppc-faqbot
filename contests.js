@@ -18,7 +18,11 @@
 
 import { PermissionsBitField } from "discord.js";
 
-// guildId -> { client, guildId, channelId, messageId, creatorId, endsAtMs, timeout, entrants:Set<string> }
+// guildId -> {
+//   client, guildId, channelId, messageId, creatorId, endsAtMs, timeout,
+//   entrants:Set<string>,
+//   entrantReactionCounts: Map<string, number>
+// }
 const activeByGuild = new Map();
 
 let reactionHooksInstalled = false;
@@ -103,6 +107,11 @@ function installReactionHooks(client) {
 
       if (msg.id !== state.messageId) return;
 
+      // Treat any reaction as entry.
+      // Track count so removing one emoji doesn't remove the entrant if they still react with others.
+      const counts = state.entrantReactionCounts;
+      const prev = counts.get(user.id) ?? 0;
+      counts.set(user.id, prev + 1);
       state.entrants.add(user.id);
     } catch (e) {
       console.warn("messageReactionAdd handler failed:", e);
@@ -128,8 +137,17 @@ function installReactionHooks(client) {
 
       if (msg.id !== state.messageId) return;
 
-      // Treat any reaction as entry. Removing reactions removes entry.
-      state.entrants.delete(user.id);
+      // Decrement per-user reaction count; only remove entrant if count hits 0.
+      const counts = state.entrantReactionCounts;
+      const prev = counts.get(user.id) ?? 0;
+      const next = prev - 1;
+
+      if (next <= 0) {
+        counts.delete(user.id);
+        state.entrants.delete(user.id);
+      } else {
+        counts.set(user.id, next);
+      }
     } catch (e) {
       console.warn("messageReactionRemove handler failed:", e);
     }
@@ -244,8 +262,9 @@ export function registerContests(register) {
         messageId: null, // filled after we send
         creatorId: message.author.id,
         endsAtMs,
-        timeout: null,   // filled after we schedule
-        entrants: new Set()
+        timeout: null, // filled after we schedule
+        entrants: new Set(),
+        entrantReactionCounts: new Map()
       });
 
       let contestMsg;
