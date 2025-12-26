@@ -1,18 +1,4 @@
-// games/explodingVoltorbs.js
-
-const activeGames = new Map();
-
-const scareMessages = [
-  "⚠️ The Voltorb is vibrating violently...",
-  "💥 **CRITICAL WARNING** — energy spike detected!",
-  "😰 Something feels very wrong...",
-  "🔥 Voltorb temperature rising rapidly!",
-  "💣 The fuse is crackling ominously...",
-  "⚡ You hear a sharp electrical snap...",
-  "💥 IT'S ABOUT TO— never mind.",
-];
-
-function startGame(message, rangeArg) {
+export function startExplodingVoltorbs(message, rangeArg) {
   const guildId = message.guild.id;
 
   if (activeGames.has(guildId)) {
@@ -20,7 +6,6 @@ function startGame(message, rangeArg) {
     return;
   }
 
-  // ---- range parsing ----
   const DEFAULT_MIN = 30;
   const DEFAULT_MAX = 90;
   const MAX_ALLOWED = 600;
@@ -87,7 +72,7 @@ function startGame(message, rangeArg) {
   );
 }
 
-function passVoltorb(message) {
+export function passVoltorb(message) {
   const game = activeGames.get(message.guild.id);
 
   if (!game) {
@@ -114,8 +99,3 @@ function passVoltorb(message) {
     `💣 The ticking continues...`
   );
 }
-
-module.exports = {
-  startGame,
-  passVoltorb,
-};
