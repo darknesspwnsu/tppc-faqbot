@@ -28,6 +28,12 @@ import { registerContests } from "./contests.js";
 import { registerTrades } from "./trades.js";
 import { registerRarity, registerLevel4Rarity } from "./rarity.js";
 
+import {
+  startExplodingVoltorbs,
+  passVoltorb
+} from "./games/explodingVoltorbs.js";
+
+
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
   const lo = Math.ceil(min);
