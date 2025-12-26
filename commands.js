@@ -363,7 +363,7 @@ export function buildCommandRegistry() {
       "**Available commands:**\n" +
       lines.sort().map(l => `• ${l}`).join("\n")
     );
-  }, "!help — shows this help message");
+  }, "!help — shows this help message", { aliases: ["!helpme"]});
 
   // Local-title-based wiki lookup (Cloudflare-proof)
   register("!wiki", async ({ message, rest }) => {
