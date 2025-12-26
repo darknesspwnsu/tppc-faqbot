@@ -27,12 +27,7 @@ import { registerCalculator } from "./calculator.js";
 import { registerContests } from "./contests.js";
 import { registerTrades } from "./trades.js";
 import { registerRarity, registerLevel4Rarity } from "./rarity.js";
-
-import {
-  startExplodingVoltorbs,
-  passVoltorb
-} from "./games/explodingVoltorbs.js";
-
+import {startExplodingVoltorbs, passVoltorb} from "./games/explodingVoltorbs.js";
 
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
@@ -472,26 +467,17 @@ export function buildCommandRegistry() {
 
     /* ------------------ Exploding Voltorbs ------------------ */
 
-  register(
-    "!contest",
-    async ({ message, rest }) => {
+  register("!contest", async ({ message, rest }) => {
       const parts = rest.trim().split(/\s+/).filter(Boolean);
-
-      // Only handle OUR contest
       if (parts[0] !== "exploding_voltorbs") return;
-
       const rangeArg = parts[1]; // optional "30-90"
       startExplodingVoltorbs(message, rangeArg);
-    },
-    "!contest exploding_voltorbs [min-max] — starts an exploding Voltorb game"
+    }, "!contest exploding_voltorbs [min-max] — starts an exploding Voltorb game"
   );
 
-  register(
-    "!pass",
-    async ({ message }) => {
+  register("!pass", async ({ message }) => {
       passVoltorb(message);
-    },
-    "!pass @user — pass the Voltorb (only during an active game)"
+    }, "!pass @user — pass the Voltorb (only during an active game)"
   );
 
   /* ------------------------------ Public API ----------------------------- */
