@@ -556,7 +556,10 @@ export function registerRarity(register) {
       if (!isGuildAllowed(message)) return;
 
       const qRaw = String(rest ?? "").trim();
-      if (!qRaw) return;
+      if (!qRaw) {
+        await message.reply("Usage: `?rarity <pokemon>`");
+        return;
+      }
 
       const r = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
 
@@ -623,7 +626,10 @@ export function registerLevel4Rarity(register) {
     "!l4",
     async ({ message, rest }) => {
       const qRaw = String(rest ?? "").trim();
-      if (!qRaw) return;
+      if (!qRaw) {
+        await message.reply("Usage: `!l4 <pokemon>`");
+        return;
+      }
 
       // Ensure both datasets are loaded:
       // - L4 is for display
