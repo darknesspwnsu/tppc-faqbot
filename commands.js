@@ -292,16 +292,16 @@ export function buildCommandRegistry() {
     },
     "?elim <1–30s> <items...> — randomly eliminates one item per round"
   );
-
+  
   register("!awesome", async ({ message }) => {
     if (!isAllowedChannel(message, AWESOME_CHANNELS)) {
       return;
     }
-
+  
     const uid = targetUserId(message);
     const x = randIntInclusive(0, 101);
     await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
-  }, "!awesome — tells you how awesome someone is (0–101%)");
+  }, "!awesome — tells you how awesome someone is (0–101%)", { aliases: ["!a"] });
 
   register("!faq", async ({ message, rest }) => {
     const qRaw = rest.trim();
