@@ -20,7 +20,8 @@ import { PermissionsBitField } from "discord.js";
 // guildId -> {
 //   client, guildId, channelId, messageId, creatorId, endsAtMs, timeout,
 //   entrants:Set<string>,
-//   entrantReactionCounts: Map<string, number>
+//   entrantReactionCounts: Map<string, number>,
+//   maxEntrants?: number
 // }
 const activeByGuild = new Map();
 
@@ -71,6 +72,22 @@ function camelizeIfNeeded(name) {
     .join("");
 }
 
+function humanDuration(ms) {
+  const totalSeconds = Math.round(ms / 1000);
+
+  if (totalSeconds < 60) {
+    return `${totalSeconds} second${totalSeconds === 1 ? "" : "s"}`;
+  }
+
+  const totalMinutes = Math.round(totalSeconds / 60);
+  if (totalMinutes < 60) {
+    return `${totalMinutes} minute${totalMinutes === 1 ? "" : "s"}`;
+  }
+
+  const totalHours = Math.round(totalMinutes / 60);
+  return `${totalHours} hour${totalHours === 1 ? "" : "s"}`;
+}
+
 async function safeFetchReaction(reaction) {
   try {
     if (reaction?.partial && typeof reaction.fetch === "function") {
@@ -108,6 +125,12 @@ function installReactionHooks(client) {
       const prev = counts.get(user.id) ?? 0;
       counts.set(user.id, prev + 1);
       state.entrants.add(user.id);
+
+      // If we hit max unique entrants, end early
+      if (state.maxEntrants && state.entrants.size >= state.maxEntrants) {
+        try { clearTimeout(state.timeout); } catch {}
+        await finalizeContest(msg.guildId, "max");
+      }
     } catch (e) {
       console.warn("messageReactionAdd handler failed:", e);
     }
@@ -167,7 +190,9 @@ async function finalizeContest(guildId, reason = "timer") {
   const total = nameList.length;
 
   const elapsedNote =
-    reason === "close"
+    reason === "max"
+      ? "Closed early (max entrants reached)."
+      : reason === "close"
       ? "Closed early."
       : reason === "cancel"
       ? "Cancelled."
@@ -198,12 +223,25 @@ export function registerContests(register) {
 
       installReactionHooks(message.client);
 
-      const ms = parseDurationToMs(rest.trim());
+      const raw = rest.trim();
+      const parts = raw.split(/\s+/).filter(Boolean);
+      const timeRaw = parts[0] || "";
+      const maxRaw = parts[1]; // optional
+
+      const ms = parseDurationToMs(timeRaw);
       if (!ms) {
-        await message.reply(
-          "Invalid time. Examples: `30sec`, `5min`, `1hour`."
-        );
+        await message.reply("Invalid time. Examples: `30sec`, `5min`, `1hour`.");
         return;
+      }
+
+      let maxEntrants = null;
+      if (maxRaw != null) {
+        const n = Number(maxRaw);
+        if (!Number.isInteger(n) || n <= 0 || n > 1000) {
+          await message.reply("Invalid max entrants. Usage: `!contest <time> [max]` (example: `!contest 2s 10`)");
+          return;
+        }
+        maxEntrants = n;
       }
 
       const MAX_MS = 24 * 60 * 60_000;
@@ -223,13 +261,13 @@ export function registerContests(register) {
         endsAtMs,
         timeout: null,
         entrants: new Set(),
-        entrantReactionCounts: new Map()
+        entrantReactionCounts: new Map(),
+        maxEntrants,
       });
 
+      const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
       const contestMsg = await message.channel.send(
-        `React to this message to enter a contest! The list will be generated in **${fmtTime(
-          rest
-        )}**...`
+        `React to this message to enter a contest! The list will be generated in **${humanDuration(ms)}**...${maxNote}`
       );
 
       try {
@@ -247,7 +285,7 @@ export function registerContests(register) {
         state.timeout = timeout;
       }
     },
-    "!conteststart <time> — starts a reaction contest",
+    "!conteststart <time> [quota] — starts a reaction contest",
     { aliases: ["!contest"] }
   );
 
