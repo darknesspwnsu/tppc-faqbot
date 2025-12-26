@@ -26,6 +26,7 @@ import { createWikiService } from "./wiki.js";
 import { registerCalculator } from "./calculator.js";
 import { registerContests } from "./contests.js";
 import { registerTrades } from "./trades.js";
+import { registerRarity } from "./rarity.js";
 
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
@@ -125,6 +126,7 @@ export function buildCommandRegistry() {
   if (TRADING_ENABLED_ANYWHERE) {
     registerTrades(register);
   }
+  registerRarity(register);
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
