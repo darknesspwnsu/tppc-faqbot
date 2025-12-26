@@ -96,15 +96,22 @@ export function registerTrades(register) {
         return;
       }
 
-      // !id @user1 @user2 ... (multi-read)
+      // ?id @user1 @user2 ... (multi-read)
       const mentionedUsers = parseMentions(message);
       if (mentionedUsers.length >= 1) {
         const lines = [];
+        const multi = mentionedUsers.length >= 2;
 
         for (const u of mentionedUsers) {
           const saved = await getSavedId({ guildId: message.guild.id, userId: u.id });
-          if (saved == null) continue;
-          lines.push(`${mention(u.id)} : ${saved}`);
+
+          // If only ONE user was tagged and they have no ID, keep old behavior: say nothing.
+          if (saved == null && !multi) continue;
+
+          lines.push(saved == null
+            ? `${mention(u.id)} : no ID set`
+            : `${mention(u.id)} : ${saved}`
+          );
         }
 
         if (lines.length === 0) return;
@@ -198,7 +205,7 @@ export function registerTrades(register) {
   // !ft / !lf
   registerTextCommand("?ft", "ft", "is trading");
   registerTextCommand("?lf", "lf", "is looking for");
-  
+
   // Explicit short-form commands so they show up in !help
   register(
     "?ftadd",
