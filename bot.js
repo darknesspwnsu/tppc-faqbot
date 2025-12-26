@@ -2,11 +2,26 @@ import "dotenv/config";
 import process from "node:process";
 import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
+import { initDb } from "./db.js";
 
 function mustEnv(name) {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required env var: ${name}`);
   return v;
+}
+
+async function initDbWithRetry(tries = 15, delayMs = 1000) {
+  for (let i = 1; i <= tries; i++) {
+    try {
+      await initDb();
+      return;
+    } catch (e) {
+      const code = e?.code ? ` (${e.code})` : "";
+      console.error(`[DB] init failed attempt ${i}/${tries}${code}:`, e?.message ?? e);
+      if (i === tries) throw e;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
 }
 
 const TOKEN = mustEnv("DISCORD_TOKEN");
@@ -16,6 +31,22 @@ const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+// Trading / DB-backed profile commands are enabled only for guilds in this allowlist.
+// If empty, trading features are disabled everywhere and we skip DB init entirely.
+const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
+
+if (TRADING_ENABLED_ANYWHERE) {
+  await initDbWithRetry();
+  console.log(`DB ready ✅ (trading enabled for guilds: ${TRADING_GUILD_ALLOWLIST.join(", ")})`);
+} else {
+  console.log("DB disabled — TRADING_GUILD_ALLOWLIST empty (trading commands disabled everywhere).");
+}
 
 function inAllowedChannel(channelId) {
   if (ALLOWED_CHANNEL_IDS.length === 0) return true;

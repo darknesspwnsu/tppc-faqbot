@@ -25,6 +25,7 @@ import { createFaqService } from "./faq.js";
 import { createWikiService } from "./wiki.js";
 import { registerCalculator } from "./calculator.js";
 import { registerContests } from "./contests.js";
+import { registerTrades } from "./trades.js";
 
 // Small helpers used by multiple commands
 function randIntInclusive(min, max) {
@@ -56,6 +57,13 @@ function canReload(message) {
 const AWESOME_CHANNELS = {
   "329934860388925442": ["331114564966154240", "551243336187510784"]
 };
+const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
+
 
 function isAllowedChannel(message, allowlist) {
   if (!message.guild) return true; // DMs allowed by default
@@ -114,6 +122,9 @@ export function buildCommandRegistry() {
   const wiki = createWikiService();
   registerCalculator(register);
   registerContests(register);
+  if (TRADING_ENABLED_ANYWHERE) {
+    registerTrades(register);
+  }
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
