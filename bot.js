@@ -25,6 +25,8 @@ async function initDbWithRetry(tries = 15, delayMs = 1000) {
 }
 
 const TOKEN = mustEnv("DISCORD_TOKEN");
+const ENABLE_FLAREON_COMMANDS =
+  String(process.env.ENABLE_FLAREON_COMMANDS || "").toLowerCase() === "true";
 
 // Optional: restrict to certain channels. If empty, bot works anywhere it can see.
 const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
@@ -78,6 +80,9 @@ client.once(Events.ClientReady, () => {
       : "Allowed channels: (all visible channels)"
   );
   console.log(`Loaded commands: ${commands.list().join(", ")}`);
+  console.log(
+    `Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`
+  );
 });
 
 client.on("messageCreate", async (message) => {
@@ -87,7 +92,14 @@ client.on("messageCreate", async (message) => {
     if (!inAllowedChannel(message.channelId)) return;
 
     const content = (message.content ?? "").trim();
-    if (!(content.startsWith("!") || content.startsWith("?"))) return;
+    const isBang = content.startsWith("!");
+    const isQuestion = content.startsWith("?");
+
+    if (!isBang && !isQuestion) return;
+
+    // Gate experimental ? commands
+    if (isQuestion && !ENABLE_FLAREON_COMMANDS) return;
+
 
     // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");
