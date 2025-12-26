@@ -349,23 +349,25 @@ export function buildCommandRegistry() {
     const isAdmin =
       message.member?.permissions?.has("Administrator") ||
       message.member?.permissions?.has("ManageGuild");
-
-    const lines = [];
-
-    for (const { help, admin, canonical } of registry.values()) {
-      if (!canonical) continue; // hide aliases
-      if (!help) continue;
-      if (admin) continue; // hide admin commands
-      lines.push(help);
+  
+    const grouped = {};
+  
+    for (const { help, admin, canonical, category } of registry.values()) {
+      if (!canonical || !help) continue;
+      if (admin) continue;
+  
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(help);
     }
-
-    if (lines.length === 0) return;
-
-    await message.reply(
-      "**Available commands:**\n" +
-      lines.sort().map(l => `• ${l}`).join("\n")
-    );
-  }, "!help — shows this help message", { aliases: ["!helpme"]});
+  
+    const lines = Object.entries(grouped)
+      .map(([cat, cmds]) => `**${cat}**\n• ${cmds.sort().join("\n• ")}`)
+      .join("\n\n");
+  
+    if (!lines) return;
+  
+    await message.reply(`**Available commands:**\n${lines}`);
+  }, "!help — shows this help message", { aliases: ["!helpme"] });
 
   // Local-title-based wiki lookup (Cloudflare-proof)
   register("!wiki", async ({ message, rest }) => {
