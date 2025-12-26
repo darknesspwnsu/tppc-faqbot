@@ -443,9 +443,9 @@ export function buildCommandRegistry() {
   }, "!rules <discord/rpg/forums> — returns rules link(s)");
   
   // !boxorganizer
-  register("!boxorganizer", async ({ message }) => {
+  register("!organizer", async ({ message }) => {
     await message.reply("https://coldsp33d.github.io/box_organizer");
-  }, "!boxorganizer — returns the organizer page link", { aliases: ["!organizer"]});
+  }, "!organizer — returns the organizer page link", { aliases: ["!boxorganizer"]});
 
     // !tools
   register("!tools", async ({ message }) => {
