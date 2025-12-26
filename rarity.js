@@ -63,6 +63,69 @@ function fetchText(url) {
   });
 }
 
+function parseLastUpdatedTextEastern(text) {
+  // Accept:
+  // "MM-DD-YYYY HH:mm"
+  // "MM-DD-YYYY HH:mm EST"
+  // "MM-DD-YYYY HH:mm EDT"
+  if (!text) return null;
+
+  const s = String(text).trim();
+
+  const m = s.match(
+    /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})(?:\s+(EST|EDT))?$/i
+  );
+  if (!m) return null;
+
+  const mm = Number(m[1]);
+  const dd = Number(m[2]);
+  const yyyy = Number(m[3]);
+  const hh = Number(m[4]);
+  const min = Number(m[5]);
+  const tz = (m[6] || "EST").toUpperCase(); // default to EST if missing
+
+  if (
+    !Number.isFinite(mm) || mm < 1 || mm > 12 ||
+    !Number.isFinite(dd) || dd < 1 || dd > 31 ||
+    !Number.isFinite(yyyy) ||
+    !Number.isFinite(hh) || hh < 0 || hh > 23 ||
+    !Number.isFinite(min) || min < 0 || min > 59
+  ) return null;
+
+  // Convert Eastern -> UTC by offset.
+  // EST = UTC-5, EDT = UTC-4
+  const offsetHours = tz === "EDT" ? 4 : 5;
+
+  const utcMs = Date.UTC(yyyy, mm - 1, dd, hh + offsetHours, min, 0);
+  return new Date(utcMs);
+}
+
+function formatDurationAgo(fromMs, nowMs = Date.now()) {
+  let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
+
+  const days = Math.floor(diff / 86400);
+  diff %= 86400;
+
+  const hours = Math.floor(diff / 3600);
+  diff %= 3600;
+
+  const minutes = Math.floor(diff / 60);
+  const seconds = diff % 60;
+
+  const parts = [];
+
+  if (days) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
+  if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
+  if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
+
+  // ALWAYS include seconds
+  parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
+
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return parts.join(" and ");
+  return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
+}
+
 function stripDiacritics(s) {
   // NFKD splits letters + accents; remove accent marks.
   return String(s).normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
@@ -337,8 +400,11 @@ export function registerRarity(register) {
         return;
       }
 
-      const updatedUnix = meta?.generatedAt ? Math.floor(meta.generatedAt / 1000) : null;
-      const updatedLine = updatedUnix ? `Updated <t:${updatedUnix}:R>.` : "";
+      const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
+
+      const updatedLine = updatedDate
+        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        : "";
 
       await message.channel.send({
         embeds: [
