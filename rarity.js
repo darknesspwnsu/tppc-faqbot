@@ -259,8 +259,9 @@ function diceCoeff(a, b) {
 
 function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
   if (!normIndex) return [];
-  const q = normalizeKey(queryRaw);
-  if (!q) return [];
+
+  const qKeys = normalizeQueryVariants(queryRaw); // expands g./s./d. forms too
+  if (!qKeys.length) return [];
 
   const pref = queryVariantPrefix(queryRaw); // "" | "shiny" | "dark" | "golden"
 
@@ -276,11 +277,15 @@ function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
       }
     }
 
-    // Guardrail: avoid far-off matches with wildly different lengths.
-    if (Math.abs(nk.length - q.length) > SUGGEST_MAX_LEN_DIFF) continue;
+    // Score = best Dice coefficient among all candidate normalized queries
+    let best = 0;
+    for (const q of qKeys) {
+      if (Math.abs(nk.length - q.length) > SUGGEST_MAX_LEN_DIFF) continue;
+      const s = diceCoeff(q, nk);
+      if (s > best) best = s;
+    }
 
-    const score = diceCoeff(q, nk);
-    if (score >= SUGGEST_MIN_SCORE) scored.push([score, entry.name]);
+    if (best >= SUGGEST_MIN_SCORE) scored.push([best, entry.name]);
   }
 
   scored.sort((a, b) => b[0] - a[0]);
@@ -311,6 +316,47 @@ function findEntry({ lowerIndex, normIndex }, qRaw) {
   }
 
   return null;
+}
+
+function prettyVariantGuess(qRaw) {
+  const q = String(qRaw ?? "").trim();
+  if (!q) return null;
+
+  // Handle dot prefixes: g.sneasel (hisui) -> GoldenSneasel (hisui)
+  const mDot = q.match(/^([sdg])\.(.+)$/i);
+  if (mDot) {
+    const letter = mDot[1].toLowerCase();
+    const rest = mDot[2].trim();
+    const prefix = letter === "s" ? "Shiny" : letter === "d" ? "Dark" : "Golden";
+    return prefix + rest;
+  }
+
+  // Handle spaced prefixes: "g sneasel (hisui)" -> "Golden sneasel (hisui)"
+  const parts = q.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2 && ["s", "d", "g"].includes(parts[0].toLowerCase())) {
+    const letter = parts[0].toLowerCase();
+    const rest = parts.slice(1).join(" ");
+    const prefix = letter === "s" ? "Shiny" : letter === "d" ? "Dark" : "Golden";
+    return `${prefix} ${rest}`;
+  }
+
+  return q;
+}
+
+// Merge suggestions from multiple sources, dedupe case-insensitively, keep order.
+function mergeSuggestions(...lists) {
+  const out = [];
+  const seen = new Set();
+  for (const list of lists) {
+    for (const s of list || []) {
+      const k = String(s).toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(s);
+      if (out.length >= 5) return out;
+    }
+  }
+  return out;
 }
 
 /* --------------------------------- loading -------------------------------- */
@@ -510,22 +556,44 @@ export function registerLevel4Rarity(register) {
   }
 
   register(
-    "!rarity4",
+    "!l4",
     async ({ message, rest }) => {
       const qRaw = String(rest ?? "").trim();
       if (!qRaw) return;
 
+      // Ensure both datasets are loaded:
+      // - L4 is for display
+      // - general rarity is for "does this key exist?" + richer suggestions (forms)
+      if (!rarity4Norm) await refreshL4();
+      if (!rarityNorm) await refresh();
+
       const r = findEntry({ lowerIndex: rarity4, normIndex: rarity4Norm }, qRaw);
 
       if (!r) {
-        const suggestions = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
-        if (suggestions.length === 0) return;
+        // If general rarity recognizes this exact/canonical key, then this is a "valid mon, no L4 data" case.
+        const generalHit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
+        if (generalHit) {
+          await message.reply(`No Level 4 rarity data found for \`${generalHit.name}\`.`);
+          return;
+        }
 
-        await message.reply(
-          `No exact match for \`${qRaw}\`.\nDid you mean: ${suggestions
-            .map((s) => `\`${s}\``)
-            .join(", ")} ?`
-        );
+        // Otherwise, treat as typo/unknown: offer "did you mean" from BOTH sources.
+        const sL4 = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
+        const sGen = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
+        const merged = mergeSuggestions(sL4, sGen);
+
+        if (merged.length) {
+          await message.reply(
+            `No exact match for \`${qRaw}\`.\nDid you mean: ${merged
+              .map((s) => `\`${s}\``)
+              .join(", ")} ?`
+          );
+          return;
+        }
+
+        // No suggestions anywhere
+        const guess = prettyVariantGuess(qRaw);
+        await message.reply(`No exact match for \`${guess ?? qRaw}\`.`);
         return;
       }
 
@@ -537,7 +605,7 @@ export function registerLevel4Rarity(register) {
       await message.channel.send({
         embeds: [
           {
-            title: r.name,
+            title: `${r.name} - Level 4`,
             description: updatedLine,
             color: 0xed8b2d,
             fields: [
@@ -552,8 +620,8 @@ export function registerLevel4Rarity(register) {
         ]
       });
     },
-    "!rarity4 <pokemon> — shows level 4 rarity statistics",
-    { aliases: ["!l4"] }
+    "!l4 <pokemon> — shows level 4 rarity statistics",
+    { aliases: ["!rarity4", "!l4rarity", "!rarityl4"] }
   );
 
   register(
