@@ -21,7 +21,6 @@
 
 import { registerContests } from "./contests.js";
 import { registerTrades } from "./trades.js";
-import { registerRarity, registerLevel4Rarity } from "./rarity.js";
 import { registerGames } from "./games/games.js";
 
 import { registerInfoCommands } from "./faq.js";
@@ -37,13 +36,8 @@ const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
 
 const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
-const RARITY_ENABLED_ANYWHERE = RARITY_GUILD_ALLOWLIST.length > 0;
 
 /* -------------------------------- registry -------------------------------- */
 
@@ -56,12 +50,12 @@ export function buildCommandRegistry() {
       handler,
       help,
       admin: Boolean(opts.admin),
-      canonical: true
+      canonical: true,
+      category: opts.category || "Other"
     };
 
     registry.set(name.toLowerCase(), entry);
 
-    // Register aliases (if any)
     if (Array.isArray(opts.aliases)) {
       for (const alias of opts.aliases) {
         registry.set(alias.toLowerCase(), {
@@ -72,57 +66,73 @@ export function buildCommandRegistry() {
     }
   }
 
+  function withCategory(baseRegister, category) {
+    return (name, handler, help = "", opts = {}) => {
+      // Allow per-command override if you ever want it
+      const merged = { ...opts };
+      if (!merged.category) merged.category = category;
+      return baseRegister(name, handler, help, merged);
+    };
+  }
+
   /* ------------------------------ Module wiring ------------------------------ */
-
-  // Core / fun / contests (also contains: ?roll, ?choose, ?elim, !coinflip, !awesome per your refactor)
-  registerContests(register);
-
-  // FAQ / Wiki / NG / Rules / Glossary (moved into faq.js)
-  registerInfoCommands(register);
-
-  // Tools hub + organizer link + calculator (!calc) (collated in tools.js)
-  registerTools(register);
-
-  // Toybox fun commands (e.g. !rig)
-  registerToybox(register);
 
   // Trading lists + IDs (?ft/?lf/?id etc.) behind allowlist
   if (TRADING_ENABLED_ANYWHERE) {
-    registerTrades(register);
+    registerTrades(withCategory(register, "Trading"));
   }
 
-  // Rarity commands behind allowlist (but L4 is available everywhere)
-  if (RARITY_ENABLED_ANYWHERE) {
-    registerRarity(register);
-  }
-  registerLevel4Rarity(register);
+  // Tools hub + organizer link + calculator (!calc) (collated in tools.js)
+  registerTools(withCategory(register, "Tools"));
+
+  // FAQ / Wiki / NG / Rules / Glossary (moved into faq.js)
+  registerInfoCommands(withCategory(register, "Info"));
+
+  // Core / fun / contests (also contains: ?roll, ?choose, ?elim, !coinflip, !awesome per your refactor)
+  registerContests(withCategory(register, "Contests"));
 
   // Games registry (exploding voltorbs etc.)
-  registerGames(register);
+  registerGames(withCategory(register, "Games"));
+
+  // Toybox fun commands (e.g. !rig)
+  registerToybox(withCategory(register, "Fun"));
 
   /* ------------------------------ Local commands ----------------------------- */
 
-  register(
-    "!help",
-    async ({ message }) => {
-      const lines = [];
+  register("!help", async ({ message }) => {
+    const byCat = new Map();      // category -> [help lines]
+    const catOrder = [];         // categories in first-seen order
 
-      for (const { help, admin, canonical } of registry.values()) {
-        if (!canonical) continue; // hide aliases
-        if (!help) continue;
-        if (admin) continue; // hide admin commands
-        lines.push(help);
+    for (const { help, admin, canonical, category } of registry.values()) {
+      if (!canonical) continue;
+      if (!help) continue;
+      if (admin) continue;
+
+      const cat = category || "Other";
+
+      if (!byCat.has(cat)) {
+        byCat.set(cat, []);
+        catOrder.push(cat); // 👈 preserve registration order
       }
 
-      if (lines.length === 0) return;
+      byCat.get(cat).push(help);
+    }
 
-      await message.reply(
-        "**Available commands:**\n" + lines.sort().map((l) => `• ${l}`).join("\n")
+    if (catOrder.length === 0) return;
+
+    const sections = [];
+    for (const cat of catOrder) {
+      const lines = byCat.get(cat);
+      if (!lines || lines.length === 0) continue;
+
+      sections.push(
+        `**${cat}**\n` +
+        lines.sort().map((l) => `• ${l}`).join("\n")
       );
-    },
-    "!help — shows this help message",
-    { aliases: ["!helpme"] }
-  );
+    }
+
+    await message.reply(sections.join("\n\n"));
+  }, "!help — shows this help message", { aliases: ["!helpme"], category: "Info" });
 
   /* ------------------------------ Public API ----------------------------- */
 
