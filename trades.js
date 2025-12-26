@@ -64,9 +64,10 @@ export function registerTrades(register) {
       const raw = normalizeCommandArg(rest);
       const lower = raw.toLowerCase();
 
-      // !id del (silent)
+      // ?id del
       if (lower === "del") {
         await deleteSavedId({ guildId: message.guild.id, userId: message.author.id });
+        await message.reply("✅ Saved ID cleared.");
         return;
       }
 
@@ -91,7 +92,8 @@ export function registerTrades(register) {
           userId: message.author.id,
           savedId: n
         });
-        return; // silent
+        await message.reply(`✅ Saved your ID as **${n}**. Use \`?id\` to view it.`);
+        return;
       }
 
       // !id @user1 @user2 ... (multi-read)
@@ -121,10 +123,16 @@ export function registerTrades(register) {
         return;
       }
 
+      // If they typed a bare number like "?id 3451651", show correct usage
+      if (/^\d+$/.test(raw)) {
+        await message.reply("ℹ️ To save an ID, use: `?id add <number>` (example: `?id add 3451651`)");
+        return;
+      }
+
       // Anything else: do nothing (prevents accidental overwrites)
       return;
     },
-    "?id add <number> | !id del | !id [@user...] — saves, shows, deletes, or looks up IDs"
+    "?id add <number> | ?id del | ?id [@user...] — saves, shows, deletes, or looks up IDs"
   );
 
   // Shared handler for !ft and !lf
@@ -190,4 +198,63 @@ export function registerTrades(register) {
   // !ft / !lf
   registerTextCommand("?ft", "ft", "is trading");
   registerTextCommand("?lf", "lf", "is looking for");
+  
+  // Explicit short-form commands so they show up in !help
+  register(
+    "?ftadd",
+    async ({ message, rest }) => {
+      if (!message.guild) return;
+      if (!tradingAllowedInGuild(message)) return;
+
+      const text = stripLeadingMentions(rest).trim();
+      if (!text) {
+        await message.reply("Usage: `?ftadd <text>`");
+        return;
+      }
+      await setUserText({ guildId: message.guild.id, userId: message.author.id, kind: "ft", text });
+      await message.reply("✅ Trading text saved. Use `?ft` to view it.");
+    },
+    "?ftadd <text> — shortcut for `?ft add <text>`"
+  );
+
+  register(
+    "?ftdel",
+    async ({ message }) => {
+      if (!message.guild) return;
+      if (!tradingAllowedInGuild(message)) return;
+
+      await deleteUserText({ guildId: message.guild.id, userId: message.author.id, kind: "ft" });
+      await message.reply("✅ Trading text cleared.");
+    },
+    "?ftdel — shortcut for `?ft del`"
+  );
+
+  register(
+    "?lfadd",
+    async ({ message, rest }) => {
+      if (!message.guild) return;
+      if (!tradingAllowedInGuild(message)) return;
+
+      const text = stripLeadingMentions(rest).trim();
+      if (!text) {
+        await message.reply("Usage: `?lfadd <text>`");
+        return;
+      }
+      await setUserText({ guildId: message.guild.id, userId: message.author.id, kind: "lf", text });
+      await message.reply("✅ Looking-for text saved. Use `?lf` to view it.");
+    },
+    "?lfadd <text> — shortcut for `?lf add <text>`"
+  );
+
+  register(
+    "?lfdel",
+    async ({ message }) => {
+      if (!message.guild) return;
+      if (!tradingAllowedInGuild(message)) return;
+
+      await deleteUserText({ guildId: message.guild.id, userId: message.author.id, kind: "lf" });
+      await message.reply("✅ Looking-for text cleared.");
+    },
+    "?lfdel — shortcut for `?lf del`"
+  );
 }
