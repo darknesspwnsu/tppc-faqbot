@@ -697,9 +697,6 @@ export function registerLevel4Rarity(register) {
   register(
     "!rc",
     async ({ message, rest }) => {
-      // Keep same allowlist behavior as ?rarity (since this uses main rarity data)
-      if (!isGuildAllowed(message)) return;
-
       const [q1, q2] = parseTwoArgs(rest);
       if (!q1 || !q2) {
         await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
