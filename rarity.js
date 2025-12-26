@@ -1,22 +1,37 @@
 // rarity.js
 //
-// !rarity <pokemon> — shows rarity counts from a preprocessed JSON.
-// Data source is your GitHub Pages JSON that is refreshed daily by GitHub Actions.
+// ?rarity <pokemon> — shows rarity counts from a preprocessed JSON (gated by RARITY_GUILD_ALLOWLIST).
+// !rarity4 / !l4 <pokemon> — shows LEVEL 4 rarity counts from l4_rarity.json (available everywhere).
+//
+// Data source(s) are GitHub Pages JSON refreshed by GitHub Actions.
 
 import fs from "node:fs";
 import path from "node:path";
 import https from "node:https";
 import http from "node:http";
 
+/* ----------------------------- caches (main) ----------------------------- */
 let rarity = null;      // { lowerName: entry }
 let rarityNorm = null;  // { normalizedKey: entry }
 let meta = null;
 
-// ✅ Default to your live, auto-refreshed GitHub Pages JSON:
+/* ----------------------------- caches (level4) ---------------------------- */
+let rarity4 = null;      // { lowerName: entry }
+let rarity4Norm = null;  // { normalizedKey: entry }
+let meta4 = null;
+
+/* --------------------------------- config -------------------------------- */
+
+// ✅ Default to our live, auto-refreshed GitHub Pages JSON:
 const DEFAULT_URL = "https://darknesspwnsu.github.io/tppc-data/data/rarity.json";
+const DEFAULT_L4_URL = "https://darknesspwnsu.github.io/tppc-data/data/l4_rarity.json";
 
 const FILE = process.env.RARITY_JSON_FILE || "data/rarity.json";
 const URL = process.env.RARITY_JSON_URL || DEFAULT_URL;
+
+const L4_FILE = process.env.RARITY4_JSON_FILE || "data/l4_rarity.json";
+const L4_URL = process.env.RARITY4_JSON_URL || DEFAULT_L4_URL;
+
 const DAILY_REFRESH_ET = process.env.RARITY_DAILY_REFRESH_ET || "07:10";
 
 // How often the bot checks for updates (keep modest; 5–10 min is perfect)
@@ -25,6 +40,8 @@ const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
 // Suggestion tuning (env override)
 const SUGGEST_MIN_SCORE = Number(process.env.RARITY_SUGGEST_MIN_SCORE ?? 0.55);
 const SUGGEST_MAX_LEN_DIFF = Number(process.env.RARITY_SUGGEST_MAX_LEN_DIFF ?? 12);
+
+// Rarity allowlist (ONLY applies to ?rarity / ?rarityreload)
 const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
   .split(",")
   .map((s) => s.trim())
@@ -36,12 +53,13 @@ function isGuildAllowed(message) {
   // If no allowlist is set, treat it as disabled.
   if (!RARITY_ENABLED_ANYWHERE) return false;
 
-  // Don’t respond in DMs for rarity (you can change this if you want)
   const gid = message?.guild?.id;
   if (!gid) return false;
 
   return RARITY_GUILD_ALLOWLIST.includes(gid);
 }
+
+/* --------------------------------- fetch --------------------------------- */
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -63,6 +81,8 @@ function fetchText(url) {
   });
 }
 
+/* ------------------------- time: TPPC banner -> Date ------------------------ */
+
 function parseLastUpdatedTextEastern(text) {
   // Accept:
   // "MM-DD-YYYY HH:mm"
@@ -71,7 +91,6 @@ function parseLastUpdatedTextEastern(text) {
   if (!text) return null;
 
   const s = String(text).trim();
-
   const m = s.match(
     /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})(?:\s+(EST|EDT))?$/i
   );
@@ -125,6 +144,8 @@ function formatDurationAgo(fromMs, nowMs = Date.now()) {
   if (parts.length === 2) return parts.join(" and ");
   return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
 }
+
+/* ------------------------------ normalization ------------------------------ */
 
 function stripDiacritics(s) {
   // NFKD splits letters + accents; remove accent marks.
@@ -186,8 +207,10 @@ function queryVariantPrefix(qRaw) {
   return "";
 }
 
-function buildIndex(json) {
-  meta = json.meta || null;
+/* ---------------------------- indexing + search ---------------------------- */
+
+function buildIndexGeneric(json) {
+  const metaOut = json.meta || null;
 
   const out = {};
   const outNorm = {};
@@ -199,8 +222,7 @@ function buildIndex(json) {
     outNorm[normalizeKey(k)] = entry;
   }
 
-  rarity = out;
-  rarityNorm = outNorm;
+  return { meta: metaOut, lower: out, norm: outNorm };
 }
 
 function bigrams(s) {
@@ -235,21 +257,20 @@ function diceCoeff(a, b) {
   return (2 * inter) / (sizeA + sizeB);
 }
 
-function getSuggestions(queryRaw, limit = 5) {
-  if (!rarityNorm) return [];
+function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
+  if (!normIndex) return [];
   const q = normalizeKey(queryRaw);
   if (!q) return [];
 
   const pref = queryVariantPrefix(queryRaw); // "" | "shiny" | "dark" | "golden"
 
   const scored = [];
-  for (const [nk, entry] of Object.entries(rarityNorm)) {
+  for (const [nk, entry] of Object.entries(normIndex)) {
     // If user clearly asked for Golden/Dark/Shiny, keep suggestions in that bucket.
     if (pref) {
       if (!nk.startsWith(pref)) continue;
     } else {
       // No variant requested: keep suggestions to BASE only
-      // (i.e., exclude Shiny*, Dark*, Golden* entries)
       if (nk.startsWith("shiny") || nk.startsWith("dark") || nk.startsWith("golden")) {
         continue;
       }
@@ -275,34 +296,75 @@ function getSuggestions(queryRaw, limit = 5) {
   return out;
 }
 
-async function loadFromUrl() {
-  const raw = await fetchText(URL);
-  const json = JSON.parse(raw);
-  buildIndex(json);
-  console.log(`[RARITY] Loaded ${Object.keys(rarity).length} entries from URL`);
+function findEntry({ lowerIndex, normIndex }, qRaw) {
+  if (!qRaw) return null;
+
+  // exact case-insensitive key hit
+  let r = lowerIndex?.[String(qRaw).toLowerCase()];
+  if (r) return r;
+
+  // normalized tries (variant-aware)
+  const tries = normalizeQueryVariants(qRaw);
+  for (const t of tries) {
+    r = normIndex?.[t];
+    if (r) return r;
+  }
+
+  return null;
 }
 
-function loadFromFile() {
-  const raw = fs.readFileSync(path.resolve(FILE), "utf8");
+/* --------------------------------- loading -------------------------------- */
+
+async function loadIndexFromUrl(url) {
+  const raw = await fetchText(url);
   const json = JSON.parse(raw);
-  buildIndex(json);
-  console.log(`[RARITY] Loaded ${Object.keys(rarity).length} entries from file`);
+  return buildIndexGeneric(json);
 }
+
+function loadIndexFromFile(filePath) {
+  const raw = fs.readFileSync(path.resolve(filePath), "utf8");
+  const json = JSON.parse(raw);
+  return buildIndexGeneric(json);
+}
+
+/* -------------------------- main rarity: refreshers ------------------------- */
 
 async function refresh() {
   try {
-    if (URL) await loadFromUrl();
-    else loadFromFile();
+    const idx = URL ? await loadIndexFromUrl(URL) : loadIndexFromFile(FILE);
+    meta = idx.meta;
+    rarity = idx.lower;
+    rarityNorm = idx.norm;
+    console.log(`[RARITY] Loaded ${Object.keys(rarity).length} entries`);
   } catch (e) {
     console.warn("[RARITY] Refresh failed:", e?.message ?? e);
     // Keep last-known-good cache in memory
   }
 }
 
+/* -------------------------- level4 rarity: refreshers ------------------------ */
+
+async function refreshL4() {
+  try {
+    const idx = L4_URL ? await loadIndexFromUrl(L4_URL) : loadIndexFromFile(L4_FILE);
+    meta4 = idx.meta;
+    rarity4 = idx.lower;
+    rarity4Norm = idx.norm;
+    console.log(`[RARITY4] Loaded ${Object.keys(rarity4).length} entries`);
+  } catch (e) {
+    console.warn("[RARITY4] Refresh failed:", e?.message ?? e);
+    // Keep last-known-good cache in memory
+  }
+}
+
+/* --------------------------------- format --------------------------------- */
+
 function fmt(n) {
   const x = Number(n);
   return Number.isFinite(x) ? x.toLocaleString("en-US") : "0";
 }
+
+/* ------------------------ daily refresh scheduling (ET) --------------------- */
 
 function parseHHMM(hhmm) {
   const m = String(hhmm).trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
@@ -326,16 +388,14 @@ function nextRunInEastern(hhmm) {
     day: "2-digit"
   }).formatToParts(now);
 
-  const get = (type) => parts.find(p => p.type === type)?.value;
+  const get = (type) => parts.find((p) => p.type === type)?.value;
   const y = Number(get("year"));
   const mo = Number(get("month"));
   const d = Number(get("day"));
 
   // Create a Date for today's target time *as Eastern*, by formatting a UTC guess and adjusting.
-  // Approach: build a UTC Date for y/mo/d hour:minute, then interpret it in Eastern and correct.
   const candidateUtc = new Date(Date.UTC(y, mo - 1, d, hour, minute, 0));
 
-  // If candidate is already past in Eastern time, schedule for tomorrow (Eastern calendar day).
   const nowInET = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(now));
   const candInET = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(candidateUtc));
 
@@ -346,29 +406,34 @@ function nextRunInEastern(hhmm) {
   return runUtc;
 }
 
-function scheduleDailyRefresh(refreshFn) {
+function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   const runAt = nextRunInEastern(DAILY_REFRESH_ET);
   let delay = runAt.getTime() - Date.now();
   if (!Number.isFinite(delay) || delay < 0) delay = 60_000;
 
-  console.log(`[RARITY] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(delay / 1000)}s)`);
+  console.log(
+    `[${label}] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(delay / 1000)}s)`
+  );
 
   setTimeout(async function tick() {
     await refreshFn();
 
-    // Schedule the next day
     const next = nextRunInEastern(DAILY_REFRESH_ET);
     let nextDelay = next.getTime() - Date.now();
     if (!Number.isFinite(nextDelay) || nextDelay < 0) nextDelay = 24 * 60 * 60_000;
 
-    console.log(`[RARITY] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(nextDelay / 1000)}s)`);
+    console.log(
+      `[${label}] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(nextDelay / 1000)}s)`
+    );
     setTimeout(tick, nextDelay);
   }, delay);
 }
 
+/* --------------------------------- exports -------------------------------- */
+
 export function registerRarity(register) {
-  refresh(); // load once at startup
-  scheduleDailyRefresh(refresh); // then refresh once per day around ET update time
+  refresh();                 // load once at startup
+  scheduleDailyRefresh(refresh, "RARITY"); // refresh once per day around ET update time
 
   register(
     "?rarity",
@@ -378,18 +443,10 @@ export function registerRarity(register) {
       const qRaw = String(rest ?? "").trim();
       if (!qRaw) return;
 
-      let r = rarity?.[qRaw.toLowerCase()];
+      const r = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
 
       if (!r) {
-        const tries = normalizeQueryVariants(qRaw);
-        for (const t of tries) {
-          r = rarityNorm?.[t];
-          if (r) break;
-        }
-      }
-
-      if (!r) {
-        const suggestions = getSuggestions(qRaw, 5);
+        const suggestions = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
         if (suggestions.length === 0) return;
 
         await message.reply(
@@ -401,7 +458,6 @@ export function registerRarity(register) {
       }
 
       const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
-
       const updatedLine = updatedDate
         ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
         : "";
@@ -440,6 +496,78 @@ export function registerRarity(register) {
       await message.reply("Rarity cache refreshed ✅");
     },
     "?rarityreload — refreshes rarity cache (admin)",
+    { admin: true }
+  );
+}
+
+export function registerLevel4Rarity(register) {
+  // Available out-of-the-box everywhere.
+  refreshL4(); // load once at startup
+
+  // Optional periodic refresh (kept modest). If you prefer only manual reload, delete this block.
+  if (Number.isFinite(REFRESH_MS) && REFRESH_MS > 0) {
+    setInterval(refreshL4, REFRESH_MS).unref?.();
+  }
+
+  register(
+    "!rarity4",
+    async ({ message, rest }) => {
+      const qRaw = String(rest ?? "").trim();
+      if (!qRaw) return;
+
+      const r = findEntry({ lowerIndex: rarity4, normIndex: rarity4Norm }, qRaw);
+
+      if (!r) {
+        const suggestions = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
+        if (suggestions.length === 0) return;
+
+        await message.reply(
+          `No exact match for \`${qRaw}\`.\nDid you mean: ${suggestions
+            .map((s) => `\`${s}\``)
+            .join(", ")} ?`
+        );
+        return;
+      }
+
+      const updatedDate = parseLastUpdatedTextEastern(meta4?.lastUpdatedText);
+      const updatedLine = updatedDate
+        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        : "";
+
+      await message.channel.send({
+        embeds: [
+          {
+            title: r.name,
+            description: updatedLine,
+            color: 0xed8b2d,
+            fields: [
+              { name: "Total", value: fmt(r.total), inline: false },
+              { name: "Male", value: fmt(r.male), inline: true },
+              { name: "Female", value: fmt(r.female), inline: true },
+              { name: "Ungendered", value: fmt(r.ungendered), inline: true },
+              { name: "Genderless", value: fmt(r.genderless), inline: true }
+            ],
+            footer: { text: "Source: forums.tppc.info/showthread.php?t=318183" }
+          }
+        ]
+      });
+    },
+    "!rarity4 <pokemon> — shows level 4 rarity statistics",
+    { aliases: ["!l4"] }
+  );
+
+  register(
+    "!rarity4reload",
+    async ({ message }) => {
+      const isAdmin =
+        message.member?.permissions?.has("Administrator") ||
+        message.member?.permissions?.has("ManageGuild");
+      if (!isAdmin) return;
+
+      await refreshL4();
+      await message.reply("Rarity4 cache refreshed ✅");
+    },
+    "!rarity4reload — refreshes rarity4 cache (admin)",
     { admin: true }
   );
 }
