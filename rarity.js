@@ -359,6 +359,75 @@ function mergeSuggestions(...lists) {
   return out;
 }
 
+function parseTwoArgs(rest) {
+  // Supports:
+  //   !rc a b
+  //   !rc "GoldenSneasel (Hisui)" "ShinySneasel (Hisui)"
+  //   !rc a | b
+  //   !rc a vs b
+  const s = String(rest ?? "").trim();
+  if (!s) return [];
+
+  // Prefer explicit separators first
+  const sepMatch = s.match(/\s*\|\s*|\s+vs\s+/i);
+  if (sepMatch) {
+    const parts = s.split(sepMatch[0]).map((x) => x.trim()).filter(Boolean);
+    return parts.slice(0, 2);
+  }
+
+  // Quote-aware split
+  const out = [];
+  let cur = "";
+  let q = null;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (q) {
+      if (ch === q) {
+        q = null;
+      } else {
+        cur += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      q = ch;
+      continue;
+    }
+
+    if (/\s/.test(ch)) {
+      if (cur) { out.push(cur); cur = ""; }
+      continue;
+    }
+
+    cur += ch;
+  }
+  if (cur) out.push(cur);
+
+  // If user didn’t quote multi-word names, they’ll get >2 tokens — we just take first 2.
+  return out.slice(0, 2);
+}
+
+function fmtDiffCaret(a, b) {
+  const da = Number(a) || 0;
+  const db = Number(b) || 0;
+  const d = db - da;
+
+  if (d === 0) return { sym: "●", text: "±0" };
+
+  return d > 0
+    ? { sym: "▲", text: `+${Math.abs(d).toLocaleString("en-US")}` }
+    : { sym: "▼", text: `-${Math.abs(d).toLocaleString("en-US")}` };
+}
+
+function cmpLine(a, b) {
+  const { sym, text } = fmtDiffCaret(a, b);
+  return `${sym} ${text} (${fmt(a)} vs ${fmt(b)})`;
+}
+
+
 /* --------------------------------- loading -------------------------------- */
 
 async function loadIndexFromUrl(url) {
@@ -550,11 +619,6 @@ export function registerLevel4Rarity(register) {
   // Available out-of-the-box everywhere.
   refreshL4(); // load once at startup
 
-  // Optional periodic refresh (kept modest). If you prefer only manual reload, delete this block.
-  if (Number.isFinite(REFRESH_MS) && REFRESH_MS > 0) {
-    setInterval(refreshL4, REFRESH_MS).unref?.();
-  }
-
   register(
     "!l4",
     async ({ message, rest }) => {
@@ -622,6 +686,77 @@ export function registerLevel4Rarity(register) {
     },
     "!l4 <pokemon> — shows level 4 rarity statistics",
     { aliases: ["!rarity4", "!l4rarity", "!rarityl4"] }
+  );
+
+  register(
+    "!rc",
+    async ({ message, rest }) => {
+      // Keep same allowlist behavior as ?rarity (since this uses main rarity data)
+      if (!isGuildAllowed(message)) return;
+
+      const [q1, q2] = parseTwoArgs(rest);
+      if (!q1 || !q2) {
+        await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
+        return;
+      }
+
+      // Ensure cache is loaded
+      if (!rarityNorm) await refresh();
+
+      const r1 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q1);
+      const r2 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q2);
+
+      // Did-you-mean handling per-side
+      if (!r1 || !r2) {
+        const parts = [];
+
+        if (!r1) {
+          const s1 = getSuggestionsFromIndex(rarityNorm, q1, 5);
+          parts.push(
+            s1.length
+              ? `No exact match for \`${q1}\`. Did you mean: ${s1.map((s) => `\`${s}\``).join(", ")} ?`
+              : `No exact match for \`${q1}\`.`
+          );
+        }
+
+        if (!r2) {
+          const s2 = getSuggestionsFromIndex(rarityNorm, q2, 5);
+          parts.push(
+            s2.length
+              ? `No exact match for \`${q2}\`. Did you mean: ${s2.map((s) => `\`${s}\``).join(", ")} ?`
+              : `No exact match for \`${q2}\`.`
+          );
+        }
+
+        await message.reply(parts.join("\n"));
+        return;
+      }
+
+      const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
+      const updatedLine = updatedDate
+        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        : "";
+
+      await message.channel.send({
+        embeds: [
+          {
+            title: `${r1.name} vs ${r2.name}`,
+            description: updatedLine,
+            color: 0xed8b2d,
+            fields: [
+              { name: "Total", value: cmpLine(r1.total, r2.total), inline: false },
+              { name: "Male", value: cmpLine(r1.male, r2.male), inline: true },
+              { name: "Female", value: cmpLine(r1.female, r2.female), inline: true },
+              { name: "Ungendered", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
+              { name: "Genderless", value: cmpLine(r1.genderless, r2.genderless), inline: true }
+            ],
+            footer: { text: "Source: tppcrpg.net/rarity.html" }
+          }
+        ]
+      });
+    },
+    "!rc <pokemon1> <pokemon2> — compares rarity statistics",
+    { aliases: ["!raritycompare", "!rarityc", "!rcompare", "!rcomp"] }
   );
 
   register(
