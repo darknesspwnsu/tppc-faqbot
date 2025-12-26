@@ -62,8 +62,13 @@ const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
+const RARITY_ENABLED_ANYWHERE = RARITY_GUILD_ALLOWLIST.length > 0;
 
 
 function isAllowedChannel(message, allowlist) {
