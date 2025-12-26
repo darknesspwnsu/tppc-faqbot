@@ -112,17 +112,6 @@ export function buildCommandRegistry() {
 
   const faq = createFaqService();
   const wiki = createWikiService();
-  registerCalculator(register);
-  registerContests(register);
-  if (TRADING_ENABLED_ANYWHERE) registerTrades(register);
-  if (RARITY_ENABLED_ANYWHERE) registerRarity(register);
-  registerLevel4Rarity(register);
-
-  const ngs = loadNgsOnce();
-  const glossary = loadGlossaryOnce();
-
-  const MAX_ROLL_N = Number(process.env.MAX_ROLL_N ?? 50);
-  const MAX_ROLL_M = Number(process.env.MAX_ROLL_M ?? 100000);
 
   function register(name, handler, help = "", opts = {}) {
     const entry = {
@@ -139,6 +128,18 @@ export function buildCommandRegistry() {
       }
     }
   }
+  
+  registerCalculator(register);
+  registerContests(register);
+  if (TRADING_ENABLED_ANYWHERE) registerTrades(register);
+  if (RARITY_ENABLED_ANYWHERE) registerRarity(register);
+  registerLevel4Rarity(register);
+
+  const ngs = loadNgsOnce();
+  const glossary = loadGlossaryOnce();
+
+  const MAX_ROLL_N = Number(process.env.MAX_ROLL_N ?? 50);
+  const MAX_ROLL_M = Number(process.env.MAX_ROLL_M ?? 100000);
 
   /* ------------------ Contest commands ------------------ */
 
