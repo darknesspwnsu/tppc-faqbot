@@ -25,6 +25,23 @@ const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
 // Suggestion tuning (env override)
 const SUGGEST_MIN_SCORE = Number(process.env.RARITY_SUGGEST_MIN_SCORE ?? 0.55);
 const SUGGEST_MAX_LEN_DIFF = Number(process.env.RARITY_SUGGEST_MAX_LEN_DIFF ?? 12);
+const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const RARITY_ENABLED_ANYWHERE = RARITY_GUILD_ALLOWLIST.length > 0;
+
+function isGuildAllowed(message) {
+  // If no allowlist is set, treat it as disabled.
+  if (!RARITY_ENABLED_ANYWHERE) return false;
+
+  // Don’t respond in DMs for rarity (you can change this if you want)
+  const gid = message?.guild?.id;
+  if (!gid) return false;
+
+  return RARITY_GUILD_ALLOWLIST.includes(gid);
+}
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -165,7 +182,15 @@ function getSuggestions(queryRaw, limit = 5) {
   const scored = [];
   for (const [nk, entry] of Object.entries(rarityNorm)) {
     // If user clearly asked for Golden/Dark/Shiny, keep suggestions in that bucket.
-    if (pref && !nk.startsWith(pref)) continue;
+    if (pref) {
+      if (!nk.startsWith(pref)) continue;
+    } else {
+      // No variant requested: keep suggestions to BASE only
+      // (i.e., exclude Shiny*, Dark*, Golden* entries)
+      if (nk.startsWith("shiny") || nk.startsWith("dark") || nk.startsWith("golden")) {
+        continue;
+      }
+    }
 
     // Guardrail: avoid far-off matches with wildly different lengths.
     if (Math.abs(nk.length - q.length) > SUGGEST_MAX_LEN_DIFF) continue;
@@ -283,7 +308,7 @@ export function registerRarity(register) {
   scheduleDailyRefresh(refresh); // then refresh once per day around ET update time
 
   register(
-    "!rarity",
+    "?rarity",
     async ({ message, rest }) => {
       if (!isGuildAllowed(message)) return;
 
@@ -333,11 +358,11 @@ export function registerRarity(register) {
         ]
       });
     },
-    "!rarity <pokemon> — shows rarity statistics"
+    "?rarity <pokemon> — shows rarity statistics"
   );
 
   register(
-    "!rarityreload",
+    "?rarityreload",
     async ({ message }) => {
       if (!isGuildAllowed(message)) return;
       const isAdmin =
@@ -348,7 +373,7 @@ export function registerRarity(register) {
       await refresh();
       await message.reply("Rarity cache refreshed ✅");
     },
-    "!rarityreload — refreshes rarity cache (admin)",
+    "?rarityreload — refreshes rarity cache (admin)",
     { admin: true }
   );
 }

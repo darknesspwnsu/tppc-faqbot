@@ -87,7 +87,7 @@ client.on("messageCreate", async (message) => {
     if (!inAllowedChannel(message.channelId)) return;
 
     const content = (message.content ?? "").trim();
-    if (!content.startsWith("!")) return;
+    if (!(content.startsWith("!") || content.startsWith("?"))) return;
 
     // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");

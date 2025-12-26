@@ -120,6 +120,29 @@ function loadGlossaryOnce() {
   return map;
 }
 
+function parseSecondsToMs(raw) {
+  const s = (raw ?? "").trim().toLowerCase();
+
+  // Only allow whole seconds: 1s .. 30s
+  const m = /^(\d+)\s*s$/.exec(s);
+  if (!m) return { error: "Delay must be specified in seconds, e.g. `2s` (1s–30s)." };
+
+  const seconds = Number(m[1]);
+  if (!Number.isInteger(seconds)) {
+    return { error: "Delay must be a whole number of seconds." };
+  }
+
+  if (seconds < 1) {
+    return { error: "Delay must be at least 1 second." };
+  }
+
+  if (seconds > 30) {
+    return { error: "Delay cannot exceed 30 seconds." };
+  }
+
+  return { ms: seconds * 1000, seconds };
+}
+
 export function buildCommandRegistry() {
   const registry = new Map();
 
@@ -131,7 +154,9 @@ export function buildCommandRegistry() {
   if (TRADING_ENABLED_ANYWHERE) {
     registerTrades(register);
   }
-  registerRarity(register);
+  if (RARITY_ENABLED_ANYWHERE) {
+    registerRarity(register);
+  }
 
   // Load NGs once at startup
   const ngs = loadNgsOnce();
@@ -168,48 +193,103 @@ export function buildCommandRegistry() {
 
   /* ------------------------------ Commands ------------------------------ */
 
-  // ==========================================================================
-  // ====== CURRENTLY COMMENTED OUT SINCE FLAREON STILL HANDLES THESE ====== //
-  // ==========================================================================
-  // register("!roll", async ({ message, rest }) => {
-  //   const arg = rest.trim();
-  //   const m = /^(\d+)d(\d+)$/.exec(arg);
-  //   if (!m) {
-  //     await message.channel.send("Invalid format. Please use a format like `1d100`");
-  //     return;
-  //   }
+  register("?roll", async ({ message, rest }) => {
+    const arg = rest.trim();
+    const m = /^(\d+)d(\d+)$/.exec(arg);
+    if (!m) {
+      await message.channel.send("Invalid format. Please use a format like `1d100`");
+      return;
+    }
 
-  //   const n = Number(m[1]);
-  //   const sides = Number(m[2]);
+    const n = Number(m[1]);
+    const sides = Number(m[2]);
 
-  //   if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
-  //     await message.channel.send("Invalid format. Please use a format like `1d100`");
-  //     return;
-  //   }
+    if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
+      await message.channel.send("Invalid format. Please use a format like `1d100`");
+      return;
+    }
 
-  //   if (n > MAX_ROLL_N) {
-  //     await message.channel.send(`Too many rolls. Max is ${MAX_ROLL_N}.`);
-  //     return;
-  //   }
-  //   if (sides > MAX_ROLL_M) {
-  //     await message.channel.send(`Range too large. Max m is ${MAX_ROLL_M}.`);
-  //     return;
-  //   }
+    if (n > MAX_ROLL_N) {
+      await message.channel.send(`Too many rolls. Max is ${MAX_ROLL_N}.`);
+      return;
+    }
+    if (sides > MAX_ROLL_M) {
+      await message.channel.send(`Range too large. Max m is ${MAX_ROLL_M}.`);
+      return;
+    }
 
-  //   const uid = targetUserId(message);
-  //   const rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
-  //   await message.channel.send(`${mention(uid)} ${rolls.join(", ")}`);
-  // }, "!roll NdM — rolls N numbers from 0..M (example: !roll 1d100)");
+    const uid = targetUserId(message);
+    const rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
+    await message.channel.send(`${mention(uid)} ${rolls.join(", ")}`);
+  }, "?roll NdM — rolls N numbers from 0..M (example: !roll 1d100)");
 
-  // register("!choose", async ({ message, rest }) => {
-  //   const options = rest.trim().split(/\s+/).filter(Boolean);
-  //   if (options.length < 1) {
-  //     await message.channel.send("Usage: `!choose option1 option2 ...`");
-  //     return;
-  //   }
-  //   const pick = options[randIntInclusive(0, options.length - 1)];
-  //   await message.channel.send(pick);
-  // }, "!choose a b c — randomly chooses one option");
+  register("?choose", async ({ message, rest }) => {
+    const options = rest.trim().split(/\s+/).filter(Boolean);
+    if (options.length < 1) {
+      await message.channel.send("Usage: `!choose option1 option2 ...`");
+      return;
+    }
+    const pick = options[randIntInclusive(0, options.length - 1)];
+    await message.channel.send(pick);
+  }, "?choose a b c — randomly chooses one option");
+
+  register(
+    "?elim",
+    async ({ message, rest }) => {
+      if (!message.guild) return;
+
+      const parts = rest.trim().split(/\s+/).filter(Boolean);
+
+      if (parts.length < 3) {
+        await message.reply("Usage: `?elim <seconds>s <item1> <item2> [...]`");
+        return;
+      }
+
+      const delayRaw = parts[0];
+      const parsed = parseSecondsToMs(delayRaw);
+
+      if (parsed.error) {
+        await message.reply(parsed.error);
+        return;
+      }
+
+      const delayMs = parsed.ms;
+      const delaySec = parsed.seconds;
+
+      let remaining = parts.slice(1);
+      if (remaining.length < 2) {
+        await message.reply("You need at least 2 items to run an elimination.");
+        return;
+      }
+
+      await message.channel.send(
+        `Setting up elimination with ${delaySec}s between rounds... are you ready?`
+      );
+
+      remaining = [...remaining];
+
+      const runRound = async () => {
+        if (!message.channel) return;
+
+        if (remaining.length === 1) {
+          await message.channel.send(`${remaining[0]} wins!`);
+          return;
+        }
+
+        const idx = Math.floor(Math.random() * remaining.length);
+        const eliminated = remaining.splice(idx, 1)[0];
+
+        await message.channel.send(
+          `${eliminated} has been eliminated! Remaining: ${remaining.join(", ")}`
+        );
+
+        setTimeout(runRound, delayMs);
+      };
+
+      setTimeout(runRound, delayMs);
+    },
+    "?elim <1–30s> <items...> — randomly eliminates one item per round"
+  );
 
   register("!awesome", async ({ message }) => {
     if (!isAllowedChannel(message, AWESOME_CHANNELS)) {

@@ -56,7 +56,7 @@ function tradingAllowedInGuild(message) {
 export function registerTrades(register) {
   // -------------------- !id --------------------
   register(
-    "!id",
+    "?id",
     async ({ message, rest }) => {
       if (!message.guild) return;
       if (!tradingAllowedInGuild(message)) return;
@@ -124,7 +124,7 @@ export function registerTrades(register) {
       // Anything else: do nothing (prevents accidental overwrites)
       return;
     },
-    "!id add <number> | !id del | !id [@user...] — saves, shows, deletes, or looks up IDs"
+    "?id add <number> | !id del | !id [@user...] — saves, shows, deletes, or looks up IDs"
   );
 
   // Shared handler for !ft and !lf
@@ -148,7 +148,7 @@ export function registerTrades(register) {
         if (lower.startsWith("add")) {
           const after = raw.slice(3); // remove "add"
           const text = stripLeadingMentions(after).trim();
-          if (!text) return; // if they do "!ft add" with nothing, do nothing
+          if (!text) return; // if they do "?ft add" with nothing, do nothing
           await setUserText({ guildId: message.guild.id, userId: message.author.id, kind, text });
           return;
         }
@@ -179,7 +179,7 @@ export function registerTrades(register) {
           return;
         }
 
-        // If they typed something else (like "!ft blah" without add), do nothing
+        // If they typed something else (like "?ft blah" without add), do nothing
         // (keeps behavior tight + avoids accidental saves)
         return;
       },
@@ -188,6 +188,6 @@ export function registerTrades(register) {
   }
 
   // !ft / !lf
-  registerTextCommand("!ft", "ft", "is trading");
-  registerTextCommand("!lf", "lf", "is looking for");
+  registerTextCommand("?ft", "ft", "is trading");
+  registerTextCommand("?lf", "lf", "is looking for");
 }
