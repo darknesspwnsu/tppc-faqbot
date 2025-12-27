@@ -4,12 +4,17 @@
 // Add new games by importing + appending to GAME_MODULES.
 
 import { registerExplodingVoltorbs } from "./exploding_voltorbs.js";
+import { registerExplodingElectrode } from "./exploding_electrode.js";
 
 const GAME_MODULES = [
   {
     id: "exploding_voltorbs",
     register: registerExplodingVoltorbs
-  }
+  },
+  {
+    id: "exploding_electrode",
+    register: registerExplodingElectrode
+  },
 ];
 
 export function registerGames(register) {
