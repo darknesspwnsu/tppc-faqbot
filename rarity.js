@@ -121,28 +121,28 @@ function parseLastUpdatedTextEastern(text) {
   return new Date(utcMs);
 }
 
-function formatDurationAgo(fromMs, nowMs = Date.now()) {
-  let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
-  
-  const days = Math.floor(diff / 86400);
-  diff %= 86400;
-  const hours = Math.floor(diff / 3600);
-  diff %= 3600;
-  const minutes = Math.floor(diff / 60);
-  const seconds = diff % 60;
+// function formatDurationAgo(fromMs, nowMs = Date.now()) {
+//   let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
 
-  const parts = [];
+//   const days = Math.floor(diff / 86400);
+//   diff %= 86400;
+//   const hours = Math.floor(diff / 3600);
+//   diff %= 3600;
+//   const minutes = Math.floor(diff / 60);
+//   const seconds = diff % 60;
 
-  if (days) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
-  if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
-  if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
+//   const parts = [];
 
-  parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
+//   if (days) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
+//   if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
+//   if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
 
-  if (parts.length === 1) return parts[0];
-  if (parts.length === 2) return parts.join(" and ");
-  return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
-}
+//   parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
+
+//   if (parts.length === 1) return parts[0];
+//   if (parts.length === 2) return parts.join(" and ");
+//   return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
+// }
 
 function formatDurationAgoWithoutSeconds(fromMs, nowMs = Date.now()) {
   let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
@@ -813,7 +813,6 @@ export function registerLevel4Rarity(register) {
         embeds: [
           {
             title: `${r1.name} vs ${r2.name}`,
-            description: updatedLine,
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: cmpLine(r1.total, r2.total), inline: false },
