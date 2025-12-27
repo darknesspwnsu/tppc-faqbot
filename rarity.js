@@ -194,6 +194,17 @@ function normalizeQueryVariants(qRaw) {
     candidates.add(normalizeKey(parts.join(" ")));
   }
 
+  // Accept "gpichu" / "spichu" / "dpichu" (NO dot, NO space)
+  // IMPORTANT: this is only a *candidate*; findEntry() still tries exact match first.
+  const mStuck = q.match(/^([sdg])([a-z0-9].+)$/);
+  if (mStuck && !q.includes(".") && !q.includes(" ")) {
+    const letter = mStuck[1];
+    const rest = mStuck[2].trim();
+    const prefix = letter === "s" ? "shiny" : letter === "d" ? "dark" : "golden";
+    candidates.add(normalizeKey(prefix + rest));
+    candidates.add(normalizeKey(prefix + " " + rest));
+  }
+
   return Array.from(candidates);
 }
 
@@ -263,7 +274,20 @@ function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
   const qKeys = normalizeQueryVariants(queryRaw); // expands g./s./d. forms too
   if (!qKeys.length) return [];
 
-  const pref = queryVariantPrefix(queryRaw); // "" | "shiny" | "dark" | "golden"
+  let pref = queryVariantPrefix(queryRaw); // "" | "shiny" | "dark" | "golden"
+
+  // If user used "gpichu"/"spichu"/"dpichu" and it doesn't directly exist,
+  // treat it as variant intent for suggestions.
+  if (!pref) {
+    const q = String(queryRaw ?? "").trim().toLowerCase();
+    const mStuck = q.match(/^([sdg])([a-z0-9].+)$/);
+    if (mStuck && !q.includes(".") && !q.includes(" ")) {
+      const directKey = normalizeKey(q);
+      if (!normIndex[directKey]) {
+        pref = mStuck[1] === "s" ? "shiny" : mStuck[1] === "d" ? "dark" : "golden";
+      }
+    }
+  }
 
   const scored = [];
   for (const [nk, entry] of Object.entries(normIndex)) {
@@ -338,6 +362,16 @@ function prettyVariantGuess(qRaw) {
     const rest = parts.slice(1).join(" ");
     const prefix = letter === "s" ? "Shiny" : letter === "d" ? "Dark" : "Golden";
     return `${prefix} ${rest}`;
+  }
+
+  // Handle stuck prefixes: "gpichu" -> "GoldenPichu"
+  const mStuck = q.match(/^([sdg])([^\s.].+)$/i);
+  if (mStuck && !q.includes(".") && !q.includes(" ")) {
+    const letter = mStuck[1].toLowerCase();
+    const rest = mStuck[2].trim();
+    const prefix = letter === "s" ? "Shiny" : letter === "d" ? "Dark" : "Golden";
+    const restPretty = rest ? rest[0].toUpperCase() + rest.slice(1) : rest;
+    return prefix + restPretty;
   }
 
   return q;
