@@ -408,7 +408,9 @@ export function registerContests(register) {
 
   register("?roll", async ({ message, rest }) => {
     const arg = rest.trim();
-    const m = /^(\d+)d(\d+)$/.exec(arg);
+    const m = /^(\d+)d(\d+)(?:\s+(norepeat|nr))?$/i.exec(arg);
+    const noRepeat = !!m[3];
+
     if (!m) {
       await message.channel.send("Invalid format. Please use a format like `1d100`");
       return;
@@ -418,23 +420,59 @@ export function registerContests(register) {
     const sides = Number(m[2]);
 
     if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
+      // sides=0 is allowed (then only result is 0)
       await message.channel.send("Invalid format. Please use a format like `1d100`");
       return;
     }
 
-    if (n > MAX_ROLL_N) {
-      await message.channel.send(`Too many rolls. Max is ${MAX_ROLL_N}.`);
-      return;
-    }
-    if (sides > MAX_ROLL_M) {
-      await message.channel.send(`Range too large. Max m is ${MAX_ROLL_M}.`);
+    if (noRepeat && n > (sides + 1)) {
+      await message.channel.send(`Impossible with norepeat: you asked for ${n} unique rolls but range is only 0..${sides} (${sides + 1} unique values).`);
       return;
     }
 
     const uid = targetUserId(message);
-    const rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
-    await message.channel.send(`${mention(uid)} ${rolls.join(", ")}`);
-  }, "?roll NdM — rolls N numbers from 0..M (example: !roll 1d100)");
+    let rolls;
+
+    if (!noRepeat) {
+      rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
+    } else {
+      // Unique sampling from integers [0..sides]
+      // Strategy:
+      // - If n is a large fraction of the range, do a partial Fisher-Yates shuffle (faster than rejection).
+      // - Else use a Set with rejection sampling (simple and fast when n << range).
+      const rangeSize = sides + 1;
+
+      if (n > rangeSize * 0.6) {
+        // Partial shuffle: build 0..sides and shuffle first n positions.
+        const arr = Array.from({ length: rangeSize }, (_, i) => i);
+        for (let i = 0; i < n; i++) {
+          const j = randIntInclusive(i, rangeSize - 1);
+          const tmp = arr[i];
+          arr[i] = arr[j];
+          arr[j] = tmp;
+        }
+        rolls = arr.slice(0, n);
+      } else {
+        const seen = new Set();
+        while (seen.size < n) {
+          seen.add(randIntInclusive(0, sides));
+        }
+        rolls = Array.from(seen);
+      }
+    }
+
+    const out = `${mention(uid)} ${rolls.join(", ")}`;
+
+    // Discord message content hard limit ~2000 chars
+    if (out.length > 1900) {
+      await message.channel.send(
+        `${mention(uid)} Rolled ${n}d${sides}${noRepeat ? " norepeat" : ""}. Output too long to display (${out.length} chars). Try a smaller N.`
+      );
+      return;
+    }
+
+    await message.channel.send(out);
+  }, "?roll NdM — rolls N numbers from 0..M (example: ?roll 1d100)");
 
   register("?choose", async ({ message, rest }) => {
     const options = rest.trim().split(/\s+/).filter(Boolean);
