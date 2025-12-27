@@ -629,6 +629,29 @@ export function registerContests(register) {
     "?elim <1–30s> <items...> — randomly eliminates one item per round"
   );
 
+  register(
+    "?cancelelim",
+    async ({ message }) => {
+      if (!message.guildId) return;
+  
+      const state = activeElimByGuild.get(message.guildId);
+      if (!state) {
+        await message.reply("No elimination is currently running in this guild.");
+        return;
+      }
+  
+      if (state.timeout) {
+        try { clearTimeout(state.timeout); } catch {}
+      }
+  
+      activeElimByGuild.delete(message.guildId);
+  
+      await message.channel.send("Elimination has been cancelled!");
+    },
+    "?cancelelim — cancels the currently running elimination",
+    { aliases: ["?stopelim", "?endelim"] }
+  );
+
   register("!awesome", async ({ message }) => {
     if (!isAllowedChannel(message, AWESOME_CHANNELS)) {
       return;
