@@ -51,6 +51,63 @@ function fromBillions(bil) {
   return bil * 1e9;
 }
 
+// ---- Selling math (from sell_guide) ----
+// TotalExp(L) = L^3 + 1
+// MarketPrice(L) = 10 * TotalExp(L) = 10*(L^3 + 1)
+//
+// Buyer pays:
+//   - no PP: MarketPrice(L)
+//   - PP: floor(MarketPrice(L) * 2/3)
+//
+// Seller receives (independent of PP):
+//   - floor(MarketPrice(L) / 2)
+
+function marketPriceAtLevel(level) {
+  return 10 * levelToExp(level);
+}
+
+function buyerPaysAtLevel(level, ppEnabled) {
+  const mp = marketPriceAtLevel(level);
+  return ppEnabled ? Math.floor((mp * 2) / 3) : mp;
+}
+
+function sellerGetsAtLevel(level) {
+  const mp = marketPriceAtLevel(level);
+  return Math.floor(mp / 2);
+}
+
+// Find minimum integer L such that f(L) >= target, where f(L) is monotonic increasing.
+function minLevelForTarget(target, f) {
+  if (!Number.isFinite(target) || target <= 0) return null;
+
+  let lo = 1;
+  let hi = 1;
+
+  // Expand hi until it satisfies.
+  while (f(hi) < target) {
+    hi *= 2;
+    // Prevent infinite loops on weird input
+    if (hi > 50_000_000) return null;
+  }
+
+  // Binary search for minimum satisfying level.
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (f(mid) >= target) hi = mid;
+    else lo = mid + 1;
+  }
+
+  return lo;
+}
+
+function levelForBuyerPays(target, ppEnabled) {
+  return minLevelForTarget(target, (L) => buyerPaysAtLevel(L, ppEnabled));
+}
+
+function levelForSellerGets(target) {
+  return minLevelForTarget(target, (L) => sellerGetsAtLevel(L));
+}
+
 function helpText() {
   // Keep this as plain text; Discord will render it nicely.
   return [
@@ -69,6 +126,10 @@ function helpText() {
     "• `ea <exp...>` — Add Exp values → level",
     "• `eba <exp_bil...>` — Add Exp values in billions → level",
     "• `ld <lvl1> <lvl2>` — Level difference (Exp diff → level)",
+    "• `buy <money>` — Buyer pays money → minimum level (shows PP no/yes)",
+    "• `buym <money_millions>` — Buyer pays (in millions) → minimum level (shows PP no/yes)",
+    "• `sell <money>` — Seller receives money → minimum level (PP no/yes will match)",
+    "• `sellm <money_millions>` — Seller receives (in millions) → minimum level (PP no/yes will match)",
     "",
     "**Examples:**",
     "• `!calc l2e 125`",
@@ -78,7 +139,11 @@ function helpText() {
     "• `!calc la 100 200 300`",
     "• `!calc ea 100000 200000 300000`",
     "• `!calc eba 42.5 10 1.25`",
-    "• `!calc ld 1500 1200`"
+    "• `!calc ld 1500 1200`",
+    "• `!calc buy 500000000`",
+    "• `!calc buym 500`",
+    "• `!calc sell 250000000`",
+    "• `!calc sellm 250`"
   ].join("\n");
 }
 
@@ -144,6 +209,51 @@ export function registerCalculator(register) {
       const lvl = expToLevel(exp);
       await message.reply(
         `${fn === "eb2l" ? `Exp ${formatBillions(expRaw)}` : `Exp ${formatInt(exp)}`} → Level: ${lvl}`
+      );
+      return;
+    }
+
+    // buy / buym (buyer pays -> level)
+    if (fn === "buy" || fn === "buym") {
+      const moneyRaw = one();
+      if (moneyRaw === null) return;
+
+      const target = fn === "buym" ? moneyRaw * 1_000_000 : moneyRaw;
+      if (!Number.isFinite(target) || target <= 0) return;
+
+      const lvlNo = levelForBuyerPays(target, false);
+      const lvlYes = levelForBuyerPays(target, true);
+
+      if (lvlNo === null || lvlYes === null) return;
+
+      await message.reply(
+        [
+          `Buyer pays $${formatInt(target)} → minimum level`,
+          `• PP: no  → Level ${lvlNo}`,
+          `• PP: yes → Level ${lvlYes}`
+        ].join("\n")
+      );
+      return;
+    }
+
+    // sell / sellm (seller receives -> level)
+    if (fn === "sell" || fn === "sellm") {
+      const moneyRaw = one();
+      if (moneyRaw === null) return;
+
+      const target = fn === "sellm" ? moneyRaw * 1_000_000 : moneyRaw;
+      if (!Number.isFinite(target) || target <= 0) return;
+
+      const lvl = levelForSellerGets(target);
+      if (lvl === null) return;
+
+      // Seller gets is independent of PP; show both for clarity, per your request.
+      await message.reply(
+        [
+          `Seller receives $${formatInt(target)} → minimum level`,
+          `• PP: no  → Level ${lvl}`,
+          `• PP: yes → Level ${lvl}`
+        ].join("\n")
       );
       return;
     }
