@@ -457,10 +457,8 @@ function fmtDiffCaret(a, b) {
 }
 
 function cmpLine(a, b) {
-  const { sym, text } = fmtDiffCaret(a, b);
-  return `${sym} ${text} (${fmt(a)} vs ${fmt(b)})`;
+  return `(${fmt(a)} vs ${fmt(b)})`;
 }
-
 
 /* --------------------------------- loading -------------------------------- */
 
@@ -622,12 +620,11 @@ export function registerRarity(register) {
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: fmt(r.total), inline: false },
-              { name: "Male", value: fmt(r.male), inline: true },
-              { name: "Female", value: fmt(r.female), inline: true },
-              { name: "Ungendered", value: fmt(r.ungendered), inline: true },
+              { name: "♂", value: fmt(r.male), inline: true },
+              { name: "♀", value: fmt(r.female), inline: true },
+              { name: "(?)", value: fmt(r.ungendered), inline: true },
               { name: "Genderless", value: fmt(r.genderless), inline: true }
             ],
-            footer: { text: "Source: tppcrpg.net/rarity.html" }
           }
         ]
       });
@@ -714,9 +711,9 @@ export function registerLevel4Rarity(register) {
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: fmt(r.total), inline: false },
-              { name: "Male", value: fmt(r.male), inline: true },
-              { name: "Female", value: fmt(r.female), inline: true },
-              { name: "Ungendered", value: fmt(r.ungendered), inline: true },
+              { name: "♂", value: fmt(r.male), inline: true },
+              { name: "♀", value: fmt(r.female), inline: true },
+              { name: "(?)", value: fmt(r.ungendered), inline: true },
               { name: "Genderless", value: fmt(r.genderless), inline: true }
             ],
             footer: { text: "Source: forums.tppc.info/showthread.php?t=318183" }
@@ -734,6 +731,12 @@ export function registerLevel4Rarity(register) {
       const [q1, q2] = parseTwoArgs(rest);
       if (!q1 || !q2) {
         await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
+        return;
+      }
+
+      // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
+      if (String(r1.name).toLowerCase() === String(r2.name).toLowerCase()) {
+        await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
         return;
       }
 
@@ -782,12 +785,11 @@ export function registerLevel4Rarity(register) {
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: cmpLine(r1.total, r2.total), inline: false },
-              { name: "Male", value: cmpLine(r1.male, r2.male), inline: true },
-              { name: "Female", value: cmpLine(r1.female, r2.female), inline: true },
-              { name: "Ungendered", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
+              { name: "♂", value: cmpLine(r1.male, r2.male), inline: true },
+              { name: "♀", value: cmpLine(r1.female, r2.female), inline: true },
+              { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
               { name: "Genderless", value: cmpLine(r1.genderless, r2.genderless), inline: true }
             ],
-            footer: { text: "Source: tppcrpg.net/rarity.html" }
           }
         ]
       });
