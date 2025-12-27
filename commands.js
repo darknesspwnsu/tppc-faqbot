@@ -180,7 +180,7 @@ export function buildCommandRegistry({ client } = {}) {
 
   async function dispatchMessage(message) {
     const content = (message.content ?? "").trim();
-    if (!content.startsWith("!")) return;
+    if (!(content.startsWith("!") || content.startsWith("?"))) return;
 
     // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");
