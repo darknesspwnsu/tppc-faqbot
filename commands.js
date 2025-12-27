@@ -123,13 +123,13 @@ export function buildCommandRegistry() {
   /* ------------------------------ Local commands ----------------------------- */
 
   register("!help", async ({ message }) => {
-    const model = buildHelpModel(registry);
-    if (!model.categories.length) return;
+    const pages = helpModel();
+    if (!pages.length) return;
 
-    const sections = model.categories.map(
-      (cat) =>
-        `**${cat.name}**\n` +
-        cat.lines.map((l) => `• ${l}`).join("\n")
+    const sections = pages.map(
+      (p) =>
+        `**${p.category}**\n` +
+        p.lines.map((l) => `• ${l}`).join("\n")
     );
 
     await message.reply(sections.join("\n\n"));
