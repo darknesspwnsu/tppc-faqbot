@@ -240,7 +240,17 @@ async function finalizeContest(guildId, reason = "timer") {
 
   activeByGuild.delete(guildId);
 
-  const { client, channelId, creatorId, endsAtMs } = state;
+  const { client, channelId, messageId, creatorId, endsAtMs } = state;
+
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (channel?.isTextBased() && messageId) {
+      const msg = await channel.messages.fetch(messageId);
+      await msg.edit("Entries have closed for this contest.");
+    }
+  } catch (e) {
+    console.warn("Failed to edit contest message:", e);
+  }
 
   const userIds = [...state.entrants];
   const nameList = await buildNameList(client, userIds);
@@ -253,14 +263,14 @@ async function finalizeContest(guildId, reason = "timer") {
       ? "Closed early."
       : reason === "cancel"
       ? "Cancelled."
-      : `(ended at <t:${Math.floor(endsAtMs / 1000)}:t>).`;
+      : `(ended <t:${Math.floor(endsAtMs / 1000)}:t>):`;
 
-  const body = total === 0 ? "No one reacted to enter." : nameList.join(" ");
+  const body = total === 0 ? "No one reacted..." : nameList.join(" ");
 
   const channel = await client.channels.fetch(channelId);
   if (channel?.isTextBased()) {
     await channel.send(
-      `━━━━━━━━━━━━━━\n<@${creatorId}> Entrants (${total}) — ${elapsedNote}\n\n${body}`
+      `━━━━━━━━━━━━━━\n<@${creatorId}> ${total} entrant(s) ${elapsedNote}\n\n${body}`
     );
   }
 }
