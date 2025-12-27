@@ -164,7 +164,11 @@ export function registerExplodingVoltorbs(register) {
     "!ev",
     async ({ message, rest }) => {
       if (!message.guild) return;
-      const rangeArg = rest.trim() || null;
+
+      const rangeArg = rest
+        ? rest.trim().replace(/s$/i, "")
+        : null;
+
       startExplodingVoltorbs(message, rangeArg);
     },
     "!ev [min-max] — start Exploding Voltorbs (default 30-90s)",
@@ -173,13 +177,13 @@ export function registerExplodingVoltorbs(register) {
 
   // Pass
   register(
-    "!passvoltorb",
+    "!pass",
     async ({ message }) => {
       if (!message.guild) return;
       passVoltorb(message);
     },
     "!passvoltorb @user — pass the Voltorb (only holder can pass)",
-    { aliases: ["!passv", "!pv"] }
+    { aliases: ["!passv", "!pv", "!passvoltorb"] }
   );
 
   // End (admin-only)

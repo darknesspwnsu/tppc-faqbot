@@ -223,7 +223,17 @@ async function finalizeContest(guildId, reason = "timer") {
 
   activeByGuild.delete(guildId);
 
-  const { client, channelId, creatorId, endsAtMs } = state;
+  const { client, channelId, messageId, creatorId, endsAtMs } = state;
+
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (channel?.isTextBased() && messageId) {
+      const msg = await channel.messages.fetch(messageId);
+      await msg.edit("Entries have closed for this contest.");
+    }
+  } catch (e) {
+    console.warn("Failed to edit contest message:", e);
+  }
 
   const userIds = [...state.entrants];
   const nameList = await buildNameList(client, userIds);
@@ -243,7 +253,7 @@ async function finalizeContest(guildId, reason = "timer") {
   const channel = await client.channels.fetch(channelId);
   if (channel?.isTextBased()) {
     await channel.send(
-      `<@${creatorId}> Contest entrants (${total}) — ${elapsedNote}\n\n${body}`
+      `━━━━━━━━━━━━━━\n<@${creatorId}> Entrants (${total}) — ${elapsedNote}\n\n${body}`
     );
   }
 }
@@ -265,8 +275,10 @@ export function registerContests(register) {
 
       const raw = rest.trim();
       const parts = raw.split(/\s+/).filter(Boolean);
+
       const timeRaw = parts[0] || "";
       const maxRaw = parts[1]; // optional
+      const game = parts.slice(2).join(" ") || null; // optional <game>
 
       const ms = parseDurationToMs(timeRaw);
       if (!ms) {
@@ -278,7 +290,9 @@ export function registerContests(register) {
       if (maxRaw != null) {
         const n = Number(maxRaw);
         if (!Number.isInteger(n) || n <= 0 || n > 1000) {
-          await message.reply("Invalid max entrants. Usage: `!contest <time> [max]` (example: `!contest 2s 10`)");
+          await message.reply(
+            "Invalid max entrants. Usage: `!contest <time> [max] [game]` (example: `!contest 2s 10 Mario Kart`)"
+          );
           return;
         }
         maxEntrants = n;
@@ -303,11 +317,17 @@ export function registerContests(register) {
         entrants: new Set(),
         entrantReactionCounts: new Map(),
         maxEntrants,
+        game,
       });
 
-      const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
+      const maxNote = maxEntrants
+        ? ` (max **${maxEntrants}** entrants — ends early if reached)`
+        : "";
+
+      const gameNote = game ? `\n🎮 **Game:** ${game}` : "";
+
       const contestMsg = await message.channel.send(
-        `React to this message to enter a contest! The list will be generated in **${humanDuration(ms)}**...${maxNote}`
+        `React to this message to enter a contest! The list will be generated in **${humanDuration(ms)}**...${maxNote}${gameNote}`
       );
 
       try {
@@ -325,8 +345,8 @@ export function registerContests(register) {
         state.timeout = timeout;
       }
     },
-    "!conteststart <time> [quota] — starts a reaction contest",
-    { aliases: ["!contest"] }
+    "!conteststart <time> [quota] [game] — starts a reaction contest",
+    { aliases: ["!contest", "!startcontest"] }
   );
 
   register("!getlist", async ({ message }) => {
