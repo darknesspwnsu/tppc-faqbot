@@ -603,7 +603,7 @@ export function registerContests(register) {
         const eliminated = remaining.splice(idx, 1)[0];
 
         await message.channel.send(
-          `${eliminated} has been eliminated! Remaining: ${remaining.join(", ")}`
+          `${eliminated} has been eliminated! Remaining: ${remaining.join(", ")}\n______________________`
         );
 
         // ✅ If we just reached a single remaining entry, declare winner NOW (no extra delay)
