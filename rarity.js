@@ -733,13 +733,6 @@ export function registerLevel4Rarity(register) {
         await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
         return;
       }
-
-      // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
-      if (String(r1.name).toLowerCase() === String(r2.name).toLowerCase()) {
-        await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
-        return;
-      }
-
       // Ensure cache is loaded
       if (!rarityNorm) await refresh();
 
@@ -766,6 +759,12 @@ export function registerLevel4Rarity(register) {
               ? `No exact match for \`${q2}\`. Did you mean: ${s2.map((s) => `\`${s}\``).join(", ")} ?`
               : `No exact match for \`${q2}\`.`
           );
+        }
+
+        // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
+        if (normalizeKey(r1.name) === normalizeKey(r2.name)) {
+          await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
+          return;
         }
 
         await message.reply(parts.join("\n"));
