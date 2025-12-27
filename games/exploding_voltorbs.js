@@ -500,19 +500,26 @@ export function registerExplodingVoltorbs(register) {
       // If no taglist is provided, run a reaction-join window (like !conteststart)
       if (!hasMentions) {
         const modeLabel = modeArg || "suddendeath";
+        const modeLabelCapitalized = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
         const rangeLabel = rangeArg ? ` • Range: **${rangeArg}**` : "";
         const durationMs = (joinSeconds ?? 15) * 1000;
 
-        const entrants = await collectEntrantsByReactions({
+        const reactMessage = await collectEntrantsByReactions({
           message,
           promptText:
             `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
-            `Mode: **${modeLabel}**${rangeLabel}`,
+            `Mode: **${modeLabelCapitalized}**${rangeLabel}`,
           durationMs
         });
 
-        if (entrants.size < 2) {
-          await message.channel.send("❌ Not enough players joined (need at least 2).");
+       if (entrants.size < 2) {
+          try {
+            await reactMessage.edit(
+              reactMessage.content + "\n❌ Not enough players joined (need at least 2)."
+            );
+          } catch {
+            await message.channel.send("❌ Not enough players joined (need at least 2).");
+          }
           return;
         }
 
