@@ -5,7 +5,10 @@
   "main": "bot.js",
   "type": "module",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "start:dev": "DOTENV_CONFIG_PATH=.env.development.local node bot.js",
+    "pause:dev": "pkill -f 'node bot.js' && docker pause tppc-mysql",
+    "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js"
   },
   "keywords": [],
   "author": "",
