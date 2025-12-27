@@ -23,13 +23,12 @@ function evHelpText() {
   return [
     "**Exploding Voltorbs — Help**",
     "",
-    "**Start game (using a taglist):**",
-    "• `!ev [min-max] [mode] @user1 @user2 ...`",
+    "**Start game:**",
+    "• Using a list: `!ev [min-max] [mode] @user1 @user2 ...`",
     "  – Example: `!ev 30-90s elim @a @b @c`",
     "",
-    "**Start game (join with reactions):**",
-    "• `!ev [min-max] [mode] [join_window]`",
-    "  – Join window is between 10 to 120 seconds`",
+    "• Using reactions: `!ev [min-max] [mode] [join_window]`",
+    "  – Join window is between 10 to 120 seconds",
     "  – Example: `!ev 10-25s elim 60s`",
     "",
     "**Modes:**",
@@ -39,7 +38,7 @@ function evHelpText() {
     "**During the game:**",
     "• `!pass @user` — the current holder can pass the Voltorb to a participant",
     "• `!endvoltorb` — admins only; force end",
-    "",
+    ""
   ].join("\n");
 }
 
@@ -134,7 +133,7 @@ function scheduleExplosion(message, guildId) {
     if (g.aliveIds.size <= 1) {
       const winnerId = randChoiceFromSet(g.aliveIds);
       if (winnerId) {
-        await message.channel.send(`🏆 <@${winnerId}> wins **Exploding Voltorbs (elim)**!`);
+        await message.channel.send(`🏆 <@${winnerId}> wins **Exploding Voltorbs**!`);
       } else {
         await message.channel.send("🏁 Game ended — no winner (everyone exploded?).");
       }
@@ -219,8 +218,9 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
       message.channel.send(
         `${scare}\n` +
-        `━━━━━━━━━━\n` +
-        `👀 <@${g.holderId}> is holding the Voltorb.`
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `👀 <@${g.holderId}> is holding the Voltorb.\n` +
+        `━━━━━━━━━━━━━━━━━━━`
       );
     }
   }, 8000);
@@ -238,10 +238,10 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
 
   message.channel.send(
     `⚡ **Exploding Voltorbs started!**\n` +
-      `💣 <@${holderId}> is holding the Voltorb!\n` +
       `🎮 Mode: **${mode}**\n` +
       `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
       `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}`
+      `💣 <@${holderId}> is holding the Voltorb!`
   );
 
   scheduleExplosion(message, guildId);
@@ -435,7 +435,7 @@ export function registerExplodingVoltorbs(register) {
       // `!ev` with no arguments
       if (tokens.length === 0) {
         await message.reply(
-          "❌ Usage: `!ev [min-max] [mode] [list of @players]/[join_window]`. Type `!ev help` for more info."
+          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
         );
         return;
       }
@@ -492,7 +492,7 @@ export function registerExplodingVoltorbs(register) {
       // Mention-based path allows [range] [mode] + mentions only.
       if (extras.length > 0) {
         await message.reply(
-          "❌ Usage: `!ev [min-max] [mode] [list of @players]/[join_window]`. Type `!ev help` for more info."
+          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
         );
         return;
       }
