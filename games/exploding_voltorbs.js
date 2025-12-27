@@ -262,10 +262,13 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
     return;
   }
 
+<<<<<<< HEAD
   // Mention-based enrollment: ONLY mentioned users are enrolled.
   // (Starter is NOT auto-enrolled unless they tag themselves.)
   const mentioned = getMentionedUsers(message);
   const allowedIds = new Set();
+=======
+>>>>>>> 607136a (exploding voltorb - support suddendeath|elim mode)
   for (const u of mentioned) {
     if (!u?.id) continue;
     if (u.bot) continue;
@@ -308,7 +311,16 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
 
   const mode = modeArg || "suddendeath"; // default per your request
 
+<<<<<<< HEAD
   const aliveIds = new Set(allowedIds);
+=======
+  const allowedIds = new Set(allowed.keys());
+  const aliveIds = new Set(allowed.keys());
+
+  // Pick random initial holder from tagged players
+  const holderId = randChoiceFromSet(aliveIds);
+  if (!holderId) return;
+>>>>>>> 607136a (exploding voltorb - support suddendeath|elim mode)
 
   // Pick random initial holder from tagged players
   const holderId = randChoiceFromSet(aliveIds);
