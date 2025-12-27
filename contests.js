@@ -491,11 +491,43 @@ export function registerContests(register) {
     await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
   }, "!awesome — tells you how awesome someone is (0–101%)");
 
-  // !coinflip — heads/tails
-  register("!coinflip", async ({ message }) => {
-    const uid = targetUserId(message);
-    const result = Math.random() < 0.5 ? "Heads" : "Tails";
-    await message.channel.send(`${mention(uid)} ${result}!`);
-    }, "!coinflip — flips a coin (Heads/Tails)", { aliases: ["!flip", "!coin"] }
+  // !coinflip — heads/tails (rare side!)
+  register(
+    "!coinflip",
+    async ({ message }) => {
+      const uid = targetUserId(message);
+      const roll = Math.random(); // [0,1)
+      // Probability breakdown:
+      //  - 0.5%  chance → coin lands on its side
+      //  - 49.75% chance → Heads
+      //  - 49.75% chance → Tails
+      //
+      // IMPORTANT: thresholds are CUMULATIVE.
+      // We carve the [0,1) range like this:
+      //
+      //   [0.0000 ── 0.0050)   = Side      (0.5%)
+      //   [0.0050 ── 0.5025)   = Heads     (49.75%)
+      //   [0.5025 ── 1.0000)   = Tails     (49.75%)
+      //
+      // Heads cutoff is 0.005 + 0.4975 = 0.5025 (not 0.4975!)
+      let result;
+      if (roll < 0.005) {
+        const sideMessages = [
+          "🪙 landed on its side! Physics is confused.",
+          "🪙 balanced perfectly on its edge. RNGesus is watching.",
+          "🪙 landed on its side. Buy a lottery ticket.",
+          "🪙 stands upright. Reality briefly glitches.",
+        ];
+        result = sideMessages[Math.floor(Math.random() * sideMessages.length)];
+      } else if (roll < 0.5025) {
+        result = "Heads!";
+      } else {
+        result = "Tails!";
+      }
+
+      await message.channel.send(`${mention(uid)} ${result}`);
+    },
+    "!coinflip — flips a coin (Heads/Tails)",
+    { aliases: ["!flip", "!coin"] }
   );
 }
