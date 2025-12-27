@@ -46,7 +46,7 @@ export function registerTools(register) {
   register(
     "!promo",
     async ({ message }) => {
-      await message.reply(`Last promo: ${lastPromo}`);
+      await message.reply(`Current promo: ${lastPromo}`);
     },
     "!promo — shows the last promo",
     { aliases: ["!p"] }
