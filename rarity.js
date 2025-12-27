@@ -123,13 +123,11 @@ function parseLastUpdatedTextEastern(text) {
 
 function formatDurationAgo(fromMs, nowMs = Date.now()) {
   let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
-
+  
   const days = Math.floor(diff / 86400);
   diff %= 86400;
-
   const hours = Math.floor(diff / 3600);
   diff %= 3600;
-
   const minutes = Math.floor(diff / 60);
   const seconds = diff % 60;
 
@@ -139,12 +137,28 @@ function formatDurationAgo(fromMs, nowMs = Date.now()) {
   if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
   if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
 
-  // ALWAYS include seconds
   parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
 
   if (parts.length === 1) return parts[0];
   if (parts.length === 2) return parts.join(" and ");
   return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
+}
+
+function formatDurationAgoWithoutSeconds(fromMs, nowMs = Date.now()) {
+  let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
+
+  const days = Math.floor(diff / 86400);
+  diff %= 86400;
+  const hours = Math.floor(diff / 3600);
+  diff %= 3600;
+  const minutes = Math.floor(diff / 60);
+
+  const parts = [];
+  if (days) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
+  if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
+  if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
+
+  return parts.join(", ");
 }
 
 /* ------------------------------ normalization ------------------------------ */
@@ -628,7 +642,7 @@ export function registerRarity(register) {
 
       const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
       const updatedLine = updatedDate
-        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
         : "";
 
       await message.channel.send({
@@ -715,7 +729,7 @@ export function registerLevel4Rarity(register) {
 
       const updatedDate = parseLastUpdatedTextEastern(meta4?.lastUpdatedText);
       const updatedLine = updatedDate
-        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
         : "";
 
       await message.channel.send({
@@ -792,7 +806,7 @@ export function registerLevel4Rarity(register) {
 
       const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
       const updatedLine = updatedDate
-        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
         : "";
 
       await message.channel.send({
@@ -808,6 +822,7 @@ export function registerLevel4Rarity(register) {
               { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
               { name: "G", value: cmpLine(r1.genderless, r2.genderless), inline: true }
             ],
+            footer: {text: updatedLine}
           }
         ]
       });
