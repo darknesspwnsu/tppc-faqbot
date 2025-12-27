@@ -1,8 +1,7 @@
 import "dotenv/config";
 import process from "node:process";
-import { Client, GatewayIntentBits, Partials, Events, REST, Routes } from "discord.js";
+import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
-import { handleRarityInteraction } from "./rarity.js";
 import { initDb } from "./db.js";
 
 function mustEnv(name) {
@@ -26,8 +25,6 @@ async function initDbWithRetry(tries = 15, delayMs = 1000) {
 }
 
 const TOKEN = mustEnv("DISCORD_TOKEN");
-const ENABLE_FLAREON_COMMANDS =
-  String(process.env.ENABLE_FLAREON_COMMANDS || "").toLowerCase() === "true";
 
 // Optional: restrict to certain channels. If empty, bot works anywhere it can see.
 const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
@@ -51,71 +48,23 @@ if (TRADING_ENABLED_ANYWHERE) {
   console.log("DB disabled — TRADING_GUILD_ALLOWLIST empty (trading commands disabled everywhere).");
 }
 
+// If set, slash commands are registered ONLY to this guild (recommended for dev).
+// If empty, slash commands are registered globally.
+const SLASH_GUILD_ID = (process.env.SLASH_GUILD_ID || "").trim();
+
 function inAllowedChannel(channelId) {
   if (ALLOWED_CHANNEL_IDS.length === 0) return true;
   return ALLOWED_CHANNEL_IDS.includes(channelId);
 }
 
-// Register /help (guild if DISCORD_GUILD_ID is set; global otherwise)
-async function registerSlashCommands() {
-  const clientId = mustEnv("DISCORD_CLIENT_ID");
-  const guildId = process.env.DISCORD_GUILD_ID;
-
-  const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-  const slashDefs = [
-    {
-      name: "help",
-      description: "Show a private, categorized help menu"
-    }
-  ];
-
-  if (guildId) {
-    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: slashDefs });
-    console.log(`[SLASH] Registered guild slash commands for guild ${guildId}`);
-  } else {
-    await rest.put(Routes.applicationCommands(clientId), { body: slashDefs });
-    console.log("[SLASH] Registered global slash commands");
-  }
-}
-
-function findDefaultHelpIndex(pages) {
-  const idx = pages.findIndex((p) => String(p.category).toLowerCase() === "trading");
-  return idx >= 0 ? idx : 0;
-}
-
-function buildHelpComponents(pages, activeIdx) {
-  const rows = [];
-
-  // One button per category (max 5 per row)
-  const catButtons = pages.map((p, i) => ({
-    type: 2,
-    style: i === activeIdx ? 1 : 2, // Primary highlights active category
-    label: p.category,
-    custom_id: `helpcat:${i}`,
-    disabled: i === activeIdx
-  }));
-
-  for (let i = 0; i < catButtons.length; i += 5) {
-    rows.push({ type: 1, components: catButtons.slice(i, i + 5) });
-  }
-
-  return rows;
-}
-
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds, // required for slash commands
+    GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
   ],
-  partials: [
-    Partials.Channel,
-    Partials.Message,
-    Partials.Reaction,
-    Partials.User
-  ]
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User]
 });
 
 const commands = buildCommandRegistry({ client });
@@ -127,14 +76,27 @@ client.once(Events.ClientReady, async () => {
       ? `Allowed channels: ${ALLOWED_CHANNEL_IDS.join(", ")}`
       : "Allowed channels: (all visible channels)"
   );
-  console.log(`Loaded commands: ${commands.list().join(", ")}`);
-  console.log(`Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`);
+  console.log(`Loaded bang commands: ${commands.listBang().join(", ")}`);
+  console.log(`Loaded slash commands: ${commands.listSlash().join(", ")}`);
 
-  // Register slash commands on startup
+  // Slash sync: global if SLASH_GUILD_ID not set; otherwise guild-only.
   try {
-    await registerSlashCommands();
+    const appId = client.application?.id || client.user?.id;
+    if (!appId) throw new Error("Could not determine application ID for slash registration.");
+
+    await commands.syncSlashCommands({
+      token: TOKEN,
+      appId,
+      guildId: SLASH_GUILD_ID || null
+    });
+
+    console.log(
+      SLASH_GUILD_ID
+        ? `Slash commands synced ✅ (guild: ${SLASH_GUILD_ID})`
+        : "Slash commands synced ✅ (global)"
+    );
   } catch (e) {
-    console.error("[SLASH] registration failed:", e?.message ?? e);
+    console.error("Slash sync failed:", e?.message ?? e);
   }
 });
 
@@ -144,180 +106,18 @@ client.on("messageCreate", async (message) => {
     if (message.author?.bot) return;
     if (!inAllowedChannel(message.channelId)) return;
 
-    const content = (message.content ?? "").trim();
-    const isBang = content.startsWith("!");
-    const isQuestion = content.startsWith("?");
-
-    if (!isBang && !isQuestion) return;
-
-    // Gate experimental ? commands
-    if (isQuestion && !ENABLE_FLAREON_COMMANDS) return;
-
-    // Parse: "!cmd rest..."
-    const spaceIdx = content.indexOf(" ");
-    const cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
-    const rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);
-
-    const handler = commands.get(cmd);
-    if (!handler) return; // ignore unknown commands
-
-    await handler({ message, cmd, rest });
+    await commands.dispatchMessage(message);
   } catch (err) {
     console.error("messageCreate error:", err);
   }
 });
 
-// Slash commands + buttons
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    // /help
-    if (interaction.isChatInputCommand() && interaction.commandName === "help") {
-      // commands.js should expose helpModel() that returns:
-      // [{ category: "Tools", lines: ["!calc ...", ...] }, ...]
-      const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
-
-      if (!pages.length) {
-        await interaction.reply({ content: "No commands available.", ephemeral: true });
-        return;
-      }
-
-      const embedFor = (i) => ({
-        title: pages[i].category,
-        description: pages[i].lines.map((l) => `• ${l}`).join("\n"),
-        footer: { text: `Page ${i + 1} / ${pages.length}` }
-      });
-
-      const i = findDefaultHelpIndex(pages);
-
-      await interaction.reply({
-        ephemeral: true,
-        embeds: [embedFor(i)],
-        components: buildHelpComponents(pages, i)
-      });
-      return;
-    }
-
-    // Buttons (help pagination + rarity reruns)
-    if (interaction.isButton()) {
-      // rarity buttons
-      const rerun = await handleRarityInteraction(interaction);
-
-      // handleRarityInteraction returns:
-      // - false if not a rarity button
-      // - { cmd, rest } if it IS a rarity button and we should rerun
-      if (rerun && typeof rerun === "object") {
-        const cmd = String(rerun.cmd || "").toLowerCase();
-        const rest = String(rerun.rest || "");
-
-        // Mirror the same experimental gating as messageCreate
-        const isQuestion = cmd.startsWith("?");
-        if (isQuestion && !ENABLE_FLAREON_COMMANDS) return;
-
-        // Mirror the same allowed-channel gating as messageCreate
-        if (!inAllowedChannel(interaction.channelId)) return;
-
-        const handler = commands.get(cmd);
-        if (!handler) return;
-
-        // Create a lightweight "message-like" object that satisfies your handlers
-        const messageLike = {
-          guild: interaction.guild,
-          channel: interaction.channel,
-          channelId: interaction.channelId,
-          author: interaction.user,
-          member: interaction.member, // keeps admin checks working
-          mentions: { users: { first: () => null } }, // rc already passes explicit args
-          reply: (payload) => interaction.channel.send(payload),
-        };
-
-        await handler({ message: messageLike, cmd, rest });
-        return;
-      }
-
-      // /help category switch
-      const cid = String(interaction.customId || "");
-      if (cid.startsWith("helpcat:")) {
-        const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
-        if (!pages.length) {
-          await interaction.update({ content: "No commands available.", embeds: [], components: [] });
-          return;
-        }
-
-        let idx = Number(cid.split(":")[1]);
-        if (!Number.isFinite(idx)) idx = 0;
-        idx = Math.max(0, Math.min(pages.length - 1, idx));
-
-        const embed = {
-          title: pages[idx].category,
-          description: pages[idx].lines.map((l) => `• ${l}`).join("\n"),
-          footer: { text: `Category ${idx + 1} / ${pages.length}` }
-        };
-
-        await interaction.update({
-          embeds: [embed],
-          components: buildHelpComponents(pages, idx)
-        });
-        return;
-      }
-
-      // /help pagination
-      const id = String(interaction.customId || "");
-      if (!id.startsWith("help:")) return;
-
-      const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
-      if (!pages.length) {
-        await interaction.update({ content: "No commands available.", embeds: [], components: [] });
-        return;
-      }
-
-      let idx = Number(id.split(":")[1]);
-      if (!Number.isFinite(idx)) idx = 0;
-      idx = Math.max(0, Math.min(pages.length - 1, idx));
-
-      const embed = {
-        title: pages[idx].category,
-        description: pages[idx].lines.map((l) => `• ${l}`).join("\n"),
-        footer: { text: `Page ${idx + 1} / ${pages.length}` }
-      };
-
-      const row =
-        pages.length <= 1
-          ? []
-          : [
-              {
-                type: 1,
-                components: [
-                  {
-                    type: 2,
-                    style: 2,
-                    label: "Prev",
-                    custom_id: `help:${idx - 1}`,
-                    disabled: idx <= 0
-                  },
-                  {
-                    type: 2,
-                    style: 2,
-                    label: "Next",
-                    custom_id: `help:${idx + 1}`,
-                    disabled: idx >= pages.length - 1
-                  }
-                ]
-              }
-            ];
-
-      await interaction.update({ embeds: [embed], components: row });
-      return;
-    }
-
+    // Let the registry decide what to do with it.
+    await commands.dispatchInteraction(interaction);
   } catch (err) {
     console.error("interactionCreate error:", err);
-    try {
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "Something went wrong.", ephemeral: true });
-      }
-    } catch {
-      // ignore
-    }
   }
 });
 
