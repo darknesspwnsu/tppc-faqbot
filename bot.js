@@ -1,6 +1,6 @@
 import "dotenv/config";
 import process from "node:process";
-import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
+import { Client, GatewayIntentBits, Partials, Events, REST, Routes } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 
@@ -55,24 +55,47 @@ function inAllowedChannel(channelId) {
   return ALLOWED_CHANNEL_IDS.includes(channelId);
 }
 
+// Register /help (guild if DISCORD_GUILD_ID is set; global otherwise)
+async function registerSlashCommands() {
+  const clientId = mustEnv("DISCORD_CLIENT_ID");
+  const guildId = process.env.DISCORD_GUILD_ID;
+
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+  const slashDefs = [
+    {
+      name: "help",
+      description: "Show a private, categorized help menu"
+    }
+  ];
+
+  if (guildId) {
+    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: slashDefs });
+    console.log(`[SLASH] Registered guild slash commands for guild ${guildId}`);
+  } else {
+    await rest.put(Routes.applicationCommands(clientId), { body: slashDefs });
+    console.log("[SLASH] Registered global slash commands");
+  }
+}
+
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
+    GatewayIntentBits.Guilds, // required for slash commands
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
   ],
   partials: [
     Partials.Channel,
-    Partials.Message,   
-    Partials.Reaction,  
-    Partials.User       
+    Partials.Message,
+    Partials.Reaction,
+    Partials.User
   ]
 });
 
 const commands = buildCommandRegistry({ client });
 
-client.once(Events.ClientReady, () => {
+client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user?.tag}`);
   console.log(
     ALLOWED_CHANNEL_IDS.length
@@ -80,9 +103,14 @@ client.once(Events.ClientReady, () => {
       : "Allowed channels: (all visible channels)"
   );
   console.log(`Loaded commands: ${commands.list().join(", ")}`);
-  console.log(
-    `Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`
-  );
+  console.log(`Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`);
+
+  // Register slash commands on startup
+  try {
+    await registerSlashCommands();
+  } catch (e) {
+    console.error("[SLASH] registration failed:", e?.message ?? e);
+  }
 });
 
 client.on("messageCreate", async (message) => {
@@ -100,7 +128,6 @@ client.on("messageCreate", async (message) => {
     // Gate experimental ? commands
     if (isQuestion && !ENABLE_FLAREON_COMMANDS) return;
 
-
     // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");
     const cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
@@ -112,6 +139,122 @@ client.on("messageCreate", async (message) => {
     await handler({ message, cmd, rest });
   } catch (err) {
     console.error("messageCreate error:", err);
+  }
+});
+
+// Slash commands + buttons
+client.on(Events.InteractionCreate, async (interaction) => {
+  try {
+    // /help
+    if (interaction.isChatInputCommand() && interaction.commandName === "help") {
+      // commands.js should expose helpModel() that returns:
+      // [{ category: "Tools", lines: ["!calc ...", ...] }, ...]
+      const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
+
+      if (!pages.length) {
+        await interaction.reply({ content: "No commands available.", ephemeral: true });
+        return;
+      }
+
+      const embedFor = (i) => ({
+        title: pages[i].category,
+        description: pages[i].lines.map((l) => `• ${l}`).join("\n"),
+        footer: { text: `Page ${i + 1} / ${pages.length}` }
+      });
+
+      const i = 0;
+
+      const components =
+        pages.length <= 1
+          ? []
+          : [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: 2,
+                    label: "Prev",
+                    custom_id: `help:${i - 1}`,
+                    disabled: true
+                  },
+                  {
+                    type: 2,
+                    style: 2,
+                    label: "Next",
+                    custom_id: `help:${i + 1}`,
+                    disabled: pages.length <= 1
+                  }
+                ]
+              }
+            ];
+
+      await interaction.reply({
+        ephemeral: true,
+        embeds: [embedFor(i)],
+        components
+      });
+      return;
+    }
+
+    // Buttons for /help pagination
+    if (interaction.isButton()) {
+      const id = String(interaction.customId || "");
+      if (!id.startsWith("help:")) return;
+
+      const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
+      if (!pages.length) {
+        await interaction.update({ content: "No commands available.", embeds: [], components: [] });
+        return;
+      }
+
+      let idx = Number(id.split(":")[1]);
+      if (!Number.isFinite(idx)) idx = 0;
+      idx = Math.max(0, Math.min(pages.length - 1, idx));
+
+      const embed = {
+        title: pages[idx].category,
+        description: pages[idx].lines.map((l) => `• ${l}`).join("\n"),
+        footer: { text: `Page ${idx + 1} / ${pages.length}` }
+      };
+
+      const row =
+        pages.length <= 1
+          ? []
+          : [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: 2,
+                    label: "Prev",
+                    custom_id: `help:${idx - 1}`,
+                    disabled: idx <= 0
+                  },
+                  {
+                    type: 2,
+                    style: 2,
+                    label: "Next",
+                    custom_id: `help:${idx + 1}`,
+                    disabled: idx >= pages.length - 1
+                  }
+                ]
+              }
+            ];
+
+      await interaction.update({ embeds: [embed], components: row });
+      return;
+    }
+  } catch (err) {
+    console.error("interactionCreate error:", err);
+    try {
+      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: "Something went wrong.", ephemeral: true });
+      }
+    } catch {
+      // ignore
+    }
   }
 });
 
