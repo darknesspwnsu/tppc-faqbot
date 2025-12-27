@@ -457,7 +457,7 @@ function fmtDiffCaret(a, b) {
 }
 
 function cmpLine(a, b) {
-  return `(${fmt(a)} vs ${fmt(b)})`;
+  return `${fmt(a)} vs ${fmt(b)}`;
 }
 
 /* --------------------------------- loading -------------------------------- */
@@ -623,7 +623,7 @@ export function registerRarity(register) {
               { name: "♂", value: fmt(r.male), inline: true },
               { name: "♀", value: fmt(r.female), inline: true },
               { name: "(?)", value: fmt(r.ungendered), inline: true },
-              { name: "Genderless", value: fmt(r.genderless), inline: true }
+              { name: "G", value: fmt(r.genderless), inline: true }
             ],
           }
         ]
@@ -761,13 +761,13 @@ export function registerLevel4Rarity(register) {
           );
         }
 
-        // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
-        if (normalizeKey(r1.name) === normalizeKey(r2.name)) {
-          await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
-          return;
-        }
-
         await message.reply(parts.join("\n"));
+        return;
+      }
+
+      // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
+      if (normalizeKey(r1.name) === normalizeKey(r2.name)) {
+        await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
         return;
       }
 
@@ -787,7 +787,7 @@ export function registerLevel4Rarity(register) {
               { name: "♂", value: cmpLine(r1.male, r2.male), inline: true },
               { name: "♀", value: cmpLine(r1.female, r2.female), inline: true },
               { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
-              { name: "Genderless", value: cmpLine(r1.genderless, r2.genderless), inline: true }
+              { name: "G", value: cmpLine(r1.genderless, r2.genderless), inline: true }
             ],
           }
         ]
