@@ -697,8 +697,7 @@ export function registerExplodingElectrode(register) {
 
       await resolvePick(message.channel, game, message.author.id);
     },
-    "!pick — pick a Poké Ball (only on your turn)",
-    { aliases: ["!p"] }
+    "!pick — pick a Poké Ball (only on your turn)"
   );
 
   // End (admin-only)
