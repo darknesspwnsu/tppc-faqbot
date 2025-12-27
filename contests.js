@@ -24,6 +24,9 @@ import { PermissionsBitField } from "discord.js";
 //   maxEntrants?: number
 // }
 const activeByGuild = new Map();
+// guildId -> { timeout: NodeJS.Timeout, channelId: string }
+const activeElimByGuild = new Map();
+
 
 let reactionHooksInstalled = false;
 
@@ -427,6 +430,11 @@ export function registerContests(register) {
     "?elim",
     async ({ message, rest }) => {
       if (!message.guild) return;
+      // Only one elim at a time per guild
+      if (activeElimByGuild.has(message.guildId)) {
+        await message.reply("An elimination is already running, please wait for it to finish!");
+        return;
+      }
 
       const parts = rest.trim().split(/\s+/).filter(Boolean);
 
@@ -458,11 +466,28 @@ export function registerContests(register) {
 
       remaining = [...remaining];
 
+      const finish = async () => {
+        // Clear lock
+        const st = activeElimByGuild.get(message.guildId);
+        if (st?.timeout) {
+          try { clearTimeout(st.timeout); } catch {}
+        }
+        activeElimByGuild.delete(message.guildId);
+
+        // Winner immediately (no extra delay)
+        if (remaining.length === 1) {
+          await message.channel.send(`${remaining[0]} wins!`);
+        } else {
+          await message.channel.send("Elimination ended with no winner.");
+        }
+      };
+
       const runRound = async () => {
         if (!message.channel) return;
 
+        // If only one remains, declare winner NOW (no extra waiting)
         if (remaining.length === 1) {
-          await message.channel.send(`${remaining[0]} wins!`);
+          await finish();
           return;
         }
 
@@ -473,10 +498,25 @@ export function registerContests(register) {
           `${eliminated} has been eliminated! Remaining: ${remaining.join(", ")}`
         );
 
-        setTimeout(runRound, delayMs);
+        // ✅ If we just reached a single remaining entry, declare winner NOW (no extra delay)
+        if (remaining.length === 1) {
+          await finish(); // finish() should send "<winner> wins!" and clear the lock
+          return;
+        }
+
+        // Otherwise schedule the next round as usual
+        const t = setTimeout(runRound, delayMs);
+        const st = activeElimByGuild.get(message.guildId);
+        if (st) st.timeout = t;
       };
 
-      setTimeout(runRound, delayMs);
+      // Acquire lock *right before* starting
+      activeElimByGuild.set(message.guildId, { timeout: null, channelId: message.channelId });
+
+      // Start immediately (first elimination happens after delayMs, as before)
+      const t0 = setTimeout(runRound, delayMs);
+      activeElimByGuild.set(message.guildId, { timeout: t0, channelId: message.channelId });
+
     },
     "?elim <1–30s> <items...> — randomly eliminates one item per round"
   );
