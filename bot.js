@@ -2,6 +2,7 @@ import "dotenv/config";
 import process from "node:process";
 import { Client, GatewayIntentBits, Partials, Events, REST, Routes } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
+import { handleRarityInteraction } from "./rarity.js";
 import { initDb } from "./db.js";
 
 function mustEnv(name) {
@@ -197,8 +198,44 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // Buttons for /help pagination
+    // Buttons (help pagination + rarity reruns)
     if (interaction.isButton()) {
+      // rarity buttons
+      const rerun = await handleRarityInteraction(interaction);
+
+      // handleRarityInteraction returns:
+      // - false if not a rarity button
+      // - { cmd, rest } if it IS a rarity button and we should rerun
+      if (rerun && typeof rerun === "object") {
+        const cmd = String(rerun.cmd || "").toLowerCase();
+        const rest = String(rerun.rest || "");
+
+        // Mirror the same experimental gating as messageCreate
+        const isQuestion = cmd.startsWith("?");
+        if (isQuestion && !ENABLE_FLAREON_COMMANDS) return;
+
+        // Mirror the same allowed-channel gating as messageCreate
+        if (!inAllowedChannel(interaction.channelId)) return;
+
+        const handler = commands.get(cmd);
+        if (!handler) return;
+
+        // Create a lightweight "message-like" object that satisfies your handlers
+        const messageLike = {
+          guild: interaction.guild,
+          channel: interaction.channel,
+          channelId: interaction.channelId,
+          author: interaction.user,
+          member: interaction.member, // keeps admin checks working
+          mentions: { users: { first: () => null } }, // rc already passes explicit args
+          reply: (payload) => interaction.channel.send(payload),
+        };
+
+        await handler({ message: messageLike, cmd, rest });
+        return;
+      }
+
+      // /help pagination
       const id = String(interaction.customId || "");
       if (!id.startsWith("help:")) return;
 
@@ -246,6 +283,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.update({ embeds: [embed], components: row });
       return;
     }
+
   } catch (err) {
     console.error("interactionCreate error:", err);
     try {

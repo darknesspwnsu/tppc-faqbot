@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import https from "node:https";
 import http from "node:http";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
 let rarity = null;      // { lowerName: entry }
@@ -576,6 +577,23 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   }, delay);
 }
 
+function buildDidYouMeanButtons(command, suggestions, extraArgs = "") {
+  // customId format: rarity_retry:<command>:<encodedMon>:<encodedExtraArgs>
+  // Keep it short and safe: encode and trim.
+  const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
+
+  const row = new ActionRowBuilder().addComponents(
+    suggestions.slice(0, 5).map((name) =>
+      new ButtonBuilder()
+        .setCustomId(`rarity_retry:${command}:${enc(name)}:${enc(extraArgs)}`)
+        .setLabel(name.length > 80 ? name.slice(0, 77) + "…" : name)
+        .setStyle(ButtonStyle.Secondary)
+    )
+  );
+
+  return [row];
+}
+
 /* --------------------------------- exports -------------------------------- */
 
 export function registerRarity(register) {
@@ -599,11 +617,11 @@ export function registerRarity(register) {
         const suggestions = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
         if (suggestions.length === 0) return;
 
-        await message.reply(
-          `No exact match for \`${qRaw}\`.\nDid you mean: ${suggestions
-            .map((s) => `\`${s}\``)
-            .join(", ")} ?`
-        );
+        await message.reply({
+          content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
+          components: buildDidYouMeanButtons("?rarity", suggestions),
+        });
+
         return;
       }
 
@@ -684,11 +702,10 @@ export function registerLevel4Rarity(register) {
         const merged = mergeSuggestions(sL4, sGen);
 
         if (merged.length) {
-          await message.reply(
-            `No exact match for \`${qRaw}\`.\nDid you mean: ${merged
-              .map((s) => `\`${s}\``)
-              .join(", ")} ?`
-          );
+          await message.reply({
+            content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
+            components: buildDidYouMeanButtons("!l4", merged),
+          });
           return;
         }
 
@@ -739,29 +756,33 @@ export function registerLevel4Rarity(register) {
       const r1 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q1);
       const r2 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q2);
 
-      // Did-you-mean handling per-side
+      // Did-you-mean handling per-side (with clickable buttons)
       if (!r1 || !r2) {
-        const parts = [];
-
         if (!r1) {
           const s1 = getSuggestionsFromIndex(rarityNorm, q1, 5);
-          parts.push(
-            s1.length
-              ? `No exact match for \`${q1}\`. Did you mean: ${s1.map((s) => `\`${s}\``).join(", ")} ?`
-              : `No exact match for \`${q1}\`.`
-          );
+          if (s1.length) {
+            await message.reply({
+              content: `No exact match for \`${q1}\`.\nDid you mean:`,
+              // extraArgs carries the other side so the button can rebuild the rc command
+              components: buildDidYouMeanButtons("!rc_left", s1, q2),
+            });
+          } else {
+            await message.reply(`No exact match for \`${q1}\`.`);
+          }
         }
 
         if (!r2) {
           const s2 = getSuggestionsFromIndex(rarityNorm, q2, 5);
-          parts.push(
-            s2.length
-              ? `No exact match for \`${q2}\`. Did you mean: ${s2.map((s) => `\`${s}\``).join(", ")} ?`
-              : `No exact match for \`${q2}\`.`
-          );
+          if (s2.length) {
+            await message.reply({
+              content: `No exact match for \`${q2}\`.\nDid you mean:`,
+              components: buildDidYouMeanButtons("!rc_right", s2, q1),
+            });
+          } else {
+            await message.reply(`No exact match for \`${q2}\`.`);
+          }
         }
 
-        await message.reply(parts.join("\n"));
         return;
       }
 
@@ -811,4 +832,25 @@ export function registerLevel4Rarity(register) {
     "!rarity4reload — refreshes rarity4 cache (admin)",
     { admin: true }
   );
+}
+
+export async function handleRarityInteraction(interaction) {
+  if (!interaction?.isButton?.()) return false;
+
+  const id = String(interaction.customId || "");
+  if (!id.startsWith("rarity_retry:")) return false;
+
+  const [, cmdKey, encMon, encExtra] = id.split(":");
+  const mon = decodeURIComponent(encMon || "");
+  const extra = decodeURIComponent(encExtra || "");
+
+  await interaction.deferUpdate().catch(() => {});
+
+  if (cmdKey === "?rarity") return { cmd: "?rarity", rest: mon };
+  if (cmdKey === "!l4") return { cmd: "!l4", rest: mon };
+
+  if (cmdKey === "!rc_left") return { cmd: "!rc", rest: `"${mon}" "${extra}"` };
+  if (cmdKey === "!rc_right") return { cmd: "!rc", rest: `"${extra}" "${mon}"` };
+
+  return false;
 }
