@@ -3,6 +3,20 @@ import path from "node:path";
 import Fuse from "fuse.js";
 import { createWikiService } from "./wiki.js";
 
+/**
+ * Read numeric env var from the first key that exists and parses as a number.
+ */
+function envNumber(...keys) {
+  for (const k of keys) {
+    const v = process.env[k];
+    if (v !== undefined && v !== "") {
+      const n = Number(v);
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 function normalize(text) {
   return (text ?? "")
     .toLowerCase()
@@ -11,16 +25,36 @@ function normalize(text) {
     .trim();
 }
 
+// Keep list conservative. Do NOT remove "not", "no", etc.
+function stripStopwords(norm) {
+  return String(norm ?? "")
+    .replace(
+      /\b(i|im|i'm|can|cant|can't|could|would|should|please|plz|the|a|an|to|of|for|on|in|at|is|are|am|do|does|did)\b/g,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Optional aliases: improves matching without lowering thresholds
 function aliasNormalize(norm) {
   norm = String(norm ?? "");
+
   // Common TPPC synonyms/short-hands
   norm = norm.replace(/\bxe\b/g, "experience");
   norm = norm.replace(/\bxp\b/g, "experience");
   norm = norm.replace(/\bexp\b/g, "experience");
   norm = norm.replace(/\bue\b/g, "ungendered");
   norm = norm.replace(/\bug\b/g, "ungendered");
-  norm = norm.replace(/\bng\b/g, "non golden");
+
+  // Server slang (you asked for permissive matching here)
+  // NOTE: this maps "ng"/"ngs" -> "goldens". If you ever need "ng" to mean "non-golden",
+  // change this back and rely on explicit triggers instead.
+  norm = norm.replace(/\bngs\b/g, "goldens");
+  norm = norm.replace(/\bng\b/g, "goldens");
+  norm = norm.replace(/\bnew golds\b/g, "goldens");
+  norm = norm.replace(/\bnew goldens\b/g, "goldens");
+
   return norm;
 }
 
@@ -30,48 +64,88 @@ function readFaq() {
   const json = JSON.parse(raw);
 
   // Normalize format:
-  // - allow either { version, entries:[{id, q, a, ...}] } or [{...}]
-  const entries = Array.isArray(json) ? json : Array.isArray(json?.entries) ? json.entries : [];
+  // - allow either { version, entries:[...] } or [...]
+  const entries = Array.isArray(json)
+    ? json
+    : Array.isArray(json?.entries)
+      ? json.entries
+      : [];
   const version = Array.isArray(json) ? null : json?.version ?? null;
 
   const out = [];
+
   for (const e of entries) {
     if (!e || typeof e !== "object") continue;
 
     const id = String(e.id ?? "").trim();
-    const q = String(e.q ?? e.question ?? "").trim();
-    const a = String(e.a ?? e.answer ?? e.response ?? "").trim();
+    if (!id) continue;
 
-    if (!id || !q || !a) continue;
+    // -------- NEW FORMAT: { id, q, a } (or question/answer) --------
+    const q1 = String(e.q ?? e.question ?? "").trim();
+    const a1 = String(e.a ?? e.answer ?? e.response ?? "").trim();
+    if (q1 && a1) {
+      const questionNorm = normalize(q1);
+      const questionAlias = aliasNormalize(questionNorm);
+      const questionSW = stripStopwords(questionNorm);
+      const questionAliasSW = stripStopwords(questionAlias);
 
-    const questionNorm = normalize(q);
-    const questionAlias = aliasNormalize(questionNorm);
+      out.push({
+        id,
+        q: q1,
+        a: a1,
+        questionNorm,
+        questionAlias,
+        questionSW,
+        questionAliasSW,
+        threshold: typeof e.threshold === "number" ? e.threshold : null
+      });
+      continue;
+    }
 
-    out.push({
-      id,
-      q,
-      a,
-      questionNorm,
-      questionAlias,
-      // Optional knobs per entry
-      threshold: typeof e.threshold === "number" ? e.threshold : null
-    });
+    // -------- OLD FORMAT: { id, triggers:[...], response } --------
+    const resp = String(e.response ?? e.a ?? e.answer ?? "").trim();
+    const triggers = Array.isArray(e.triggers) ? e.triggers : null;
+
+    if (resp && triggers && triggers.length) {
+      for (const t of triggers) {
+        const q = String(t ?? "").trim();
+        if (!q) continue;
+
+        const questionNorm = normalize(q);
+        const questionAlias = aliasNormalize(questionNorm);
+        const questionSW = stripStopwords(questionNorm);
+        const questionAliasSW = stripStopwords(questionAlias);
+
+        out.push({
+          id, // keep base id for cooldown + logging
+          q,
+          a: resp,
+          questionNorm,
+          questionAlias,
+          questionSW,
+          questionAliasSW,
+          threshold: typeof e.threshold === "number" ? e.threshold : null
+        });
+      }
+    }
   }
 
   return { version, entries: out };
 }
 
 function buildFuseIndex(faqData) {
-  // We index both the normalized text and an alias-normalized form
+  // We index both the normalized text and an alias-normalized form (+ stopword-stripped variants)
   return new Fuse(faqData.entries, {
     includeScore: true,
     shouldSort: true,
-    threshold: 0.45, // this is only a candidate threshold; we apply our own confidence gate below
+    threshold: 0.45, // candidate threshold; we apply our own confidence gate below
     ignoreLocation: true,
     minMatchCharLength: 3,
     keys: [
-      { name: "questionNorm", weight: 0.6 },
-      { name: "questionAlias", weight: 0.4 }
+      { name: "questionNorm", weight: 0.45 },
+      { name: "questionAlias", weight: 0.35 },
+      { name: "questionSW", weight: 0.10 },
+      { name: "questionAliasSW", weight: 0.10 }
     ]
   });
 }
@@ -89,11 +163,42 @@ function score01FromFuse(score) {
 }
 
 function pickBestMatch(fuse, qNorm) {
-  const results = fuse.search(qNorm);
-  if (!results || results.length === 0) return null;
+  const qAlias = aliasNormalize(qNorm);
+  const qSW = stripStopwords(qNorm);
+  const qAliasSW = stripStopwords(qAlias);
 
-  const best = results[0];
-  const second = results.find((r) => r.item?.id !== best.item?.id) || null;
+  const queries = [];
+  const pushQ = (s) => {
+    s = String(s || "").trim();
+    if (!s) return;
+    if (!queries.includes(s)) queries.push(s);
+  };
+
+  pushQ(qNorm);
+  if (qAlias && qAlias !== qNorm) pushQ(qAlias);
+  if (qSW && qSW !== qNorm) pushQ(qSW);
+  if (qAliasSW && qAliasSW !== qAlias && qAliasSW !== qSW) pushQ(qAliasSW);
+
+  // Merge results across query variants, keep best score per FAQ id
+  const bestById = new Map();
+
+  for (const q of queries) {
+    const res = fuse.search(q) || [];
+    for (const r of res) {
+      const id = r?.item?.id;
+      if (!id) continue;
+      const prev = bestById.get(id);
+      if (!prev || (r.score ?? 999) < (prev.score ?? 999)) bestById.set(id, r);
+    }
+  }
+
+  const merged = [...bestById.values()].sort(
+    (a, b) => (a.score ?? 999) - (b.score ?? 999)
+  );
+  if (merged.length === 0) return null;
+
+  const best = merged[0];
+  const second = merged[1] || null;
 
   const best01 = score01FromFuse(best.score);
   const second01 = second ? score01FromFuse(second.score) : 0;
@@ -101,6 +206,7 @@ function pickBestMatch(fuse, qNorm) {
   return {
     entry: best.item,
     score01: best01,
+    // keep margin for logging only (NOT used for confidence)
     margin01: best01 - second01
   };
 }
@@ -112,8 +218,14 @@ function loadNgsOnce() {
   const data = JSON.parse(raw);
 
   // Allow either ["A","B"] or {"ngs":["A","B"]}
-  const ngs = Array.isArray(data) ? data : Array.isArray(data?.ngs) ? data.ngs : null;
-  if (!ngs) throw new Error("data/ngs.json must be an array of strings, or { ngs: [...] }");
+  const ngs = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.ngs)
+      ? data.ngs
+      : null;
+  if (!ngs) {
+    throw new Error("data/ngs.json must be an array of strings, or { ngs: [...] }");
+  }
 
   return ngs.map((x) => String(x).trim()).filter(Boolean);
 }
@@ -139,16 +251,22 @@ function loadGlossaryOnce() {
 }
 
 /**
- * Existing FAQ engine (unchanged): createFaqService()
+ * FAQ engine
  */
 export function createFaqService() {
-  // Config knobs
-  const DEFAULT_THRESHOLD = Number(process.env.FAQ_MATCH_THRESHOLD ?? 0.82); // 0..1 (higher is stricter)
-  const MIN_MARGIN = Number(process.env.FAQ_MIN_MARGIN ?? 0.06);            // best - 2nd best in 0..1
-  const NEAR_MISS_MIN = Number(process.env.FAQ_NEAR_MISS_MIN ?? 0.70);
-  const NEAR_MISS_MAX = Number(process.env.FAQ_NEAR_MISS_MAX ?? 0.82);
+  // Read BOTH your legacy env keys and newer FAQ_* keys.
+  // (You said you want to remove MIN_MARGIN completely — done.)
+  const DEFAULT_THRESHOLD =
+    envNumber("FAQ_MATCH_THRESHOLD", "DEFAULT_THRESHOLD") ?? 0.82;
 
-  const FAQ_RESPONSE_COOLDOWN_SECONDS = Number(process.env.FAQ_RESPONSE_COOLDOWN_SECONDS ?? 12);
+  const NEAR_MISS_MIN =
+    envNumber("FAQ_NEAR_MISS_MIN", "NEAR_MISS_MIN") ?? 0.70;
+
+  const NEAR_MISS_MAX =
+    envNumber("FAQ_NEAR_MISS_MAX", "NEAR_MISS_MAX") ?? 0.82;
+
+  const FAQ_RESPONSE_COOLDOWN_SECONDS =
+    envNumber("FAQ_RESPONSE_COOLDOWN_SECONDS", "RESPONSE_COOLDOWN_SECONDS") ?? 12;
 
   const lastFaqResponseAt = new Map(); // key `${channelId}:${faqId}` -> epochMs
 
@@ -165,28 +283,33 @@ export function createFaqService() {
     return Date.now();
   }
 
-  function onCooldown(channelId, faqId) {
+  function getChannelId(message) {
+    return message?.channelId ?? message?.channel?.id ?? "unknown";
+  }
+
+  function onCooldown(message, faqId) {
+    const channelId = getChannelId(message);
     const key = `${channelId}:${faqId}`;
     const t = lastFaqResponseAt.get(key) || 0;
     return nowMs() - t < FAQ_RESPONSE_COOLDOWN_SECONDS * 1000;
   }
 
-  function markResponded(channelId, faqId) {
+  function markResponded(message, faqId) {
+    const channelId = getChannelId(message);
     lastFaqResponseAt.set(`${channelId}:${faqId}`, nowMs());
   }
 
-  function logNearMiss({ message, questionRaw, questionNorm, match, margin }) {
-    // Keep logs lightweight; no PII beyond user id & channel id.
+  function logNearMiss({ message, questionRaw, questionNorm, match }) {
     try {
       const meta = {
-        userId: message.author?.id,
-        channelId: message.channel?.id,
-        guildId: message.guild?.id,
+        userId: message?.author?.id,
+        channelId: getChannelId(message),
+        guildId: message?.guild?.id,
         questionRaw,
         questionNorm,
         matchId: match.entry?.id,
         score01: match.score01,
-        margin01: margin
+        margin01: match.margin01
       };
       console.log(`[FAQ][NEAR-MISS] ${JSON.stringify(meta)}`);
     } catch {
@@ -202,29 +325,30 @@ export function createFaqService() {
     if (!match) return null;
 
     const threshold = match.entry.threshold ?? DEFAULT_THRESHOLD;
-    const margin = match.margin01 ?? 0;
 
-    const confident = match.score01 >= threshold && margin >= MIN_MARGIN;
+    // NO MIN_MARGIN: confidence is purely based on score vs threshold
+    const confident = match.score01 >= threshold;
 
     if (!confident) {
       if (match.score01 >= NEAR_MISS_MIN && match.score01 <= NEAR_MISS_MAX) {
-        logNearMiss({ message, questionRaw, questionNorm: qNorm, match, margin });
+        logNearMiss({ message, questionRaw, questionNorm: qNorm, match });
         console.log(
           `[NEAR-MISS][FAQ] "${questionRaw}" -> ${match.entry.id} score=${match.score01.toFixed(
             3
-          )} margin=${margin.toFixed(3)}`
+          )} (threshold=${threshold})`
         );
       }
       return null;
     }
 
-    if (onCooldown(message.channelId, match.entry.id)) return null;
+    if (FAQ_RESPONSE_COOLDOWN_SECONDS > 0 && onCooldown(message, match.entry.id)) return null;
 
-    markResponded(message.channelId, match.entry.id);
+    markResponded(message, match.entry.id);
 
     console.log(
       `[FAQ] "${questionRaw}" -> ${match.entry.id} score=${match.score01.toFixed(3)} ` +
-        `margin=${margin.toFixed(3)}`
+        `threshold=${threshold}` +
+        ` cooldownSec=${FAQ_RESPONSE_COOLDOWN_SECONDS}`
     );
 
     return match.entry.a;
@@ -237,7 +361,7 @@ export function createFaqService() {
 }
 
 /**
- * New: registers "info/knowledge" commands that used to live in commands.js
+ * Registers "info/knowledge" commands:
  * - !faq, !faqreload
  * - !wiki
  * - !ng
@@ -371,7 +495,6 @@ export function registerInfoCommands(register) {
       if (!keyRaw) return; // show nothing if user didn't provide a key
 
       const key = keyRaw.toLowerCase();
-
       const def = glossary[key];
       if (!def) return; // show nothing if key doesn't exist
 
