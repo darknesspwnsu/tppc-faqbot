@@ -115,13 +115,9 @@ export function registerTools(register) {
   register(
     "!promo",
     async ({ message }) => {
-<<<<<<< HEAD
-      await message.reply(`Current promo: ${lastPromo}`);
-=======
       const guildId = message.guild?.id;
       const promo = await getPromoForGuild(guildId);
-      await message.reply(`Last promo: ${promo}`);
->>>>>>> b0cd855 (persist promo setting if database exists, otherwise fallback inmemory.)
+      await message.reply(`Current promo: ${promo}`);
     },
     "!promo — shows the last promo",
     { aliases: ["!p"] }
