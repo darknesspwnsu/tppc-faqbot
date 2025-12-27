@@ -635,7 +635,6 @@ export function registerRarity(register) {
         embeds: [
           {
             title: r.name,
-            description: updatedLine,
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: fmt(r.total), inline: false },
@@ -644,6 +643,7 @@ export function registerRarity(register) {
               { name: "(?)", value: fmt(r.ungendered), inline: true },
               { name: "G", value: fmt(r.genderless), inline: true }
             ],
+            footer: {text: updatedLine}
           }
         ]
       });
