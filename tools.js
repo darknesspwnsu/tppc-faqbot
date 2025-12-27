@@ -39,6 +39,39 @@ export function registerTools(register) {
     "!tools — returns a wiki link to several helpful TPPC tools, calculators and other utilties."
   );
 
+   // Promo commands
+  let lastPromo = "Not set";
+  const ALLOWED_PROMO_SETTERS = new Set([".dkns", "haunter07"]);
+
+  register(
+    "!promo",
+    async ({ message }) => {
+      await message.reply(`Last promo: ${lastPromo}`);
+    },
+    "!promo — shows the last promo",
+    { aliases: ["!p"] }
+  );
+
+  register(
+    "!setpromo",
+    async ({ message, rest }) => {
+      const newPromo = rest.trim();
+      if (!newPromo) {
+        await message.reply("Usage: !setpromo <promo text>");
+        return;
+      }
+      const username = message.author.username;
+      const isAdmin = message.author.admin;
+      if (!isAdmin && !ALLOWED_PROMO_SETTERS.has(username)) {
+        await message.reply("You do not have permission to set the promo.");
+        return;
+      }
+      lastPromo = newPromo;
+      await message.reply(`Promo updated to: ${lastPromo}`);
+    },
+    "!setpromo <text> — sets the last promo (admin or allowed users only)"
+  );
+
   // Delegate: calculator command family
   registerCalculator(register);
   // Rarity: gated by RARITY_GUILD_ALLOWLIST inside rarity.js
