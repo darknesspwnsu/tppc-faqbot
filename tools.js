@@ -7,6 +7,7 @@
 
 import { registerCalculator } from "./calculator.js";
 import { registerRarity, registerLevel4Rarity } from "./rarity.js";
+import { isAdminOrPrivileged } from "./auth.js";
 
 /* --------------------------------- config -------------------------------- */
 
@@ -41,7 +42,6 @@ export function registerTools(register) {
 
    // Promo commands
   let lastPromo = "Not set";
-  const ALLOWED_PROMO_SETTERS = new Set([".dkns", "haunter07"]);
 
   register(
     "!promo",
@@ -60,9 +60,7 @@ export function registerTools(register) {
         await message.reply("Usage: !setpromo <promo text>");
         return;
       }
-      const username = message.author.username;
-      const isAdmin = message.author.admin;
-      if (!isAdmin && !ALLOWED_PROMO_SETTERS.has(username)) {
+      if (!isAdminOrPrivileged(message)) {
         await message.reply("You do not have permission to set the promo.");
         return;
       }
