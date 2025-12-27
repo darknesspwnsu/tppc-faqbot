@@ -75,6 +75,29 @@ export function buildCommandRegistry() {
     };
   }
 
+  function helpModel() {
+    const byCat = new Map();
+    const catOrder = [];
+
+    for (const { help, admin, canonical, category } of registry.values()) {
+      if (!canonical) continue;
+      if (!help) continue;
+      if (admin) continue;
+
+      const cat = category || "Other";
+      if (!byCat.has(cat)) {
+        byCat.set(cat, []);
+        catOrder.push(cat);
+      }
+      byCat.get(cat).push(help);
+    }
+
+    return catOrder.map((cat) => ({
+      category: cat,
+      lines: (byCat.get(cat) || []).sort()
+    }));
+  }
+
   /* ------------------------------ Module wiring ------------------------------ */
 
   // Trading lists + IDs (?ft/?lf/?id etc.) behind allowlist
@@ -100,36 +123,14 @@ export function buildCommandRegistry() {
   /* ------------------------------ Local commands ----------------------------- */
 
   register("!help", async ({ message }) => {
-    const byCat = new Map();      // category -> [help lines]
-    const catOrder = [];         // categories in first-seen order
+    const model = buildHelpModel(registry);
+    if (!model.categories.length) return;
 
-    for (const { help, admin, canonical, category } of registry.values()) {
-      if (!canonical) continue;
-      if (!help) continue;
-      if (admin) continue;
-
-      const cat = category || "Other";
-
-      if (!byCat.has(cat)) {
-        byCat.set(cat, []);
-        catOrder.push(cat); // 👈 preserve registration order
-      }
-
-      byCat.get(cat).push(help);
-    }
-
-    if (catOrder.length === 0) return;
-
-    const sections = [];
-    for (const cat of catOrder) {
-      const lines = byCat.get(cat);
-      if (!lines || lines.length === 0) continue;
-
-      sections.push(
-        `**${cat}**\n` +
-        lines.sort().map((l) => `• ${l}`).join("\n")
-      );
-    }
+    const sections = model.categories.map(
+      (cat) =>
+        `**${cat.name}**\n` +
+        cat.lines.map((l) => `• ${l}`).join("\n")
+    );
 
     await message.reply(sections.join("\n\n"));
   }, "!help — shows this help message", { aliases: ["!helpme"], category: "Info" });
@@ -138,6 +139,7 @@ export function buildCommandRegistry() {
 
   return {
     get: (name) => registry.get(String(name).toLowerCase())?.handler,
-    list: () => [...registry.keys()].sort()
+    list: () => [...registry.keys()].sort(),
+    helpModel
   };
 }
