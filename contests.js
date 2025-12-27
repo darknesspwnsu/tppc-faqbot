@@ -547,7 +547,7 @@ export function registerContests(register) {
       const parts = rest.trim().split(/\s+/).filter(Boolean);
 
       if (parts.length < 3) {
-        await message.reply("Usage: `?elim <seconds>s <item1> <item2> [...]`");
+        await message.reply("Usage: `?elim <seconds> <item1> <item2> [...]`");
         return;
       }
 
