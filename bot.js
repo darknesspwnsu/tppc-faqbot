@@ -79,6 +79,30 @@ async function registerSlashCommands() {
   }
 }
 
+function findDefaultHelpIndex(pages) {
+  const idx = pages.findIndex((p) => String(p.category).toLowerCase() === "trading");
+  return idx >= 0 ? idx : 0;
+}
+
+function buildHelpComponents(pages, activeIdx) {
+  const rows = [];
+
+  // One button per category (max 5 per row)
+  const catButtons = pages.map((p, i) => ({
+    type: 2,
+    style: i === activeIdx ? 1 : 2, // Primary highlights active category
+    label: p.category,
+    custom_id: `helpcat:${i}`,
+    disabled: i === activeIdx
+  }));
+
+  for (let i = 0; i < catButtons.length; i += 5) {
+    rows.push({ type: 1, components: catButtons.slice(i, i + 5) });
+  }
+
+  return rows;
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds, // required for slash commands
@@ -163,37 +187,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         footer: { text: `Page ${i + 1} / ${pages.length}` }
       });
 
-      const i = 0;
-
-      const components =
-        pages.length <= 1
-          ? []
-          : [
-              {
-                type: 1,
-                components: [
-                  {
-                    type: 2,
-                    style: 2,
-                    label: "Prev",
-                    custom_id: `help:${i - 1}`,
-                    disabled: true
-                  },
-                  {
-                    type: 2,
-                    style: 2,
-                    label: "Next",
-                    custom_id: `help:${i + 1}`,
-                    disabled: pages.length <= 1
-                  }
-                ]
-              }
-            ];
+      const i = findDefaultHelpIndex(pages);
 
       await interaction.reply({
         ephemeral: true,
         embeds: [embedFor(i)],
-        components
+        components: buildHelpComponents(pages, i)
       });
       return;
     }
@@ -232,6 +231,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
         };
 
         await handler({ message: messageLike, cmd, rest });
+        return;
+      }
+
+      // /help category switch
+      const cid = String(interaction.customId || "");
+      if (cid.startsWith("helpcat:")) {
+        const pages = typeof commands.helpModel === "function" ? commands.helpModel() : [];
+        if (!pages.length) {
+          await interaction.update({ content: "No commands available.", embeds: [], components: [] });
+          return;
+        }
+
+        let idx = Number(cid.split(":")[1]);
+        if (!Number.isFinite(idx)) idx = 0;
+        idx = Math.max(0, Math.min(pages.length - 1, idx));
+
+        const embed = {
+          title: pages[idx].category,
+          description: pages[idx].lines.map((l) => `• ${l}`).join("\n"),
+          footer: { text: `Category ${idx + 1} / ${pages.length}` }
+        };
+
+        await interaction.update({
+          embeds: [embed],
+          components: buildHelpComponents(pages, idx)
+        });
         return;
       }
 
