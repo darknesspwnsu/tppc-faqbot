@@ -246,14 +246,14 @@ async function finalizeContest(guildId, reason = "timer") {
       ? "Closed early."
       : reason === "cancel"
       ? "Cancelled."
-      : `Finished (ended at <t:${Math.floor(endsAtMs / 1000)}:t>).`;
+      : `(ended at <t:${Math.floor(endsAtMs / 1000)}:t>).`;
 
   const body = total === 0 ? "No one reacted to enter." : nameList.join(" ");
 
   const channel = await client.channels.fetch(channelId);
   if (channel?.isTextBased()) {
     await channel.send(
-      `━━━━━━━━━━━━━━\n<@${creatorId}> Entrants (${total}) — ${elapsedNote}\n\n${body}`
+      `━━━━━━━━━━━━━━\n<@${creatorId}> Entrants (${total}) ${elapsedNote}\n\n${body}`
     );
   }
 }
