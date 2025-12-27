@@ -126,10 +126,28 @@ export function registerHelpbox(register, { helpModel }) {
       if (!pages.length) return;
 
       const sections = pages.map(
-        (p) => `**${p.category}**\n` + p.lines.map((l) => `• ${l}`).join("\n")
+        (p) => `**${p.category}**\n` + (p.lines || []).map((l) => `• ${l}`).join("\n")
       );
 
-      await message.reply(sections.join("\n\n"));
+      const full = sections.join("\n\n");
+
+      const prefix =
+        "Type `/help` for a full list of available commands.\n" +
+        "_(Showing a truncated preview below)_\n\n";
+
+      // user asked “maybe 1000” — but also keep us under 2000 total
+      const hardLimit = 2000;
+      const previewLimit = Math.min(1000, hardLimit - prefix.length - 40); // 40 buffer for suffix
+
+      let preview = full;
+      let suffix = "";
+
+      if (full.length > previewLimit) {
+        preview = full.slice(0, previewLimit);
+        suffix = `\n\n… _(truncated: ${full.length - previewLimit} more chars)_`;
+      }
+
+      await message.reply(prefix + preview + suffix);
     },
     "!help — shows this help message",
     { aliases: ["!helpme", "!h"], category: "Info" }
