@@ -409,13 +409,13 @@ export function registerContests(register) {
   register("?roll", async ({ message, rest }) => {
     const arg = rest.trim();
     const m = /^(\d+)d(\d+)(?:\s+(norepeat|nr))?$/i.exec(arg);
-    const noRepeat = !!m[3];
 
     if (!m) {
       await message.channel.send("Invalid format. Please use a format like `1d100`");
       return;
     }
 
+    const noRepeat = !!m[3];
     const n = Number(m[1]);
     const sides = Number(m[2]);
 
@@ -461,7 +461,8 @@ export function registerContests(register) {
       }
     }
 
-    const out = `${mention(uid)} ${rolls.join(", ")}`;
+    const suffix = noRepeat ? " (norepeat mode: ON)" : "";
+    const out = `${mention(uid)} ${rolls.join(", ")}${suffix}`;
 
     // Discord message content hard limit ~2000 chars
     if (out.length > 1900) {
