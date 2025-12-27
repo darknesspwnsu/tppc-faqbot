@@ -32,6 +32,8 @@ import { registerToybox } from "./toybox.js";
 
 import { registerHelpbox } from "./helpbox.js";
 
+import { handleRarityInteraction } from "./rarity.js";
+
 /* --------------------------------- config -------------------------------- */
 
 // Used only to decide whether to register trading commands at all.
@@ -206,6 +208,32 @@ export function buildCommandRegistry({ client } = {}) {
     // Components: buttons, selects, etc.
     const customId = interaction.customId ? String(interaction.customId) : "";
     if (customId) {
+      // Special-case rarity "did you mean" buttons.
+      if (customId.startsWith("rarity_retry:")) {
+        const rerun = await handleRarityInteraction(interaction);
+        if (rerun && rerun.cmd) {
+          const entry = bang.get(String(rerun.cmd).toLowerCase());
+          if (entry?.handler) {
+            // Build a lightweight "message-like" object for existing bang handlers.
+            const messageLike = {
+              guild: interaction.guild,
+              channel: interaction.channel,
+              author: interaction.user,
+              member: interaction.member,
+              // reply() should create a normal follow-up message
+              reply: (payload) => interaction.followUp(payload),
+            };
+
+            await entry.handler({
+              message: messageLike,
+              cmd: rerun.cmd,
+              rest: rerun.rest ?? ""
+            });
+          }
+        }
+        return;
+      }
+
       const match = components.find((c) => customId.startsWith(c.prefix));
       if (match?.handler) {
         await match.handler({ interaction });
