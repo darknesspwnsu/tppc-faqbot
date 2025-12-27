@@ -27,6 +27,19 @@ const activeByGuild = new Map();
 
 let reactionHooksInstalled = false;
 
+// Channel allowlist for specific commands
+// guildId -> array of allowed channelIds
+const AWESOME_CHANNELS = {
+  "329934860388925442": ["331114564966154240", "551243336187510784"]
+};
+
+function isAllowedChannel(message, allowedIds) {
+  if (!Array.isArray(allowedIds) || allowedIds.length === 0) return true; // allow everywhere by default
+  const cid = message?.channelId;
+  return !!cid && allowedIds.includes(cid);
+}
+
+
 function isAdmin(message) {
   if (!message.member) return false;
   return (
