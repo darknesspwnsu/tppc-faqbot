@@ -8,6 +8,7 @@
 // - Someone "holds" the Voltorb, can pass via mention (cannot pass to self)
 
 import { collectEntrantsByReactions } from "../contests.js";
+import { isAdminOrPrivileged } from "../auth.js";
 
 const activeGames = new Map(); // guildId -> { holderId, aliveIds:Set, allowedIds:Set, mode, minSeconds, maxSeconds, explosionTimeout, scareInterval }
 
@@ -62,13 +63,6 @@ function parseMentionToken(token) {
 
 function getMentionedUsers(message) {
   return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
-}
-
-function isAdminMember(message) {
-  return (
-    message.member?.permissions?.has("Administrator") ||
-    message.member?.permissions?.has("ManageGuild")
-  );
 }
 
 function parseRangeToken(token) {
@@ -540,7 +534,7 @@ export function registerExplodingVoltorbs(register) {
     "!endvoltorb",
     async ({ message }) => {
       if (!message.guild) return;
-      if (!isAdminMember(message)) {
+      if (!isAdminOrPrivileged(message)) {
         await message.reply("Nope — only admins can end the Voltorb game.");
         return;
       }

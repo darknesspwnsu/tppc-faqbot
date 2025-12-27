@@ -25,6 +25,7 @@
 // Flavor inspiration: your Team Rocket lines.
 
 import { collectEntrantsByReactions } from "../contests.js";
+import { isAdminOrPrivileged } from "../auth.js";
 
 const activeGames = new Map(); // guildId -> game state
 
@@ -81,13 +82,6 @@ function parseMentionToken(token) {
 
 function getMentionedUsers(message) {
   return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
-}
-
-function isAdminMember(message) {
-  return (
-    message.member?.permissions?.has("Administrator") ||
-    message.member?.permissions?.has("ManageGuild")
-  );
 }
 
 function parseJoinToken(token) {
@@ -713,7 +707,7 @@ export function registerExplodingElectrode(register) {
         return;
       }
 
-      if (!isAdminMember(message)) {
+      if (!isAdminOrPrivileged(message)) {
         await message.reply("Nope — only admins can end the Electrode game.");
         return;
       }
