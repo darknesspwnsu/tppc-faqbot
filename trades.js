@@ -14,7 +14,7 @@ import {
   deleteUserText
 } from "./db.js";
 
-// Helpers (kept local so commands.js doesn't need to own them)
+// Helpers
 function targetUserId(message) {
   const first = message.mentions?.users?.first?.();
   return first?.id ?? message.author.id;
@@ -29,7 +29,6 @@ function parseMentions(message) {
 }
 
 function stripLeadingMentions(text) {
-  // Removes leading mention tokens like "<@123>" or "<@!123>" repeatedly, then trims.
   return String(text ?? "")
     .replace(/^(\s*<@!?\d+>\s*)+/g, "")
     .trim();
@@ -47,7 +46,7 @@ function getTradingGuildAllowlist() {
 }
 
 function tradingAllowedInGuild(message) {
-  if (!message.guild) return false; // your bot already ignores DMs, but keep this safe
+  if (!message.guild) return false;
   const allow = getTradingGuildAllowlist();
   if (allow.length === 0) return false;
   return allow.includes(message.guild.id);
@@ -66,16 +65,32 @@ export function registerTrades(register) {
 
       // ?id del
       if (lower === "del") {
-        await deleteSavedId({ guildId: message.guild.id, userId: message.author.id });
+        const existing = await getSavedId({
+          guildId: message.guild.id,
+          userId: message.author.id
+        });
+
+        if (existing == null) {
+          await message.reply("Nothing to clear!");
+          return;
+        }
+
+        await deleteSavedId({
+          guildId: message.guild.id,
+          userId: message.author.id
+        });
+
         await message.reply("✅ ID cleared.");
         return;
       }
 
       // ?id add <number>
       if (lower.startsWith("add")) {
-        const after = raw.slice(3).trim(); // remove "add"
+        const after = raw.slice(3).trim();
         if (!/^\d+$/.test(after)) {
-          await message.reply("Invalid input. Use: `?id add <number>` where <number> is an integer 1–5000000.");
+          await message.reply(
+            "Invalid input. Use: `?id add <number>` where <number> is an integer 1–5000000."
+          );
           return;
         }
 
@@ -95,19 +110,17 @@ export function registerTrades(register) {
         return;
       }
 
-      // ?id 3451651 (bare number) -> helpful usage
-      if (/^\d+$/.test(raw)) {
-        await message.reply("Correct usage is `?id add <number>`.");
-        return;
-      }
-
-      // ?id @user1 @user2 ... (read)
+      // Mentions → read
       const mentionedUsers = parseMentions(message);
       if (mentionedUsers.length >= 1) {
         const lines = [];
 
         for (const u of mentionedUsers) {
-          const saved = await getSavedId({ guildId: message.guild.id, userId: u.id });
+          const saved = await getSavedId({
+            guildId: message.guild.id,
+            userId: u.id
+          });
+
           if (saved == null) {
             lines.push(`${mention(u.id)} has not set an ID!`);
           } else {
@@ -115,8 +128,9 @@ export function registerTrades(register) {
           }
         }
 
-        if (lines.length === 0) return;
-        await message.channel.send(lines.join("\n"));
+        if (lines.length) {
+          await message.channel.send(lines.join("\n"));
+        }
         return;
       }
 
@@ -135,16 +149,13 @@ export function registerTrades(register) {
         await message.channel.send(`${mention(message.author.id)} ${saved}`);
         return;
       }
-
-      // Anything else: do nothing (prevents accidental overwrites)
-      return;
     },
     "?id add <number> | ?id del | ?id [@user...] — saves, shows, deletes, or looks up IDs"
   );
 
   // -------------------- ?ft / ?lf --------------------
   function registerTextCommand(cmd, kind, label, opts = {}) {
-    const baseCmd = opts.baseCmd || cmd; // for usage strings ("?ft" even if invoked via "?ftadd")
+    const baseCmd = opts.baseCmd || cmd;
     const pretty = kind === "ft" ? "Trading" : "Looking-for";
 
     register(
@@ -161,14 +172,30 @@ export function registerTrades(register) {
 
         // del
         if (isShortcutDel || lower === "del") {
-          await deleteUserText({ guildId: message.guild.id, userId: message.author.id, kind });
+          const existing = await getUserText({
+            guildId: message.guild.id,
+            userId: message.author.id,
+            kind
+          });
+
+          if (!existing) {
+            await message.reply("Nothing to clear!");
+            return;
+          }
+
+          await deleteUserText({
+            guildId: message.guild.id,
+            userId: message.author.id,
+            kind
+          });
+
           await message.reply(`✅ ${pretty} list cleared.`);
           return;
         }
 
         // add
         if (isShortcutAdd || lower.startsWith("add")) {
-          const after = isShortcutAdd ? raw : raw.slice(3); // remove "add" for normal form
+          const after = isShortcutAdd ? raw : raw.slice(3);
           const text = stripLeadingMentions(after).trim();
 
           if (!text) {
@@ -176,18 +203,28 @@ export function registerTrades(register) {
             return;
           }
 
-          await setUserText({ guildId: message.guild.id, userId: message.author.id, kind, text });
+          await setUserText({
+            guildId: message.guild.id,
+            userId: message.author.id,
+            kind,
+            text
+          });
+
           await message.reply(`✅ ${pretty} list saved. Use \`${baseCmd}\` to view it.`);
           return;
         }
 
-        // Mentions = read mentioned users (do not skip missing)
+        // Mentions → read
         const mentionedUsers = parseMentions(message);
         if (mentionedUsers.length >= 1) {
           const lines = [];
 
           for (const u of mentionedUsers) {
-            const text = await getUserText({ guildId: message.guild.id, userId: u.id, kind });
+            const text = await getUserText({
+              guildId: message.guild.id,
+              userId: u.id,
+              kind
+            });
 
             if (!text) {
               lines.push(`${mention(u.id)} has not set a list!`);
@@ -196,12 +233,13 @@ export function registerTrades(register) {
             }
           }
 
-          if (lines.length === 0) return;
-          await message.channel.send(lines.join("\n"));
+          if (lines.length) {
+            await message.channel.send(lines.join("\n"));
+          }
           return;
         }
 
-        // No args => read self
+        // No args → read self
         if (!raw) {
           const text = await getUserText({
             guildId: message.guild.id,
@@ -219,28 +257,23 @@ export function registerTrades(register) {
           await message.channel.send(`${mention(message.author.id)} ${label}: ${text}`);
           return;
         }
-
-        // If they typed something else (like "?ft blah" without add), do nothing
-        // (keeps behavior tight + avoids accidental saves)
-        return;
       },
       opts.help ??
         `${baseCmd} add <list> | ${baseCmd} del | ${baseCmd} [@user...] — ${label.toLowerCase()} list`
     );
   }
 
-  // ?ft / ?lf canonical
+  // Canonical
   registerTextCommand("?ft", "ft", "is trading");
   registerTextCommand("?lf", "lf", "is looking for");
 
-  // Shortcuts (kept out of help by passing empty help)
-  // They behave the same as "?ft add ..." / "?ft del" (and likewise for lf),
-  // and now also produce the same success messages.
+  // Shortcuts
   registerTextCommand("?ftadd", "ft", "is trading", {
     shortcutAdd: true,
     baseCmd: "?ft",
     help: "?ftadd <text> — shortcut for ?ft add <text>"
   });
+
   registerTextCommand("?ftdel", "ft", "is trading", {
     shortcutDel: true,
     baseCmd: "?ft",
@@ -250,8 +283,9 @@ export function registerTrades(register) {
   registerTextCommand("?lfadd", "lf", "is looking for", {
     shortcutAdd: true,
     baseCmd: "?lf",
-    help: "?lfadd <text> — shortcut for ?lf add <text>"
+    help: "?lfadd <text> — shortcut for ?ft add <text>"
   });
+
   registerTextCommand("?lfdel", "lf", "is looking for", {
     shortcutDel: true,
     baseCmd: "?lf",
