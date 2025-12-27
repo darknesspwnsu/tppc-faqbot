@@ -14,44 +14,32 @@ const activeGames = new Map(); // guildId -> { holderId, aliveIds:Set, allowedId
 
 const scareMessages = [
   "⚡ The Voltorb crackles ominously...",
-  "💣 You hear an unsettling *tick... tick...*",
+  "💣 You hear an unsettling *tick... tick... tick...*",
   "😈 The bot whispers: *it’s totally safe* (it isn’t).",
   "👀 Everyone stares at the Voltorb.",
   "🧨 The fuse looks... shorter than before."
 ];
 
 function evHelpText() {
-  // Keep as plain text for Discord.
   return [
-    "**Exploding Voltorbs — help**",
+    "**Exploding Voltorbs — Help**",
     "",
-    "**Start a game (taglist):**",
-    "• `!ev @user1 @user2 ...`",
-    "• `!ev [min-max] [elim|suddendeath] @user1 @user2 ...`",
-    "  – Example: `!ev 30-90 elim @a @b @c`",
+    "**Start game:**",
+    "• Using a list: `!ev [min-max] [mode] @user1 @user2 ...`",
+    "  – Example: `!ev 30-90s elim @a @b @c`",
     "",
-    "**Start a game (reaction join):**",
-    "• `!ev` — opens a 15s join window (react to enter)",
-    "• `!ev [min-max] [elim|suddendeath] [join=NN]` — same, but with options",
-    "  – Example: `!ev 10-25 sd join=20`",
-    "",
-    "**Join window:**",
-    "• `join=NN` — reaction-join window in seconds (5–120)",
-    "  – Only valid when **no @mentions** are used",
-    "  – Example: `!ev join=30`",
+    "• Using reactions: `!ev [min-max] [mode] [join_window]`",
+    "  – Join window is between 10 to 120 seconds",
+    "  – Example: `!ev 10-25s elim 60s`",
     "",
     "**Modes:**",
-    "• `suddendeath` (or `sd`) — first person to explode loses; game ends",
     "• `elim` — exploding player is eliminated; game continues until one remains",
-    "",
-    "**Time range:**",
-    "• `min-max` seconds (examples: `30-90`, `30-90s`)",
+    "• `suddendeath` (or `sd`) — first person to explode loses; game ends",
     "",
     "**During the game:**",
-    "• `!pass @user` — only the current holder can pass the Voltorb",
+    "• `!pass @user` — the current holder can pass the Voltorb to a participant",
     "• `!endvoltorb` — admins only; force end",
-    "",
-    "Tip: If you type `!ev blahblah` by mistake, it will now error — use `!ev help`."
+    ""
   ].join("\n");
 }
 
@@ -75,15 +63,18 @@ function parseRangeToken(token) {
 function parseModeToken(token) {
   if (!token) return null;
   const t = String(token).trim().toLowerCase();
-  if (t === "elim") return "elim";
+  if (t === "elim" || t === "elimination") return "elim";
   if (t === "suddendeath" || t === "sd") return "suddendeath";
   return null;
 }
 
-function parseJoinToken(token) {
-  // join=15 or join=15s  (seconds)
-  const m = String(token ?? "").trim().toLowerCase().match(/^join=(\d+)(s)?$/);
-  return m ? Number(m[1]) : null;
+function parseJoinWindowToken(token) {
+  if (!token) return null;
+  const t = String(token).trim().toLowerCase();
+  if (t.includes("-")) return null;
+  const m = /^(\d+)(s)?$/.exec(t);
+  if (!m) return null;
+  return Number(m[1]);
 }
 
 function randChoiceFromSet(set) {
@@ -105,7 +96,6 @@ function scheduleExplosion(message, guildId) {
   const game = activeGames.get(guildId);
   if (!game) return;
 
-  // Clear any existing explosion timer before rescheduling
   try {
     if (game.explosionTimeout) clearTimeout(game.explosionTimeout);
   } catch {}
@@ -120,7 +110,6 @@ function scheduleExplosion(message, guildId) {
 
     const blownId = g.holderId;
 
-    // Announce boom
     await message.channel.send(
       `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!`
     );
@@ -132,13 +121,13 @@ function scheduleExplosion(message, guildId) {
       return;
     }
 
-    // elim mode: remove blown player and continue until one remains
+    // Elim mode: remove blown player and continue until one remains
     g.aliveIds.delete(blownId);
 
     if (g.aliveIds.size <= 1) {
       const winnerId = randChoiceFromSet(g.aliveIds);
       if (winnerId) {
-        await message.channel.send(`🏆 <@${winnerId}> wins **Exploding Voltorbs (elim)**!`);
+        await message.channel.send(`🏆 <@${winnerId}> wins **Exploding Voltorbs**!`);
       } else {
         await message.channel.send("🏁 Game ended — no winner (everyone exploded?).");
       }
@@ -164,7 +153,7 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
   if (!guildId) return;
 
   if (activeGames.has(guildId)) {
-    message.reply("⚠️ A Voltorb game is already running!");
+    message.reply("⚠️ Exploding Voltorbs is already running!");
     return;
   }
 
@@ -221,7 +210,12 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
 
     if (Math.random() < 0.35) {
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
-      message.channel.send(`${scare}\n👀 <@${g.holderId}> is holding the Voltorb.`);
+      message.channel.send(
+        `${scare}\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `👀 <@${g.holderId}> is holding the Voltorb.\n` +
+        `━━━━━━━━━━━━━━━━━━━`
+      );
     }
   }, 8000);
 
@@ -238,10 +232,10 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
 
   message.channel.send(
     `⚡ **Exploding Voltorbs started!**\n` +
-      `💣 <@${holderId}> is holding the Voltorb!\n` +
       `🎮 Mode: **${mode}**\n` +
       `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
       `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}`
+      `💣 <@${holderId}> is holding the Voltorb!`
   );
 
   scheduleExplosion(message, guildId);
@@ -252,7 +246,7 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
   if (!guildId) return;
 
   if (activeGames.has(guildId)) {
-    message.reply("⚠️ A Voltorb game is already running!");
+    message.reply("⚠️ Exploding Voltorbs is already running!");
     return;
   }
 
@@ -267,7 +261,7 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
   }
 
   if (allowedIds.size < 2) {
-    message.reply("❌ You need to tag at least 2 players to start (example: `!ev @a @b`).");
+    message.reply("❌ You need to tag at least 2 players to start.");
     return;
   }
 
@@ -331,10 +325,10 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
 
   message.channel.send(
     `⚡ **Exploding Voltorbs started!**\n` +
-      `💣 <@${holderId}> is holding the Voltorb!\n` +
       `🎮 Mode: **${mode}**\n` +
       `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
-      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}`
+      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}\n` +
+      `💣 <@${holderId}> is holding the Voltorb!`
   );
 
   // Schedule first explosion
@@ -347,19 +341,19 @@ export function passVoltorb(message) {
 
   const game = activeGames.get(guildId);
   if (!game) {
-    message.reply("❌ There is no active Voltorb game.");
+    message.reply("❌ No active Voltorb game.");
     return;
   }
 
   // Only participants can interact with the game
   if (game.allowedIds && !game.allowedIds.has(message.author?.id)) {
-    message.reply("❌ You’re not in this game’s taglist.");
+    //message.reply("❌ You’re not in this game’s taglist.");
     return;
   }
 
   // Only the current holder can pass
   if (game.holderId !== message.author?.id) {
-    message.reply("❌ You’re not holding the Voltorb!");
+    //message.reply("❌ You’re not holding the Voltorb!");
     return;
   }
 
@@ -380,7 +374,7 @@ export function passVoltorb(message) {
   }
 
   if (game.allowedIds && !game.allowedIds.has(target.id)) {
-    message.reply("❌ That player isn’t in this game’s taglist.");
+    message.reply("❌ That player isn’t in the game.");
     return;
   }
 
@@ -403,7 +397,7 @@ export function endVoltorbGame(message, { reason = "ended" } = {}) {
 
   const game = activeGames.get(guildId);
   if (!game) {
-    message.reply("❌ There is no active Voltorb game.");
+    message.reply("❌ No active Voltorb game.");
     return;
   }
 
@@ -429,7 +423,16 @@ export function registerExplodingVoltorbs(register) {
       //   !ev 10-30s @a @b
       //   !ev 10-30s elim @a @b
       //   !ev elim 10-30s @a @b
+
       const tokens = rest.trim().split(/\s+/).filter(Boolean);
+
+      // `!ev` with no arguments
+      if (tokens.length === 0) {
+        await message.reply(
+          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
+        );
+        return;
+      }
 
       // `!ev help`
       if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
@@ -444,20 +447,21 @@ export function registerExplodingVoltorbs(register) {
       for (let i = 0; i < Math.min(tokens.length, 5); i++) {
         if (!rangeArg && parseRangeToken(tokens[i])) rangeArg = tokens[i];
         if (!modeArg && parseModeToken(tokens[i])) modeArg = parseModeToken(tokens[i]);
-
-        const js = parseJoinToken(tokens[i]);
+        const js = parseJoinWindowToken(tokens[i]);
         if (joinSeconds == null && js != null) joinSeconds = js;
       }
 
       const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
       if (hasMentions && joinSeconds != null) {
-        await message.reply("❌ `join=NN` is only valid when using reaction-join (i.e., `!ev` with no @mentions).");
+        await message.reply(
+          "❌ Join window only works with reaction-join (no @mention list)."
+        );
         return;
       }
 
       if (joinSeconds != null) {
-        if (!Number.isFinite(joinSeconds) || joinSeconds < 5 || joinSeconds > 120) {
-          await message.reply("❌ `join=NN` must be between 5 and 120 seconds (example: `!ev join=20`).");
+        if (!Number.isFinite(joinSeconds) || joinSeconds < 10 || joinSeconds > 120) {
+          await message.reply("❌ Join window must be between 10 and 120 seconds.");
           return;
         }
       }
@@ -471,7 +475,7 @@ export function registerExplodingVoltorbs(register) {
         const m = parseModeToken(t);
         if (m && modeArg === m) consumed.add(t);
 
-        const js = parseJoinToken(t);
+        const js = parseJoinWindowToken(t);
         if (js != null && joinSeconds === js) consumed.add(t);
 
         if (parseMentionToken(t)) consumed.add(t);
@@ -482,7 +486,7 @@ export function registerExplodingVoltorbs(register) {
       // Mention-based path allows [range] [mode] + mentions only.
       if (extras.length > 0) {
         await message.reply(
-          `❌ Unknown argument(s): ${extras.map((x) => `\`${x}\``).join(", ")}. Try \`!ev help\`.`
+          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
         );
         return;
       }
@@ -490,19 +494,26 @@ export function registerExplodingVoltorbs(register) {
       // If no taglist is provided, run a reaction-join window (like !conteststart)
       if (!hasMentions) {
         const modeLabel = modeArg || "suddendeath";
+        const modeLabelCapitalized = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
         const rangeLabel = rangeArg ? ` • Range: **${rangeArg}**` : "";
         const durationMs = (joinSeconds ?? 15) * 1000;
 
-        const entrants = await collectEntrantsByReactions({
+        const reactMessage = await collectEntrantsByReactions({
           message,
           promptText:
             `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
-            `Mode: **${modeLabel}**${rangeLabel}`,
+            `Mode: **${modeLabelCapitalized}**${rangeLabel}`,
           durationMs
         });
 
-        if (entrants.size < 2) {
-          await message.channel.send("❌ Not enough players joined (need at least 2).");
+       if (entrants.size < 2) {
+          try {
+            await reactMessage.edit(
+              reactMessage.content + "\n❌ Not enough players joined (need at least 2)."
+            );
+          } catch {
+            await message.channel.send("❌ Not enough players joined (need at least 2).");
+          }
           return;
         }
 
@@ -541,6 +552,6 @@ export function registerExplodingVoltorbs(register) {
       endVoltorbGame(message, { reason: "ended early" });
     },
     "!endvoltorb — force-end Exploding Voltorbs (admin)",
-    { admin: true, aliases: ["!stopvoltorb"] }
+    { admin: true, aliases: ["!stopvoltorb", "!cancelvoltorb", "!endev", "!stopev", "!cancelev"] }
   );
 }
