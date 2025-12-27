@@ -114,11 +114,18 @@ export function buildCommandRegistry({ client } = {}) {
   register.component = registerComponent;
 
   function withCategory(baseRegister, category) {
-    return (name, handler, help = "", opts = {}) => {
+    const wrapped = (name, handler, help = "", opts = {}) => {
       const merged = { ...opts };
       if (!merged.category) merged.category = category;
       return baseRegister(name, handler, help, merged);
     };
+
+    // Preserve slash/component “namespace” methods.
+    // If a module receives the wrapped register, it still can do register.slash / register.component.
+    wrapped.slash = baseRegister.slash;
+    wrapped.component = baseRegister.component;
+
+    return wrapped;
   }
 
   function helpModel() {
