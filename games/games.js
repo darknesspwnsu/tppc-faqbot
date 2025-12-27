@@ -5,17 +5,14 @@
 
 import { registerExplodingVoltorbs } from "./exploding_voltorbs.js";
 import { registerExplodingElectrode } from "./exploding_electrode.js";
+import { registerSafariZone } from "./safari_zone.js";
 
 const GAME_MODULES = [
-  {
-    id: "exploding_voltorbs",
-    register: registerExplodingVoltorbs
-  },
-  {
-    id: "exploding_electrode",
-    register: registerExplodingElectrode
-  },
+  { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
+  { id: "exploding_electrode", register: registerExplodingElectrode },
+  { id: "safari_zone", register: registerSafariZone },
 ];
+
 
 export function registerGames(register) {
   for (const g of GAME_MODULES) {
