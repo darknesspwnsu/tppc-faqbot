@@ -15,7 +15,7 @@
  * - After time, ping the contest creator with the UNIQUE list of people who reacted
  */
 
-import { PermissionsBitField } from "discord.js";
+import { isAdminOrPrivileged } from "./auth.js";
 
 // guildId -> {
 //   client, guildId, channelId, messageId, creatorId, endsAtMs, timeout,
@@ -24,6 +24,8 @@ import { PermissionsBitField } from "discord.js";
 //   maxEntrants?: number
 // }
 const activeByGuild = new Map();
+// messageId -> { guildId, channelId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?: number, onDone?: (set)=>void }
+const activeCollectorsByMessage = new Map();
 // guildId -> { timeout: NodeJS.Timeout, channelId: string }
 const activeElimByGuild = new Map();
 
@@ -42,18 +44,9 @@ function isAllowedChannel(message, allowedIds) {
   return !!cid && allowedIds.includes(cid);
 }
 
-
-function isAdmin(message) {
-  if (!message.member) return false;
-  return (
-    message.member.permissions?.has(PermissionsBitField.Flags.ManageGuild) ||
-    message.member.permissions?.has(PermissionsBitField.Flags.Administrator)
-  );
-}
-
 function canManageContest(message, state) {
   if (!state) return false;
-  if (isAdmin(message)) return true;
+  if (isAdminOrPrivileged(message)) return true;
   return message.author?.id && message.author.id === state.creatorId;
 }
 
@@ -144,63 +137,87 @@ async function safeFetchMessage(msg) {
   } catch {}
 }
 
-function installReactionHooks(client) {
+export function installReactionHooks(client) {
   if (reactionHooksInstalled) return;
   reactionHooksInstalled = true;
 
   client.on("messageReactionAdd", async (reaction, user) => {
-    try {
-      if (!user || user.bot) return;
+    if (user.bot) return;
 
-      await safeFetchReaction(reaction);
-      const msg = reaction?.message;
-      if (!msg) return;
+    const msg = reaction.message;
+    if (!msg?.guildId) return;
 
-      await safeFetchMessage(msg);
-
-      const state = activeByGuild.get(msg.guildId);
-      if (!state || msg.id !== state.messageId) return;
-
-      const counts = state.entrantReactionCounts;
+    // ---- 1) Contest tracking (per guild, single active contest) ----
+    const contestState = activeByGuild.get(msg.guildId);
+    if (contestState && msg.id === contestState.messageId) {
+      const counts = contestState.entrantReactionCounts;
       const prev = counts.get(user.id) ?? 0;
       counts.set(user.id, prev + 1);
-      state.entrants.add(user.id);
+      contestState.entrants.add(user.id);
 
-      // If we hit max unique entrants, end early
-      if (state.maxEntrants && state.entrants.size >= state.maxEntrants) {
-        try { clearTimeout(state.timeout); } catch {}
+      if (
+        contestState.maxEntrants &&
+        contestState.entrants.size >= contestState.maxEntrants
+      ) {
+        try { clearTimeout(contestState.timeout); } catch {}
         await finalizeContest(msg.guildId, "max");
       }
-    } catch (e) {
-      console.warn("messageReactionAdd handler failed:", e);
+      return;
+    }
+
+    // ---- 2) Generic collectors (per message) ----
+    const collector = activeCollectorsByMessage.get(msg.id);
+    if (!collector) return;
+
+    const counts = collector.entrantReactionCounts;
+    const prev = counts.get(user.id) ?? 0;
+    counts.set(user.id, prev + 1);
+    collector.entrants.add(user.id);
+
+    if (
+      collector.maxEntrants &&
+      collector.entrants.size >= collector.maxEntrants
+    ) {
+      try { clearTimeout(collector.timeout); } catch {}
+      await finalizeCollector(msg.id, "max");
     }
   });
 
   client.on("messageReactionRemove", async (reaction, user) => {
-    try {
-      if (!user || user.bot) return;
+    if (user.bot) return;
 
-      await safeFetchReaction(reaction);
-      const msg = reaction?.message;
-      if (!msg) return;
+    const msg = reaction.message;
+    if (!msg?.guildId) return;
 
-      await safeFetchMessage(msg);
-
-      const state = activeByGuild.get(msg.guildId);
-      if (!state || msg.id !== state.messageId) return;
-
-      const counts = state.entrantReactionCounts;
+    // ---- 1) Contest tracking ----
+    const contestState = activeByGuild.get(msg.guildId);
+    if (contestState && msg.id === contestState.messageId) {
+      const counts = contestState.entrantReactionCounts;
       const prev = counts.get(user.id) ?? 0;
       const next = prev - 1;
 
       if (next <= 0) {
         counts.delete(user.id);
-        state.entrants.delete(user.id);
+        contestState.entrants.delete(user.id);
       } else {
         counts.set(user.id, next);
       }
-    } catch (e) {
-      console.warn("messageReactionRemove handler failed:", e);
+      return;
+    }
+
+    // ---- 2) Generic collectors ----
+    const collector = activeCollectorsByMessage.get(msg.id);
+    if (!collector) return;
+
+    const counts = collector.entrantReactionCounts;
+    const prev = counts.get(user.id) ?? 0;
+    const next = prev - 1;
+
+    if (next <= 0) {
+      counts.delete(user.id);
+      collector.entrants.delete(user.id);
+    } else {
+      counts.set(user.id, next);
     }
   });
 }
@@ -223,17 +240,7 @@ async function finalizeContest(guildId, reason = "timer") {
 
   activeByGuild.delete(guildId);
 
-  const { client, channelId, messageId, creatorId, endsAtMs } = state;
-
-  try {
-    const channel = await client.channels.fetch(channelId);
-    if (channel?.isTextBased() && messageId) {
-      const msg = await channel.messages.fetch(messageId);
-      await msg.edit("Entries have closed for this contest.");
-    }
-  } catch (e) {
-    console.warn("Failed to edit contest message:", e);
-  }
+  const { client, channelId, creatorId, endsAtMs } = state;
 
   const userIds = [...state.entrants];
   const nameList = await buildNameList(client, userIds);
@@ -246,16 +253,58 @@ async function finalizeContest(guildId, reason = "timer") {
       ? "Closed early."
       : reason === "cancel"
       ? "Cancelled."
-      : `(ended <t:${Math.floor(endsAtMs / 1000)}:t>):`;
+      : `(ended at <t:${Math.floor(endsAtMs / 1000)}:t>).`;
 
-  const body = total === 0 ? "No one reacted..." : nameList.join(" ");
+  const body = total === 0 ? "No one reacted to enter." : nameList.join(" ");
 
   const channel = await client.channels.fetch(channelId);
   if (channel?.isTextBased()) {
     await channel.send(
-      `━━━━━━━━━━━━━━\n<@${creatorId}> ${total} entrant(s) ${elapsedNote}\n\n${body}`
+      `━━━━━━━━━━━━━━\n<@${creatorId}> Entrants (${total}) — ${elapsedNote}\n\n${body}`
     );
   }
+}
+
+async function finalizeCollector(messageId, reason = "timer") {
+  const state = activeCollectorsByMessage.get(messageId);
+  if (!state) return;
+
+  activeCollectorsByMessage.delete(messageId);
+
+  const userIds = [...state.entrants];
+  if (typeof state.onDone === "function") {
+    try { state.onDone(new Set(userIds), reason); } catch {}
+  }
+}
+
+// Reusable: collect unique users who react to a message for a short window.
+export async function collectEntrantsByReactions({
+  message,
+  promptText,
+  durationMs,
+  maxEntrants = null,
+  emoji = "👍",
+}) {
+  installReactionHooks(message.client);
+
+  const joinMsg = await message.channel.send(promptText);
+
+  try { await joinMsg.react(emoji); } catch {}
+
+  return await new Promise((resolve) => {
+    const timeout = setTimeout(() => finalizeCollector(joinMsg.id, "timer"), durationMs);
+
+    activeCollectorsByMessage.set(joinMsg.id, {
+      guildId: message.guildId,
+      channelId: message.channelId,
+      endsAtMs: Date.now() + durationMs,
+      timeout,
+      entrants: new Set(),
+      entrantReactionCounts: new Map(),
+      maxEntrants,
+      onDone: (set) => resolve(set),
+    });
+  });
 }
 
 export function registerContests(register) {
@@ -275,10 +324,8 @@ export function registerContests(register) {
 
       const raw = rest.trim();
       const parts = raw.split(/\s+/).filter(Boolean);
-
       const timeRaw = parts[0] || "";
       const maxRaw = parts[1]; // optional
-      const game = parts.slice(2).join(" ") || null; // optional <game>
 
       const ms = parseDurationToMs(timeRaw);
       if (!ms) {
@@ -290,9 +337,7 @@ export function registerContests(register) {
       if (maxRaw != null) {
         const n = Number(maxRaw);
         if (!Number.isInteger(n) || n <= 0 || n > 1000) {
-          await message.reply(
-            "Invalid max entrants. Usage: `!contest <time> [max] [game]` (example: `!contest 2s 10 Mario Kart`)"
-          );
+          await message.reply("Invalid max entrants. Usage: `!contest <time> [max]` (example: `!contest 2s 10`)");
           return;
         }
         maxEntrants = n;
@@ -317,17 +362,11 @@ export function registerContests(register) {
         entrants: new Set(),
         entrantReactionCounts: new Map(),
         maxEntrants,
-        game,
       });
 
-      const maxNote = maxEntrants
-        ? ` (max **${maxEntrants}** entrants — ends early if reached)`
-        : "";
-
-      const gameNote = game ? `\n🎮 **Game:** ${game}` : "";
-
+      const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
       const contestMsg = await message.channel.send(
-        `React to this message to enter a contest! The list will be generated in **${humanDuration(ms)}**...${maxNote}${gameNote}`
+        `React to this message to enter a contest! The list will be generated in **${humanDuration(ms)}**...${maxNote}`
       );
 
       try {
@@ -345,7 +384,7 @@ export function registerContests(register) {
         state.timeout = timeout;
       }
     },
-    "!conteststart <time> [quota] [game] — starts a reaction contest",
+    "!conteststart <time> [quota] — starts a reaction contest",
     { aliases: ["!contest", "!startcontest"] }
   );
 

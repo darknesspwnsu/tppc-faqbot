@@ -10,6 +10,7 @@ import path from "node:path";
 import https from "node:https";
 import http from "node:http";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { isAdminOrPrivileged } from "./auth.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
 let rarity = null;      // { lowerName: entry }
@@ -626,25 +627,15 @@ export function registerRarity(register) {
       }
 
       const updatedDate = parseLastUpdatedTextEastern(meta?.lastUpdatedText);
-      let updatedLine = "";
-
-      if (updatedDate) {
-        const diffMs = Date.now() - updatedDate.getTime();
-        const totalMinutes = Math.floor(diffMs / 60000);
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-
-        const parts = [];
-        if (hours) parts.push(`${hours} h`);
-        if (minutes) parts.push(`${minutes} min`);
-
-        updatedLine = `Updated ${parts.join(" ")} ago`;
-      }
+      const updatedLine = updatedDate
+        ? `Updated ${formatDurationAgo(updatedDate.getTime())} ago`
+        : "";
 
       await message.channel.send({
         embeds: [
           {
             title: r.name,
+            description: updatedLine,
             color: 0xed8b2d,
             fields: [
               { name: "Total", value: fmt(r.total), inline: false },
@@ -653,7 +644,6 @@ export function registerRarity(register) {
               { name: "(?)", value: fmt(r.ungendered), inline: true },
               { name: "G", value: fmt(r.genderless), inline: true }
             ],
-            footer: {text: updatedLine}
           }
         ]
       });
@@ -665,10 +655,7 @@ export function registerRarity(register) {
     "?rarityreload",
     async ({ message }) => {
       if (!isGuildAllowed(message)) return;
-      const isAdmin =
-        message.member?.permissions?.has("Administrator") ||
-        message.member?.permissions?.has("ManageGuild");
-      if (!isAdmin) return;
+      if (!isAdminOrPrivileged(message)) return;
 
       await refresh();
       await message.reply("Rarity cache refreshed ✅");
@@ -832,10 +819,7 @@ export function registerLevel4Rarity(register) {
   register(
     "!rarity4reload",
     async ({ message }) => {
-      const isAdmin =
-        message.member?.permissions?.has("Administrator") ||
-        message.member?.permissions?.has("ManageGuild");
-      if (!isAdmin) return;
+      if (!isAdminOrPrivileged(message)) return;
 
       await refreshL4();
       await message.reply("Rarity4 cache refreshed ✅");
