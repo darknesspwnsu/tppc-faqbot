@@ -37,16 +37,32 @@ function clampInt(n) {
 }
 
 function parseDurationMs(token) {
-  // "30s" "5m" "1h" or "120" (seconds)
+  // Accept:
+  //  "30" (seconds)
+  //  "30s", "30sec", "30secs", "30second", "30seconds"
+  //  "5m", "5min", "5mins", "5minute", "5minutes"
+  //  "1h", "1hr", "1hrs", "1hour", "1hours"
   const s = String(token ?? "").trim().toLowerCase();
   if (!s) return null;
 
-  const m = s.match(/^(\d+)\s*([smh])?$/);
+  const m = s.match(/^(\d+)\s*([a-z]+)?$/);
   if (!m) return null;
 
   const num = Number(m[1]);
-  const unit = m[2] || "s";
   if (!Number.isFinite(num) || num <= 0) return null;
+
+  const unitRaw = (m[2] || "s").trim();
+
+  const unit =
+    unitRaw === "s" || unitRaw === "sec" || unitRaw === "secs" || unitRaw === "second" || unitRaw === "seconds"
+      ? "s"
+      : unitRaw === "m" || unitRaw === "min" || unitRaw === "mins" || unitRaw === "minute" || unitRaw === "minutes"
+      ? "m"
+      : unitRaw === "h" || unitRaw === "hr" || unitRaw === "hrs" || unitRaw === "hour" || unitRaw === "hours"
+      ? "h"
+      : null;
+
+  if (!unit) return null;
 
   const mult = unit === "h" ? 3600_000 : unit === "m" ? 60_000 : 1000;
   return num * mult;
