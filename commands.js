@@ -8,16 +8,19 @@
  *  - Slash syncing (global or guild-scoped)
  *
  * Modules should register commands via the provided `register` function,
- * which is ALSO a "namespace" for slash + components:
+ * which is ALSO a "namespace" for slash + components + message listeners:
  *
  *   register("!foo", handler, help, opts)
  *   register.slash({ name, description, options? }, handler)
  *   register.component("prefix:", handler)
+ *   register.onMessage(handler)   // passive listener for all messages
+ *   register.listener(handler)    // alias of onMessage (more explicit name)
  *
  * Handlers:
  *  - Bang: handler({ message, cmd, rest })
  *  - Slash: handler({ interaction })
  *  - Component: handler({ interaction })
+ *  - onMessage/listener: handler({ message })
  */
 
 import { REST, Routes } from "discord.js";
@@ -62,7 +65,8 @@ export function buildCommandRegistry({ client } = {}) {
 
   // Component handlers (buttons/select menus), matched by customId prefix
   const components = []; // { prefix, handler }
-  // Message hooks (for games that consume non-command chat input)
+
+  // Message hooks (passive listeners for normal chat input, games, triggers, etc.)
   const messageHooks = []; // handler({ message })
 
   function registerOnMessage(handler) {
@@ -70,6 +74,11 @@ export function buildCommandRegistry({ client } = {}) {
       throw new Error("register.onMessage requires a function");
     }
     messageHooks.push(handler);
+  }
+
+  // Alias for clarity: "listener" reads better than "onMessage" for passive triggers
+  function registerListener(handler) {
+    return registerOnMessage(handler);
   }
 
   function registerBang(name, handler, help = "", opts = {}) {
@@ -132,6 +141,7 @@ export function buildCommandRegistry({ client } = {}) {
   register.slash = registerSlash;
   register.component = registerComponent;
   register.onMessage = registerOnMessage;
+  register.listener = registerListener;
 
   function withCategory(baseRegister, category) {
     const wrapped = (name, handler, help = "", opts = {}) => {
@@ -140,11 +150,11 @@ export function buildCommandRegistry({ client } = {}) {
       return baseRegister(name, handler, help, merged);
     };
 
-    // Preserve slash/component “namespace” methods.
-    // If a module receives the wrapped register, it still can do register.slash / register.component.
+    // Preserve slash/component/message methods.
     wrapped.slash = baseRegister.slash;
     wrapped.component = baseRegister.component;
     wrapped.onMessage = baseRegister.onMessage;
+    wrapped.listener = baseRegister.listener;
 
     return wrapped;
   }
@@ -203,13 +213,12 @@ export function buildCommandRegistry({ client } = {}) {
 
   /* ------------------------------- dispatchers ------------------------------ */
 
-
   async function dispatchMessage(message) {
     const content = (message.content ?? "").trim();
     const isBang = content.startsWith("!");
     const isQ = content.startsWith("?");
 
-    // Give message hooks a chance to process normal chat (e.g., hangman guesses)
+    // Passive listeners run for ALL messages (not just !/? commands)
     if (messageHooks.length) {
       for (const h of messageHooks) {
         try {
