@@ -9,6 +9,7 @@ import { registerSafariZone } from "./safari_zone.js";
 import { registerBingo } from "./bingo.js";
 import { registerBlackjack } from "./blackjack.js";
 import { registerClosestRollWins } from "./closest_roll_wins.js";
+import { registerHigherOrLower } from "./higher_or_lower.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -17,6 +18,7 @@ const GAME_MODULES = [
   { id: "bingo", register: registerBingo },
   { id: "blackjack", register: registerBlackjack },
   { id: "closest_roll_wins", register: registerClosestRollWins },
+  { id: "higher_or_lower", register: registerHigherOrLower },
 ];
 
 export function registerGames(register) {
