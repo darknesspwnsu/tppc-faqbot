@@ -74,7 +74,9 @@ export function buildCommandRegistry({ client } = {}) {
       help,
       admin: Boolean(opts.admin),
       canonical: true,
-      category: opts.category || "Other"
+      category: opts.category || "Other",
+      hideFromHelp: Boolean(opts.hideFromHelp),
+      helpTier: opts.helpTier || "normal", // "primary" | "normal"
     };
 
     bang.set(key, entry);
@@ -140,12 +142,16 @@ export function buildCommandRegistry({ client } = {}) {
     const byCat = new Map();
     const catOrder = [];
 
-    for (const { help, admin, canonical, category } of bang.values()) {
+    for (const { help, admin, canonical, category, hideFromHelp, helpTier } of bang.values()) {
       if (!canonical) continue;
       if (!help) continue;
       if (admin) continue;
+      if (hideFromHelp) continue;
 
       const cat = category || "Other";
+      if (String(cat).toLowerCase() === "games") {
+        if (helpTier !== "primary") continue;
+      }
       if (!byCat.has(cat)) {
         byCat.set(cat, []);
         catOrder.push(cat);

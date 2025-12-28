@@ -214,7 +214,8 @@ export function registerBingo(register) {
           `Draw with \`!draw\`. View list with \`!getbingolist\`. Cancel with \`!cancelbingo\`.`
       );
     },
-    "!bingo <min-max> [drawnlist] — starts/resumes a bingo draw (example: `!bingo 1-151 5,12,77`)"
+    "!bingo <min-max> [drawnlist] — starts/resumes a bingo draw (example: `!bingo 1-151 5,12,77`)",
+    { helpTier: "primary" }
   );
 
   // !draw
@@ -255,7 +256,8 @@ export function registerBingo(register) {
         await endGame(message, "no numbers left to draw");
       }
     },
-    "!draw — draws a new number and prints the draw list"
+    "!draw — draws a new number and prints the draw list",
+    { hideFromHelp: true }
   );
 
   // !getbingolist
@@ -274,7 +276,8 @@ export function registerBingo(register) {
 
       await message.reply(`Drawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}`);
     },
-    "!getbingolist — prints the drawn numbers in order"
+    "!getbingolist — prints the drawn numbers in order",
+    { hideFromHelp: true }
   );
 
   // !cancelbingo (admin or starter)

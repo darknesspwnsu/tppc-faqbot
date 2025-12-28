@@ -346,7 +346,8 @@ export function registerBlackjack(register) {
           `Use \`!hit\`, \`!stand\`, \`!bjstatus\`, or \`!cancelblackjack\`.`
       );
     },
-    "!blackjack @p1 @p2 ... — starts a blackjack round (tag-only, in order)"
+    "!blackjack @p1 @p2 ... — starts a blackjack round (tag-only, in order)",
+    { helpTier: "primary" }
   );
 
   // !bjstatus
@@ -363,7 +364,8 @@ export function registerBlackjack(register) {
 
       await message.reply(statusText(st, false));
     },
-    "!bjstatus — shows current public blackjack status"
+    "!bjstatus — shows current public blackjack status",
+    { hideFromHelp: true }
   );
 
   // !hit
@@ -420,7 +422,8 @@ export function registerBlackjack(register) {
         await runDealerAndFinish(message, st);
       }
     },
-    "!hit — draw a card (current player only)"
+    "!hit — draw a card (current player only)",
+    { hideFromHelp: true }
   );
 
   // !stand
@@ -461,7 +464,8 @@ export function registerBlackjack(register) {
         await runDealerAndFinish(message, st);
       }
     },
-    "!stand — stand (current player only)"
+    "!stand — stand (current player only)",
+    { hideFromHelp: true }
   );
 
   // !cancelblackjack

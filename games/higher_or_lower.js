@@ -246,7 +246,7 @@ export function registerHigherOrLower(register) {
       active.set(guildId, st);
     },
     "!higherorlower <num_rounds> [min-max] — single-player Higher/Lower (buttons). Type `!higherorlower help`.",
-    { aliases: ["!hol"] }
+    { helpTier: "primary", aliases: ["!hol"] }
   );
 
   // Cancel

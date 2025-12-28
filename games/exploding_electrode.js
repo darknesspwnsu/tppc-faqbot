@@ -673,7 +673,7 @@ export function registerExplodingElectrode(register) {
       await startExplodingElectrodeFromIds(message, entrants, opts);
     },
     "!ee [options...] [@players...] — start Exploding Electrode (taglist or reaction-join). Use `!ee help`.",
-    { aliases: EE_ALIASES.filter((a) => a !== "!ee") }
+    { helpTier: "primary", aliases: EE_ALIASES.filter((a) => a !== "!ee") }
   );
 
   // Pick command
@@ -691,7 +691,8 @@ export function registerExplodingElectrode(register) {
 
       await resolvePick(message.channel, game, message.author.id);
     },
-    "!pick — pick a Poké Ball (only on your turn)"
+    "!pick — pick a Poké Ball (only on your turn)",
+    { hideFromHelp: true }
   );
 
   // End (admin-only)

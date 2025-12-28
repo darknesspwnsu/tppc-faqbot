@@ -526,7 +526,7 @@ export function registerExplodingVoltorbs(register) {
       startExplodingVoltorbs(message, rangeArg, modeArg);
     },
     "!ev [min-max[s|sec|seconds]] [elim|suddendeath] @players — start Exploding Voltorbs (default 30-90s, default mode suddendeath). If no @players, uses reaction join.",
-    { aliases: ["!explodingvoltorbs", "!voltorb"] }
+    { helpTier: "primary", aliases: ["!explodingvoltorbs", "!voltorb"] }
   );
 
   // Pass (canonical)
@@ -537,7 +537,7 @@ export function registerExplodingVoltorbs(register) {
       passVoltorb(message);
     },
     "!pass @user — pass the Voltorb (only holder can pass)",
-    { aliases: ["!passvoltorb", "!pv", "!passv"] }
+    { hideFromHelp: true, aliases: ["!passvoltorb", "!pv", "!passv"] }
   );
 
   // End (admin-only)

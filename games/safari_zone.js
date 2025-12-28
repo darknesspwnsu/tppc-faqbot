@@ -701,7 +701,7 @@ export function registerSafariZone(register) {
       await startSafariZoneFromIds(message, entrants, opts);
     },
     "!sz [options...] [@players...] — start Safari Zone (taglist or reaction-join). Use `!sz help`.",
-    { aliases: SZ_ALIASES.filter((a) => a !== "!sz") }
+    { helpTier: "primary", aliases: SZ_ALIASES.filter((a) => a !== "!sz") }
   );
 
   // Pick square
@@ -726,7 +726,7 @@ export function registerSafariZone(register) {
       await resolvePick(message.channel, game, message.author.id, coord);
     },
     "!szpick <A1..> — pick a square (only current player)",
-    { aliases: PICK_ALIASES.filter((a) => a !== "!szpick") }
+    { hideFromHelp: true, aliases: PICK_ALIASES.filter((a) => a !== "!szpick") }
   );
 
   // (Optional) status
@@ -748,7 +748,8 @@ export function registerSafariZone(register) {
           `${buildGridText(game)}`
       );
     },
-    "!safaristatus — shows current grid status"
+    "!safaristatus — shows current grid status",
+    { hideFromHelp: true }
   );
 
   // End (admin)

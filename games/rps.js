@@ -476,7 +476,8 @@ export function registerRPS(register) {
 
       scheduleTimers(st);
     },
-    "!rps [num_rounds] [@opponent] — Rock Paper Scissors (first to N wins). `!rpshelp`."
+    "!rps [num_rounds] [@opponent] — Rock Paper Scissors (first to N wins). `!rpshelp`.",
+    { helpTier: "primary" }
   );
 
   // !rpshelp
@@ -485,7 +486,8 @@ export function registerRPS(register) {
     async ({ message }) => {
       await message.reply(rpsHelp());
     },
-    "!rpshelp — shows Rock Paper Scissors help"
+    "!rpshelp — shows Rock Paper Scissors help",
+    { hideFromHelp: true }
   );
 
   // !rpscancel
