@@ -326,12 +326,11 @@ export function registerToybox(register) {
       const state = await ensureGuildLoaded(guildId);
       if (!state.items.length) return;
 
-      // Cheap short-circuit: if the message is very short, still fine; just scan.
-      for (const w of state.items) {
+      for (let i = 0; i < state.items.length; i++) {
+        const w = state.items[i];
         const p = phraseKey(w.phrase);
         if (!p) continue;
 
-        // Simple contains match (case-insensitive)
         if (lower.includes(p)) {
           const ownerId = w.ownerId;
           const prize = norm(w.prize);
@@ -343,6 +342,12 @@ export function registerToybox(register) {
             content: msg,
             allowedMentions: { users: [ownerId] }
           });
+
+          // 🔥 REMOVE THE WHISPER (one-shot)
+          state.items.splice(i, 1);
+          await trySaveGuildToDb(guildId);
+
+          break; // stop listening after first match
         }
       }
     } catch {
