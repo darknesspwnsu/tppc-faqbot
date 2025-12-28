@@ -672,7 +672,7 @@ export function registerContests(register) {
     try {
       await onAwesomeRoll(message, x);
     } catch {}
-  }, "!awesome — tells you how awesome someone is (0–101%)");
+  }, "!awesome — tells you how awesome someone is (0–101%)", {aliases: ["!a"]});
 
   // !coinflip — heads/tails (rare side!)
   register(
