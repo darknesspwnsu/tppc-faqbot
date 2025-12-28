@@ -45,6 +45,12 @@ const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
 
 const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
 
+const ENABLE_FLAREON_COMMANDS = process.env.ENABLE_FLAREON_COMMANDS === "true";
+
+console.log(
+  `[COMMANDS] Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`
+);
+
 /* ------------------------------- registry core ------------------------------ */
 
 export function buildCommandRegistry({ client } = {}) {
@@ -182,7 +188,11 @@ export function buildCommandRegistry({ client } = {}) {
 
   async function dispatchMessage(message) {
     const content = (message.content ?? "").trim();
-    if (!(content.startsWith("!") || content.startsWith("?"))) return;
+    const isBang = content.startsWith("!");
+    const isQ = content.startsWith("?");
+
+    if (!isBang && !isQ) return;
+    if (isQ && !ENABLE_FLAREON_COMMANDS) return;
 
     // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");
