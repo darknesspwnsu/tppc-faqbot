@@ -106,9 +106,14 @@ export function registerBingo(register) {
 
       const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
 
-      if (tokens.length === 0) {
+      if (tokens.length === 0 || tokens[0].toLowerCase() === "help") {
         await message.reply(
-          "Usage: `!bingo <min-max> [optional drawnlist]`\nExample: `!bingo 1-151` or `!bingo 1-151 5,12,77`"
+          "**Bingo help**\n" +
+          "`!bingo <min-max> [optional drawnlist]` — start/resume\n" +
+          "Examples: `!bingo 1-151` | `!bingo 1-151 5,12,77`\n" +
+          "`!draw` — draw a new number\n" +
+          "`!getbingolist` — show drawn list\n" +
+          "`!cancelbingo` — cancel (admin/starter)"
         );
         return;
       }

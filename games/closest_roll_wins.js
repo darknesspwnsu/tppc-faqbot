@@ -211,6 +211,20 @@ export function registerClosestRollWins(register) {
       .split(/\s+/)
       .filter(Boolean);
 
+    if (tokens.length == 1 && tokens[0].toLowerCase() === "help") {
+      await message.reply(
+        "**ClosestRoll help**\n" +
+        "`!cr [target 0-101] [timeLimit]` — start\n" +
+        "Aliases: `!closestroll`, `!cr`\n" +
+        "Time formats: `30`, `30s`, `30sec`, `30seconds`, `5m`, `1h`\n" +
+        "`!awesome` — roll (only counts while active, in this channel)\n" +
+        "`!endclosest` / `!endclosestroll` — end early (admin/starter)\n" +
+        "`!cancelclosest` / `!cancelclosestroll` — cancel (admin/starter)"
+      );
+      return;
+    }
+
+
     let target = null;
     let timeMs = null;
 

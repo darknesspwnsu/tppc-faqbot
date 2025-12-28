@@ -238,6 +238,19 @@ export function registerBlackjack(register) {
       }
 
       const mentionIds = parseMentionIdsInOrder(rest);
+      const arg = String(rest ?? "").trim();
+      if (!arg || arg.toLowerCase() === "help") {
+        await message.reply(
+          "**Blackjack help** (Dealer: S17)\n" +
+          "`!blackjack @p1 @p2 ...` — start round (tag-only)\n" +
+          "`!hit` — draw a card (current player)\n" +
+          "`!stand` — stand (current player)\n" +
+          "`!bjstatus` — show table status\n" +
+          "`!cancelblackjack` — cancel (admin/starter)"
+        );
+        return;
+      }
+
       if (mentionIds.length === 0) {
         await message.reply("❌ Tag at least 1 player.\nUsage: `!blackjack @p1 @p2 ...`");
         return;
