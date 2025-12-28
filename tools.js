@@ -33,9 +33,7 @@ const DB_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
 function dbEnabledForGuild(guildId) {
   if (!DB_ENABLED_ANYWHERE) return false;
   if (!guildId) return false;
-  // If you want “DB enabled for all guilds when TRADING_GUILD_ALLOWLIST is non-empty”,
-  // replace this with: return true;
-  return TRADING_GUILD_ALLOWLIST.includes(String(guildId));
+  return true; // DB on for all guilds once enabled anywhere
 }
 
 /* ------------------------------ promo storage ------------------------------ */
