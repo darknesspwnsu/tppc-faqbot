@@ -16,6 +16,7 @@
  */
 
 import { isAdminOrPrivileged } from "./auth.js";
+import { onAwesomeRoll } from "./games/closest_roll_wins.js";
 
 // guildId -> {
 //   client, guildId, channelId, messageId, creatorId, endsAtMs, timeout,
@@ -665,6 +666,12 @@ export function registerContests(register) {
     const uid = targetUserId(message);
     const x = randIntInclusive(0, 101);
     await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
+
+    // ClosestRollWins integration: only counts if a ClosestRoll is active in this guild+channel
+    // and ONLY the author’s !awesome roll is considered.
+    try {
+      await onAwesomeRoll(message, x);
+    } catch {}
   }, "!awesome — tells you how awesome someone is (0–101%)");
 
   // !coinflip — heads/tails (rare side!)

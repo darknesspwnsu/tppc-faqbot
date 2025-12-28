@@ -8,6 +8,7 @@ import { registerExplodingElectrode } from "./exploding_electrode.js";
 import { registerSafariZone } from "./safari_zone.js";
 import { registerBingo } from "./bingo.js";
 import { registerBlackjack } from "./blackjack.js";
+import { registerClosestRollWins } from "./closest_roll_wins.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -15,6 +16,7 @@ const GAME_MODULES = [
   { id: "safari_zone", register: registerSafariZone },
   { id: "bingo", register: registerBingo },
   { id: "blackjack", register: registerBlackjack },
+  { id: "closest_roll_wins", register: registerClosestRollWins },
 ];
 
 export function registerGames(register) {
