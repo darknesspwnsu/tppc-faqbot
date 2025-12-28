@@ -12,6 +12,7 @@
  *  - If categories > 25, automatically uses select menus (supports >25 via multiple menus)
  *  - Remembers last-opened category per user in a session map
  */
+import { MessageFlags } from "discord.js";
 
 const lastHelpCategoryByUser = new Map(); // userId -> pageIdx
 
@@ -66,6 +67,20 @@ function buildButtons(pages, activeIdx) {
   return rows;
 }
 
+function buildCategoryChoices(pages) {
+  // Discord: max 25 choices
+  return pages.slice(0, 25).map((p) => ({
+    name: String(p.category).slice(0, 100),
+    value: String(p.category).slice(0, 100),
+  }));
+}
+
+function indexForCategory(pages, categoryValue) {
+  const key = String(categoryValue || "").toLowerCase();
+  const idx = pages.findIndex((p) => String(p.category).toLowerCase() === key);
+  return idx >= 0 ? idx : null;
+}
+
 function buildSelectMenus(pages, activeIdx) {
   // Discord select menu option limit is 25. Components limit is 5 rows.
   // We'll create N menus of up to 25 options each; each menu is its own row.
@@ -118,6 +133,8 @@ function buildComponents(pages, activeIdx) {
 }
 
 export function registerHelpbox(register, { helpModel }) {
+  const HELP_PAGES = helpModel();
+
   // Bang !help (public)
   register(
     "!help",
@@ -157,21 +174,36 @@ export function registerHelpbox(register, { helpModel }) {
   register.slash(
     {
       name: "help",
-      description: "Show a categorized help menu (private)"
+      description: "Show a categorized help menu (private)",
+      options: [
+        {
+          type: 3, // STRING
+          name: "category",
+          description: "Open directly to a category (optional)",
+          required: false,
+          choices: buildCategoryChoices(HELP_PAGES),
+        }
+      ]
     },
     async ({ interaction }) => {
-      const pages = helpModel();
+      const pages = HELP_PAGES;
       if (!pages.length) {
-        await interaction.reply({ ephemeral: true, content: "No commands available." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "No commands available." });
         return;
       }
 
       const userId = interaction.user?.id;
-      const idx = getDefaultIndex(pages, userId);
+
+      const chosenCat = interaction.options?.getString?.("category") ?? null;
+      let idx = null;
+
+      if (chosenCat) idx = indexForCategory(pages, chosenCat);
+      if (idx == null) idx = getDefaultIndex(pages, userId);
+
       rememberIndex(userId, idx);
 
       await interaction.reply({
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
         embeds: [embedForPage(pages, idx)],
         components: buildComponents(pages, idx)
       });
