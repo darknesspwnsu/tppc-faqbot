@@ -83,6 +83,145 @@ function fetchText(url) {
   });
 }
 
+/* -------------------------------- history --------------------------------- */
+
+function historySlugFromName(name) {
+  // Site expects "+" literal in the path, which ends up URL-encoded as "%2B"
+  // Example: "Vulpix (Alola)" -> "Vulpix+%28Alola%29" (browser shows %2B for +)
+  const plus = String(name ?? "").trim().replace(/\s+/g, "+");
+  return encodeURIComponent(plus);
+}
+
+function historyUrlFromPokemonName(name) {
+  return `https://tppc.electa.buzz/history/${historySlugFromName(name)}`;
+}
+
+function stripTags(s) {
+  return String(s ?? "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseLeadingInt(s) {
+  const m = String(s ?? "").trim().match(/^(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+
+function parseHistoryTable(html, limit = 120) {
+  const tbody = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i)?.[1];
+  if (!tbody) return [];
+
+  const rows = [];
+  const trRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  let tr;
+
+  while ((tr = trRe.exec(tbody))) {
+    const trHtml = tr[1];
+    const tds = [...trHtml.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
+      stripTags(m[1])
+    );
+    if (tds.length < 6) continue;
+
+    const dateText = tds[0];
+    if (!dateText || dateText === "-") continue; // skip the baseline row
+
+    rows.push({
+      dateText,
+      total: parseLeadingInt(tds[5]),
+    });
+
+    if (rows.length >= limit) break;
+  }
+
+  // Page is newest->oldest; chart is nicer oldest->newest
+  rows.reverse();
+  return rows;
+}
+
+function shortenDateLabel(s) {
+  // "December 25, 2025" → "Dec 2025"
+  // Also handles already-short formats gracefully.
+  const str = String(s ?? "").trim();
+
+  // Full format: Month Day, Year
+  let m = str.match(/^([A-Za-z]+)\s+\d{1,2},\s*(\d{4})$/);
+  if (m) return `${m[1].slice(0, 3)} ${m[2]}`;
+
+  // If it ever comes through as "Dec 25, 2025"
+  m = str.match(/^([A-Za-z]{3})\s+\d{1,2},\s*(\d{4})$/);
+  if (m) return `${m[1]} ${m[2]}`;
+
+  // Fallback: if we can spot a year anywhere, prefer "Mon YYYY"
+  m = str.match(/^([A-Za-z]{3,})\b.*\b(\d{4})\b/);
+  if (m) return `${m[1].slice(0, 3)} ${m[2]}`;
+
+  return str;
+}
+
+function buildChartConfig({ title, labels, data }) {
+  return {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: title,
+          data,
+          borderColor: "#7dd3fc",
+          backgroundColor: "rgba(125, 211, 252, 0.15)",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.15,
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+      },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 8, font: { size: 11 } },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+        y: {
+          ticks: { font: { size: 11 } },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+      },
+    },
+  };
+}
+
+async function quickChartUrl(chartConfig) {
+  // Node 20+ has global fetch. This returns a hosted image URL.
+  const res = await fetch("https://quickchart.io/chart/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chart: chartConfig,
+      width: 900,
+      height: 420,
+      backgroundColor: "transparent",
+      format: "png",
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`QuickChart create failed: ${res.status} ${txt}`.trim());
+  }
+
+  const data = await res.json();
+  return data.url;
+}
+
 /* ------------------------- time: TPPC banner -> Date ------------------------ */
 
 function parseLastUpdatedTextEastern(text) {
@@ -120,29 +259,6 @@ function parseLastUpdatedTextEastern(text) {
   const utcMs = Date.UTC(yyyy, mm - 1, dd, hh + offsetHours, min, 0);
   return new Date(utcMs);
 }
-
-// function formatDurationAgo(fromMs, nowMs = Date.now()) {
-//   let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
-
-//   const days = Math.floor(diff / 86400);
-//   diff %= 86400;
-//   const hours = Math.floor(diff / 3600);
-//   diff %= 3600;
-//   const minutes = Math.floor(diff / 60);
-//   const seconds = diff % 60;
-
-//   const parts = [];
-
-//   if (days) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
-//   if (hours) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
-//   if (minutes) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
-
-//   parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
-
-//   if (parts.length === 1) return parts[0];
-//   if (parts.length === 2) return parts.join(" and ");
-//   return parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
-// }
 
 function formatDurationAgoWithoutSeconds(fromMs, nowMs = Date.now()) {
   let diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
@@ -211,7 +327,6 @@ function normalizeQueryVariants(qRaw) {
   }
 
   // Accept "gpichu" / "spichu" / "dpichu" (NO dot, NO space)
-  // IMPORTANT: this is only a *candidate*; findEntry() still tries exact match first.
   const mStuck = q.match(/^([sdg])([a-z0-9].+)$/);
   if (mStuck && !q.includes(".") && !q.includes(" ")) {
     const letter = mStuck[1];
@@ -287,10 +402,10 @@ function diceCoeff(a, b) {
 function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
   if (!normIndex) return [];
 
-  const qKeys = normalizeQueryVariants(queryRaw); // expands g./s./d. forms too
+  const qKeys = normalizeQueryVariants(queryRaw);
   if (!qKeys.length) return [];
 
-  let pref = queryVariantPrefix(queryRaw); // "" | "shiny" | "dark" | "golden"
+  let pref = queryVariantPrefix(queryRaw);
 
   // If user used "gpichu"/"spichu"/"dpichu" and it doesn't directly exist,
   // treat it as variant intent for suggestions.
@@ -307,17 +422,14 @@ function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
 
   const scored = [];
   for (const [nk, entry] of Object.entries(normIndex)) {
-    // If user clearly asked for Golden/Dark/Shiny, keep suggestions in that bucket.
     if (pref) {
       if (!nk.startsWith(pref)) continue;
     } else {
-      // No variant requested: keep suggestions to BASE only
       if (nk.startsWith("shiny") || nk.startsWith("dark") || nk.startsWith("golden")) {
         continue;
       }
     }
 
-    // Score = best Dice coefficient among all candidate normalized queries
     let best = 0;
     for (const q of qKeys) {
       if (Math.abs(nk.length - q.length) > SUGGEST_MAX_LEN_DIFF) continue;
@@ -344,11 +456,9 @@ function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
 function findEntry({ lowerIndex, normIndex }, qRaw) {
   if (!qRaw) return null;
 
-  // exact case-insensitive key hit
   let r = lowerIndex?.[String(qRaw).toLowerCase()];
   if (r) return r;
 
-  // normalized tries (variant-aware)
   const tries = normalizeQueryVariants(qRaw);
   for (const t of tries) {
     r = normIndex?.[t];
@@ -362,7 +472,6 @@ function prettyVariantGuess(qRaw) {
   const q = String(qRaw ?? "").trim();
   if (!q) return null;
 
-  // Handle dot prefixes: g.sneasel (hisui) -> GoldenSneasel (hisui)
   const mDot = q.match(/^([sdg])\.(.+)$/i);
   if (mDot) {
     const letter = mDot[1].toLowerCase();
@@ -371,7 +480,6 @@ function prettyVariantGuess(qRaw) {
     return prefix + rest;
   }
 
-  // Handle spaced prefixes: "g sneasel (hisui)" -> "Golden sneasel (hisui)"
   const parts = q.split(/\s+/).filter(Boolean);
   if (parts.length >= 2 && ["s", "d", "g"].includes(parts[0].toLowerCase())) {
     const letter = parts[0].toLowerCase();
@@ -380,7 +488,6 @@ function prettyVariantGuess(qRaw) {
     return `${prefix} ${rest}`;
   }
 
-  // Handle stuck prefixes: "gpichu" -> "GoldenPichu"
   const mStuck = q.match(/^([sdg])([^\s.].+)$/i);
   if (mStuck && !q.includes(".") && !q.includes(" ")) {
     const letter = mStuck[1].toLowerCase();
@@ -393,7 +500,6 @@ function prettyVariantGuess(qRaw) {
   return q;
 }
 
-// Merge suggestions from multiple sources, dedupe case-insensitively, keep order.
 function mergeSuggestions(...lists) {
   const out = [];
   const seen = new Set();
@@ -410,22 +516,15 @@ function mergeSuggestions(...lists) {
 }
 
 function parseTwoArgs(rest) {
-  // Supports:
-  //   !rc a b
-  //   !rc "GoldenSneasel (Hisui)" "ShinySneasel (Hisui)"
-  //   !rc a | b
-  //   !rc a vs b
   const s = String(rest ?? "").trim();
   if (!s) return [];
 
-  // Prefer explicit separators first
   const sepMatch = s.match(/\s*\|\s*|\s+vs\s+/i);
   if (sepMatch) {
     const parts = s.split(sepMatch[0]).map((x) => x.trim()).filter(Boolean);
     return parts.slice(0, 2);
   }
 
-  // Quote-aware split
   const out = [];
   let cur = "";
   let q = null;
@@ -434,11 +533,8 @@ function parseTwoArgs(rest) {
     const ch = s[i];
 
     if (q) {
-      if (ch === q) {
-        q = null;
-      } else {
-        cur += ch;
-      }
+      if (ch === q) q = null;
+      else cur += ch;
       continue;
     }
 
@@ -456,20 +552,7 @@ function parseTwoArgs(rest) {
   }
   if (cur) out.push(cur);
 
-  // If user didn’t quote multi-word names, they’ll get >2 tokens — we just take first 2.
   return out.slice(0, 2);
-}
-
-function fmtDiffCaret(a, b) {
-  const da = Number(a) || 0;
-  const db = Number(b) || 0;
-  const d = db - da;
-
-  if (d === 0) return { sym: "●", text: "±0" };
-
-  return d > 0
-    ? { sym: "▲", text: `+${Math.abs(d).toLocaleString("en-US")}` }
-    : { sym: "▼", text: `-${Math.abs(d).toLocaleString("en-US")}` };
 }
 
 function cmpLine(a, b) {
@@ -501,7 +584,6 @@ async function refresh() {
     console.log(`[RARITY] Loaded ${Object.keys(rarity).length} entries`);
   } catch (e) {
     console.warn("[RARITY] Refresh failed:", e?.message ?? e);
-    // Keep last-known-good cache in memory
   }
 }
 
@@ -516,7 +598,6 @@ async function refreshL4() {
     console.log(`[RARITY4] Loaded ${Object.keys(rarity4).length} entries`);
   } catch (e) {
     console.warn("[RARITY4] Refresh failed:", e?.message ?? e);
-    // Keep last-known-good cache in memory
   }
 }
 
@@ -531,19 +612,16 @@ function fmt(n) {
 
 function parseHHMM(hhmm) {
   const m = String(hhmm).trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
-  if (!m) return { hour: 7, minute: 10 }; // fallback
+  if (!m) return { hour: 7, minute: 10 };
   return { hour: Number(m[1]), minute: Number(m[2]) };
 }
 
-// Computes the next occurrence of HH:MM in America/New_York as a real Date() timestamp.
-// Uses Intl timeZone conversion so DST is handled correctly by the runtime.
 function nextRunInEastern(hhmm) {
   const { hour, minute } = parseHHMM(hhmm);
   const tz = "America/New_York";
 
   const now = new Date();
 
-  // Get today's date parts in Eastern
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
     year: "numeric",
@@ -556,7 +634,6 @@ function nextRunInEastern(hhmm) {
   const mo = Number(get("month"));
   const d = Number(get("day"));
 
-  // Create a Date for today's target time *as Eastern*, by formatting a UTC guess and adjusting.
   const candidateUtc = new Date(Date.UTC(y, mo - 1, d, hour, minute, 0));
 
   const nowInET = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(now));
@@ -593,8 +670,6 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
 }
 
 function buildDidYouMeanButtons(command, suggestions, extraArgs = "") {
-  // customId format: rarity_retry:<command>:<encodedMon>:<encodedExtraArgs>
-  // Keep it short and safe: encode and trim.
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
 
   const row = new ActionRowBuilder().addComponents(
@@ -612,8 +687,8 @@ function buildDidYouMeanButtons(command, suggestions, extraArgs = "") {
 /* --------------------------------- exports -------------------------------- */
 
 export function registerRarity(register) {
-  refresh();                 // load once at startup
-  scheduleDailyRefresh(refresh, "RARITY"); // refresh once per day around ET update time
+  refresh();
+  scheduleDailyRefresh(refresh, "RARITY");
 
   register(
     "?rarity",
@@ -657,7 +732,7 @@ export function registerRarity(register) {
               { name: "(?)", value: fmt(r.ungendered), inline: true },
               { name: "G", value: fmt(r.genderless), inline: true }
             ],
-            footer: {text: updatedLine}
+            footer: { text: updatedLine }
           }
         ]
       });
@@ -680,8 +755,7 @@ export function registerRarity(register) {
 }
 
 export function registerLevel4Rarity(register) {
-  // Available out-of-the-box everywhere.
-  refreshL4(); // load once at startup
+  refreshL4();
 
   register(
     "!l4",
@@ -692,23 +766,18 @@ export function registerLevel4Rarity(register) {
         return;
       }
 
-      // Ensure both datasets are loaded:
-      // - L4 is for display
-      // - general rarity is for "does this key exist?" + richer suggestions (forms)
       if (!rarity4Norm) await refreshL4();
       if (!rarityNorm) await refresh();
 
       const r = findEntry({ lowerIndex: rarity4, normIndex: rarity4Norm }, qRaw);
 
       if (!r) {
-        // If general rarity recognizes this exact/canonical key, then this is a "valid mon, no L4 data" case.
         const generalHit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
         if (generalHit) {
           await message.reply(`No Level 4 rarity data found for \`${generalHit.name}\`.`);
           return;
         }
 
-        // Otherwise, treat as typo/unknown: offer "did you mean" from BOTH sources.
         const sL4 = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
         const sGen = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
         const merged = mergeSuggestions(sL4, sGen);
@@ -721,7 +790,6 @@ export function registerLevel4Rarity(register) {
           return;
         }
 
-        // No suggestions anywhere
         const guess = prettyVariantGuess(qRaw);
         await message.reply(`No exact match for \`${guess ?? qRaw}\`.`);
         return;
@@ -762,20 +830,17 @@ export function registerLevel4Rarity(register) {
         await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
         return;
       }
-      // Ensure cache is loaded
       if (!rarityNorm) await refresh();
 
       const r1 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q1);
       const r2 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q2);
 
-      // Did-you-mean handling per-side (with clickable buttons)
       if (!r1 || !r2) {
         if (!r1) {
           const s1 = getSuggestionsFromIndex(rarityNorm, q1, 5);
           if (s1.length) {
             await message.reply({
               content: `No exact match for \`${q1}\`.\nDid you mean:`,
-              // extraArgs carries the other side so the button can rebuild the rc command
               components: buildDidYouMeanButtons("!rc_left", s1, q2),
             });
           } else {
@@ -798,7 +863,6 @@ export function registerLevel4Rarity(register) {
         return;
       }
 
-      // Disallow comparing the same Pokémon (including aliases that resolve to the same entry)
       if (normalizeKey(r1.name) === normalizeKey(r2.name)) {
         await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
         return;
@@ -821,7 +885,7 @@ export function registerLevel4Rarity(register) {
               { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
               { name: "G", value: cmpLine(r1.genderless, r2.genderless), inline: true }
             ],
-            footer: {text: updatedLine}
+            footer: { text: updatedLine }
           }
         ]
       });
@@ -840,6 +904,93 @@ export function registerLevel4Rarity(register) {
     },
     "!rarity4reload — refreshes rarity4 cache (admin)",
     { admin: true }
+  );
+
+  // ------------------------------- !rh (history) -------------------------------
+
+  register(
+    "!rh",
+    async ({ message, rest }) => {
+      const qRaw = String(rest ?? "").trim();
+      if (!qRaw) {
+        await message.reply("Usage: `!rh <pokemon>`");
+        return;
+      }
+
+      // Ensure base rarity is loaded so we can canonicalize the name + reuse suggestions
+      if (!rarityNorm) await refresh();
+
+      const hit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
+      if (!hit) {
+        const suggestions = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
+        if (suggestions.length) {
+          await message.reply({
+            content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
+            components: buildDidYouMeanButtons("!rh", suggestions),
+          });
+        }
+        return;
+      }
+
+      const url = historyUrlFromPokemonName(hit.name);
+      console.log(`[!rh] Fetching ${url}`);
+
+      let html;
+      try {
+        html = await fetchText(url);
+      } catch (e) {
+        await message.reply(`Couldn’t fetch history page for \`${hit.name}\`.`);
+        return;
+      }
+
+      const rows = parseHistoryTable(html, 120);
+      if (!rows.length) {
+        await message.reply(`No history rows found for \`${hit.name}\`.`);
+        return;
+      }
+
+      // Keep chart readable: last N points
+      const MAX_POINTS = 60;
+      const sliced = rows.length > MAX_POINTS ? rows.slice(-MAX_POINTS) : rows;
+
+      const labels = sliced.map((r) => shortenDateLabel(r.dateText));
+      const totals = sliced.map((r) => r.total);
+
+      const chartCfg = buildChartConfig({
+        title: `${hit.name} total`,
+        labels,
+        data: totals,
+      });
+
+      let chartUrl;
+      try {
+        chartUrl = await quickChartUrl(chartCfg);
+      } catch (e) {
+        await message.reply("Chart generation failed (QuickChart). Try again later.");
+        return;
+      }
+
+      const last = sliced[sliced.length - 1];
+      const prev = sliced[sliced.length - 2];
+      const delta = prev ? last.total - prev.total : 0;
+
+      await message.channel.send({
+        embeds: [
+          {
+            title: `${hit.name} — Rarity History (Total)`,
+            url,
+            description:
+              `Showing ${sliced.length} points (oldest → newest)\n` +
+              `**Current total:** ${fmt(last.total)} (${delta >= 0 ? "+" : ""}${fmt(delta)})`,
+            color: 0xed8b2d,
+            image: { url: chartUrl },
+            footer: { text: "Source: tppc.electa.buzz history" },
+          },
+        ],
+      });
+    },
+    "!rh <pokemon> — plots rarity history (Total) from tppc.electa.buzz",
+    { aliases: ["!rarityhistory"] }
   );
 }
 
@@ -860,6 +1011,8 @@ export async function handleRarityInteraction(interaction) {
 
   if (cmdKey === "!rc_left") return { cmd: "!rc", rest: `"${mon}" "${extra}"` };
   if (cmdKey === "!rc_right") return { cmd: "!rc", rest: `"${extra}" "${mon}"` };
+
+  if (cmdKey === "!rh") return { cmd: "!rh", rest: mon };
 
   return false;
 }
