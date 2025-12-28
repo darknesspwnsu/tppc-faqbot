@@ -1,4 +1,3 @@
-// toybox.js
 import { getUserText, setUserText } from "./db.js";
 
 /* ------------------------------- small helpers ------------------------------ */
@@ -27,7 +26,7 @@ const WHISPER_KIND = "whisper";
 const WHISPER_USER_ID = "__guild__"; // sentinel
 
 // In-memory fallback cache (also used as the live index)
-const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, ownerId }], dbOk?: boolean }
+const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, ownerId, prize? }], dbOk?: boolean }
 
 function getGuildState(guildId) {
   if (!guildWhispers.has(guildId)) {
@@ -41,7 +40,8 @@ function serializeItems(items) {
   return JSON.stringify(
     (items || []).map((x) => ({
       phrase: String(x.phrase || ""),
-      ownerId: String(x.ownerId || "")
+      ownerId: String(x.ownerId || ""),
+      prize: x.prize == null ? "" : String(x.prize || "")
     }))
   );
 }
@@ -53,9 +53,15 @@ function deserializeItems(text) {
     return arr
       .map((x) => ({
         phrase: norm(x?.phrase),
-        ownerId: norm(x?.ownerId)
+        ownerId: norm(x?.ownerId),
+        prize: norm(x?.prize)
       }))
-      .filter((x) => x.phrase && x.ownerId);
+      .filter((x) => x.phrase && x.ownerId)
+      .map((x) => ({
+        phrase: x.phrase,
+        ownerId: x.ownerId,
+        prize: x.prize || ""
+      }));
   } catch {
     return [];
   }
@@ -120,7 +126,7 @@ function phraseKey(phrase) {
   return lc(norm(phrase));
 }
 
-function addWhisper(state, phrase, ownerId) {
+function addWhisper(state, phrase, ownerId, prize) {
   const p = norm(phrase);
   if (!p) return { ok: false, reason: "empty" };
 
@@ -128,7 +134,11 @@ function addWhisper(state, phrase, ownerId) {
   const exists = state.items.some((x) => phraseKey(x.phrase) === key && x.ownerId === ownerId);
   if (exists) return { ok: false, reason: "exists" };
 
-  state.items.push({ phrase: p, ownerId });
+  state.items.push({
+    phrase: p,
+    ownerId: String(ownerId || ""),
+    prize: norm(prize)
+  });
   return { ok: true };
 }
 
@@ -197,6 +207,12 @@ export function registerToybox(register) {
           name: "phrase",
           description: "The phrase to listen for",
           required: true
+        },
+        {
+          type: 3, // STRING
+          name: "prize",
+          description: "Optional prize text to show when someone finds the phrase",
+          required: false
         }
       ]
     },
@@ -208,6 +224,7 @@ export function registerToybox(register) {
       }
 
       const phrase = norm(interaction.options?.getString?.("phrase"));
+      const prize = norm(interaction.options?.getString?.("prize"));
       const ownerId = interaction.user?.id;
 
       if (!phrase) {
@@ -217,7 +234,7 @@ export function registerToybox(register) {
 
       const state = await ensureGuildLoaded(guildId);
 
-      const res = addWhisper(state, phrase, ownerId);
+      const res = addWhisper(state, phrase, ownerId, prize);
       if (!res.ok && res.reason === "exists") {
         await interaction.reply({
           content: `You are already listening for: "${phrase}"`,
@@ -234,7 +251,10 @@ export function registerToybox(register) {
       await trySaveGuildToDb(guildId);
 
       await interaction.reply({
-        content: `✅ Listening for: "${phrase}"\nUse \`/listwhispers\` to see your phrases.`,
+        content:
+          `✅ Listening for: "${phrase}"` +
+          (prize ? `\nPrize: ${prize}` : "") +
+          `\nUse \`/listwhispers\` to see your phrases.`,
         ephemeral: true
       });
     }
@@ -263,7 +283,10 @@ export function registerToybox(register) {
       }
 
       const lines = mine
-        .map((x, i) => `${i + 1}. "${x.phrase}"`)
+        .map((x, i) => {
+          const prizePart = x.prize ? ` — Prize: ${x.prize}` : "";
+          return `${i + 1}. "${x.phrase}"${prizePart}`;
+        })
         .slice(0, 50);
 
       const extra = mine.length > 50 ? `\n…plus ${mine.length - 50} more.` : "";
@@ -311,16 +334,15 @@ export function registerToybox(register) {
         // Simple contains match (case-insensitive)
         if (lower.includes(p)) {
           const ownerId = w.ownerId;
-          const speakerId = message.author?.id;
+          const prize = norm(w.prize);
 
-          // Avoid pinging the owner if they triggered their own phrase, if you want:
-          // (comment out if you DO want self-triggers)
-          // if (ownerId && speakerId && ownerId === speakerId) continue;
+          let msg = `🎉 Congratulations, you have found the hidden phrase set by ${mention(ownerId)}!`;
+          if (prize) msg += `\nYou have won: ${prize}`;
+
           await message.reply({
-            content: `🎉 Congratulations, you have found the magic phrase set by ${mention(ownerId)}!`,
+            content: msg,
             allowedMentions: { users: [ownerId] }
           });
-
         }
       }
     } catch {
