@@ -659,7 +659,9 @@ export function registerContests(register) {
   );
 
   register("!awesome", async ({ message }) => {
-    if (!isAllowedChannel(message, AWESOME_CHANNELS)) {
+    const allowed = AWESOME_CHANNELS[String(message.guildId)] || [];
+    if (!isAllowedChannel(message, allowed)) {
+      console.log(`[AWESOME] blocked in ${message.guildId}/${message.channelId}`);
       return;
     }
 
@@ -669,10 +671,9 @@ export function registerContests(register) {
 
     // ClosestRollWins integration: only counts if a ClosestRoll is active in this guild+channel
     // and ONLY the author’s !awesome roll is considered.
-    try {
-      await onAwesomeRoll(message, x);
-    } catch {}
-  }, "!awesome — tells you how awesome someone is (0–101%)", {aliases: ["!a"]});
+    try { await onAwesomeRoll(message, x); } catch {}
+  }, "!awesome — tells you how awesome someone is (0–101%)", { aliases: ["!a"] });
+
 
   // !coinflip — heads/tails (rare side!)
   register(
