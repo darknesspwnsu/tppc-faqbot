@@ -70,8 +70,6 @@ function handValue(hand) {
   // If we reduced all aces, no ace remains as 11
   if (hand.some((c) => c.r === "A")) {
     // soft if there exists at least one Ace still counted as 11
-    // That happens when original aces > reductions; equivalently total + 10 <= 21 for some ace,
-    // but easiest is to recompute: treat all aces as 1 then try upgrade one.
     const base = hand.reduce((sum, c) => sum + (c.r === "A" ? 1 : cardValueRank(c.r)), 0);
     soft = hand.some((c) => c.r === "A") && base + 10 <= 21;
   } else {
@@ -79,6 +77,43 @@ function handValue(hand) {
   }
 
   return { total, soft };
+}
+
+/**
+ * Improved totals UX:
+ * - Show two totals if there's an Ace and the "high" total <= 21 (e.g., 7/17)
+ * - If high would bust, show only the low total (e.g., 17 instead of 7/27)
+ * - For game logic, prefer the highest <= 21
+ */
+function handTotals(hand) {
+  // low counts all Aces as 1
+  let low = 0;
+  let aces = 0;
+
+  for (const c of hand) {
+    if (c.r === "A") {
+      aces++;
+      low += 1;
+    } else {
+      low += cardValueRank(c.r);
+    }
+  }
+
+  if (aces > 0) {
+    const high = low + 10; // upgrade ONE ace from 1->11
+    if (high <= 21) return [low, high];
+  }
+  return [low];
+}
+
+function bestTotal(hand) {
+  const t = handTotals(hand);
+  return t.length === 2 ? t[1] : t[0];
+}
+
+function fmtTotals(hand) {
+  const t = handTotals(hand);
+  return t.length === 2 ? `${t[0]}/${t[1]}` : `${t[0]}`;
 }
 
 function isBlackjack(hand) {
@@ -145,17 +180,15 @@ function dealerUpCardLine(st) {
 }
 
 function fullDealerLine(st) {
-  const { total } = handValue(st.dealerHand);
-  return `Dealer: ${fmtHand(st.dealerHand)}  (**${total}**)`;
+  return `Dealer: ${fmtHand(st.dealerHand)}  (**${fmtTotals(st.dealerHand)}**)`;
 }
 
 function playerLine(p) {
-  const { total } = handValue(p.hand);
   let suffix = "";
   if (p.status === "busted") suffix = " — **BUST**";
   else if (p.status === "stood") suffix = " — stood";
   else if (p.status === "blackjack") suffix = " — **BLACKJACK**";
-  return `<@${p.userId}>: ${fmtHand(p.hand)}  (**${total}**)${suffix}`;
+  return `<@${p.userId}>: ${fmtHand(p.hand)}  (**${fmtTotals(p.hand)}**)${suffix}`;
 }
 
 function statusText(st, revealDealer = false) {
@@ -180,12 +213,12 @@ function dealerShouldHit_S17(hand) {
 
 function settleGame(st) {
   const dealerBJ = isBlackjack(st.dealerHand);
-  const dealerVal = handValue(st.dealerHand).total;
+  const dealerVal = bestTotal(st.dealerHand);
   const dealerBust = dealerVal > 21;
 
   const results = [];
   for (const p of st.players) {
-    const pVal = handValue(p.hand).total;
+    const pVal = bestTotal(p.hand);
     const pBJ = isBlackjack(p.hand);
 
     let outcome = "push";
@@ -231,9 +264,7 @@ export function registerBlackjack(register) {
 
       if (GAMES.has(guildId)) {
         const st = GAMES.get(guildId);
-        await message.reply(
-          `⚠️ A blackjack game is already running.\n${gameLocationLine(st)}`
-        );
+        await message.reply(`⚠️ A blackjack game is already running.\n${gameLocationLine(st)}`);
         return;
       }
 
@@ -242,11 +273,11 @@ export function registerBlackjack(register) {
       if (!arg || arg.toLowerCase() === "help") {
         await message.reply(
           "**Blackjack help** (Dealer: S17)\n" +
-          "`!blackjack @p1 @p2 ...` — start round (tag-only)\n" +
-          "`!hit` — draw a card (current player)\n" +
-          "`!stand` — stand (current player)\n" +
-          "`!bjstatus` — show table status\n" +
-          "`!cancelblackjack` — cancel (admin/starter)"
+            "`!blackjack @p1 @p2 ...` — start round (tag-only)\n" +
+            "`!hit` — draw a card (current player)\n" +
+            "`!stand` — stand (current player)\n" +
+            "`!bjstatus` — show table status\n" +
+            "`!cancelblackjack` — cancel (admin/starter)"
         );
         return;
       }
@@ -322,7 +353,6 @@ export function registerBlackjack(register) {
 
       // If everyone is done immediately (all blackjack), go straight to dealer reveal/settle
       if (allPlayersDone(st)) {
-        // Reveal dealer and settle (dealer doesn't need to draw; but we should still check dealer blackjack etc.)
         const results = settleGame(st);
         const lines = [];
         lines.push("🃏 **Blackjack** — Initial deal complete.");
@@ -394,23 +424,28 @@ export function registerBlackjack(register) {
       // Draw
       cp.hand.push(st.deck.pop());
 
-      const { total } = handValue(cp.hand);
-      if (total > 21) {
+      // Improved ace handling + auto-stand on 21
+      const t = bestTotal(cp.hand);
+      if (t > 21) {
         cp.status = "busted";
+      } else if (t === 21) {
+        // streamline: lock in stand on 21
+        cp.status = "stood";
       }
 
-      // If busted, advance; if not, player continues until stand/bust
       let msg =
         `🃏 **Hit** — <@${cp.userId}> drew **${fmtCard(cp.hand[cp.hand.length - 1])}**\n` +
         `${playerLine(cp)}`;
 
       if (cp.status === "busted") {
         const hasNext = advanceTurn(st);
-        if (hasNext) {
-          msg += `\n\nNext: <@${currentPlayer(st).userId}>`;
-        } else {
-          msg += `\n\nAll players done — dealer’s turn...`;
-        }
+        if (hasNext) msg += `\n\nNext: <@${currentPlayer(st).userId}>`;
+        else msg += `\n\nAll players done — dealer’s turn...`;
+      } else if (cp.status === "stood") {
+        msg += `\n✅ **Auto-stand** — you hit **21**.`;
+        const hasNext = advanceTurn(st);
+        if (hasNext) msg += `\n\nNext: <@${currentPlayer(st).userId}>`;
+        else msg += `\n\nAll players done — dealer’s turn...`;
       } else {
         msg += `\n\nStill your turn, <@${cp.userId}>. (\`!hit\` / \`!stand\`)`;
       }
@@ -508,7 +543,7 @@ async function runDealerAndFinish(message, st) {
     // Dealer draws with S17
     while (dealerShouldHit_S17(st.dealerHand)) {
       st.dealerHand.push(st.deck.pop());
-      const { total } = handValue(st.dealerHand);
+      const total = bestTotal(st.dealerHand);
       if (total > 21) break;
     }
   }
