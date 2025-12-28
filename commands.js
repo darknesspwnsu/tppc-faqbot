@@ -62,6 +62,15 @@ export function buildCommandRegistry({ client } = {}) {
 
   // Component handlers (buttons/select menus), matched by customId prefix
   const components = []; // { prefix, handler }
+  // Message hooks (for games that consume non-command chat input)
+  const messageHooks = []; // handler({ message })
+
+  function registerOnMessage(handler) {
+    if (typeof handler !== "function") {
+      throw new Error("register.onMessage requires a function");
+    }
+    messageHooks.push(handler);
+  }
 
   function registerBang(name, handler, help = "", opts = {}) {
     const key = String(name).toLowerCase();
@@ -122,6 +131,7 @@ export function buildCommandRegistry({ client } = {}) {
   }
   register.slash = registerSlash;
   register.component = registerComponent;
+  register.onMessage = registerOnMessage;
 
   function withCategory(baseRegister, category) {
     const wrapped = (name, handler, help = "", opts = {}) => {
@@ -134,6 +144,7 @@ export function buildCommandRegistry({ client } = {}) {
     // If a module receives the wrapped register, it still can do register.slash / register.component.
     wrapped.slash = baseRegister.slash;
     wrapped.component = baseRegister.component;
+    wrapped.onMessage = baseRegister.onMessage;
 
     return wrapped;
   }
@@ -192,10 +203,22 @@ export function buildCommandRegistry({ client } = {}) {
 
   /* ------------------------------- dispatchers ------------------------------ */
 
+
   async function dispatchMessage(message) {
     const content = (message.content ?? "").trim();
     const isBang = content.startsWith("!");
     const isQ = content.startsWith("?");
+
+    // Give message hooks a chance to process normal chat (e.g., hangman guesses)
+    if (messageHooks.length) {
+      for (const h of messageHooks) {
+        try {
+          await h({ message });
+        } catch (e) {
+          // Keep failures isolated; do not block command dispatch
+        }
+      }
+    }
 
     if (!isBang && !isQ) return;
     if (isQ && !ENABLE_FLAREON_COMMANDS) return;

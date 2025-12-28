@@ -11,6 +11,7 @@ import { registerBlackjack } from "./blackjack.js";
 import { registerClosestRollWins } from "./closest_roll_wins.js";
 import { registerHigherOrLower } from "./higher_or_lower.js";
 import { registerRPS } from "./rps.js";
+import { registerHangman } from "./hangman.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -21,6 +22,7 @@ const GAME_MODULES = [
   { id: "closest_roll_wins", register: registerClosestRollWins },
   { id: "higher_or_lower", register: registerHigherOrLower },
   { id: "rps", register: registerRPS },
+  { id: "hangman", register: registerHangman },
 ];
 
 export function registerGames(register) {
