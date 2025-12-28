@@ -623,12 +623,12 @@ export function registerContests(register) {
 
       // Start immediately (first elimination happens after delayMs, as before)
       const t0 = setTimeout(runRound, delayMs);
-      activeElimByGuild.set(message.guildId, { timeout: t0, channelId: message.channelId });
+      activeElimByGuild.set(message.guildId, { timeout: t0, channelId: message.channelId, creatorId: message.author.id });
 
     },
     "?elim <1–30s> <items...> — randomly eliminates one item per round"
   );
-
+  
   register(
     "?cancelelim",
     async ({ message }) => {
@@ -636,14 +636,19 @@ export function registerContests(register) {
   
       const state = activeElimByGuild.get(message.guildId);
       if (!state) {
-        await message.reply("No elimination is currently running in this guild.");
+        await message.reply("No elimination is currently running.");
+        return;
+      }
+  
+      if (!isAdminOrPrivileged(message) && message.author.id !== state.creatorId) {
+        await message.reply("Only the elimination starter or an admin can cancel it.");
         return;
       }
   
       if (state.timeout) {
         try { clearTimeout(state.timeout); } catch {}
       }
-  
+      
       activeElimByGuild.delete(message.guildId);
   
       await message.channel.send("Elimination has been cancelled!");
