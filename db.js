@@ -39,6 +39,9 @@ export function getDb() {
     user: DB_USER,
     password: DB_PASSWORD ?? "",
     database: DB_NAME,
+    ssl: {
+      rejectUnauthorized: false
+    },
     waitForConnections: true,
     connectionLimit: DB_CONNECTION_LIMIT ? Number(DB_CONNECTION_LIMIT) : 10,
     queueLimit: 0
