@@ -1,0 +1,378 @@
+// contests/forum_list.js
+//
+// Admin utility: Scrape forums.tppc.info thread posters and DM a list of
+// "username - rpgId" (one per line), based on contest_help_main.py logic,
+// with additional rules:
+//
+// - Optional flag BEFORE the URL: [sorted|nosorted]
+//   - Default: nosorted (preserve first-seen scan order)
+// - Determine thread starter (OP) username from the first post on page 1
+// - Skip ALL posts by the starter on any page (starter may reply multiple times)
+// - DM header: "TPPC Forums thread list for <link> (Started by: <username>)"
+//
+// Usage:
+//   !getforumlist <threadUrl>
+//   !getforumlist sorted <threadUrl>
+//   !getforumlist nosorted <threadUrl>
+//
+// Example:
+//   !getforumlist https://forums.tppc.info/showthread.php?t=641916
+
+import { isAdminOrPrivileged } from "../auth.js";
+
+const FETCH_TIMEOUT_MS = 30_000;
+const PAGE_DELAY_MS = 500;
+const MAX_PAGES_HARD_CAP = 200; // safety
+const DM_CHUNK_LIMIT = 1900;
+
+// Guild-scoped "in progress" guard so admins can't start multiple scrapes at once.
+const scrapeLocksByGuild = new Map(); // guildId -> true
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function ensureFetch() {
+  if (typeof fetch !== "function") {
+    throw new Error(
+      "Global fetch() is not available. Use Node 18+ or add a fetch polyfill."
+    );
+  }
+}
+
+function parseArgs(restRaw) {
+  const tokens = String(restRaw || "").trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return { ok: false };
+
+  let sorted = false; // default UNSORTED per your request
+  let urlTokenStart = 0;
+
+  const first = tokens[0]?.toLowerCase();
+  if (first === "sorted") {
+    sorted = true;
+    urlTokenStart = 1;
+  } else if (first === "nosorted") {
+    sorted = false;
+    urlTokenStart = 1;
+  }
+
+  const url = tokens.slice(urlTokenStart).join(" ").trim();
+  if (!url) return { ok: false };
+
+  return { ok: true, sorted, url };
+}
+
+function normalizeThreadUrl(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+
+  try {
+    const u = new URL(s);
+    if (u.hostname !== "forums.tppc.info") return null;
+    if (!u.pathname.includes("showthread.php")) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+function decodeEntitiesBasic(str) {
+  return String(str || "")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&apos;", "'");
+}
+
+function htmlToText(html) {
+  let s = String(html || "");
+  s = s.replace(/<\s*br\s*\/?\s*>/gi, "\n");
+  s = s.replace(/<\/p\s*>/gi, "\n");
+  s = s.replace(/<\/div\s*>/gi, "\n");
+  s = s.replace(/<[^>]+>/g, "");
+  s = decodeEntitiesBasic(s);
+  s = s.replace(/\r/g, "");
+  s = s.replace(/[ \t]+\n/g, "\n");
+  s = s.replace(/\n{3,}/g, "\n\n");
+  s = s.trim();
+  return s;
+}
+
+async function fetchWithTimeout(url) {
+  ensureFetch();
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function computePageCountFromHtml(html) {
+  const m = /Show results\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)/i.exec(html);
+  if (!m) return 1;
+
+  const x = Number(m[1]);
+  const y = Number(m[2]);
+  const z = Number(m[3]);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return 1;
+
+  const perPage = Math.max(1, y - x + 1);
+  const pages = Math.ceil(z / perPage);
+  return Math.min(Math.max(1, pages), MAX_PAGES_HARD_CAP);
+}
+
+function buildPageUrl(baseUrl, pageNum) {
+  const u = new URL(baseUrl);
+  u.searchParams.set("page", String(pageNum));
+  return u.toString();
+}
+
+function extractPostTables(html) {
+  const re = /<table[^>]*\bid\s*=\s*["']post\d+["'][\s\S]*?<\/table>/gi;
+  return html.match(re) || [];
+}
+
+function extractUsernameFromPostTable(postHtml) {
+  const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(
+    postHtml
+  );
+  if (!m) return null;
+
+  const txt = htmlToText(m[1]);
+  const firstLine = txt.split("\n").map((s) => s.trim()).filter(Boolean)[0];
+  return firstLine || null;
+}
+
+function extractAlt2CellText(postHtml) {
+  const m = /<td[^>]*\bclass\s*=\s*["']alt2[^"']*["'][^>]*>([\s\S]*?)<\/td>/i.exec(
+    postHtml
+  );
+  if (!m) return "";
+  return htmlToText(m[1]);
+}
+
+function extractLinkedIdsFromSidebarText(sidebarText) {
+  const txt = String(sidebarText || "");
+  const lineMatch = /TPPC:\s*#([^\n]+)/i.exec(txt);
+  const segment = lineMatch ? lineMatch[0] : "";
+
+  const ids = [];
+  const re = /#(\d+)/g;
+  let mm;
+  while ((mm = re.exec(segment))) {
+    ids.push(mm[1]);
+  }
+  return ids;
+}
+
+function extractPostMessageText(postHtml) {
+  const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(
+    postHtml
+  );
+  if (!m) return "";
+  return htmlToText(m[1]);
+}
+
+function findIdInPostText(postText, linkedIds) {
+  const ids = Array.isArray(linkedIds) ? linkedIds : [];
+  if (ids.length === 0) return null;
+
+  const found = String(postText || "").match(/\d+/g) || [];
+  for (const maybe of found) {
+    if (ids.includes(maybe)) return maybe;
+  }
+  return ids[0] ?? null;
+}
+
+function normUser(u) {
+  return String(u || "").trim().toLowerCase();
+}
+
+function findThreadStarterUsernameFromPage1(html) {
+  // First post table on page 1 should be the OP
+  const posts = extractPostTables(html);
+  if (!posts.length) return null;
+
+  const starter = extractUsernameFromPostTable(posts[0]);
+  return starter || null;
+}
+
+async function scrapeThreadUserIdPairs(threadUrl) {
+  const page1Html = await fetchWithTimeout(threadUrl);
+  const pageCount = computePageCountFromHtml(page1Html);
+
+  const starterName = findThreadStarterUsernameFromPage1(page1Html);
+  const starterKey = starterName ? normUser(starterName) : null;
+
+  const seen = new Map(); // username -> rpgId (string|null), insertion order = scan order
+  const warnings = [];
+
+  if (!starterName) {
+    warnings.push("Could not detect thread starter (OP). Starter posts may not be excluded.");
+  }
+
+  function processPage(html) {
+    const posts = extractPostTables(html);
+    for (const postHtml of posts) {
+      const username = extractUsernameFromPostTable(postHtml);
+      if (!username) continue;
+
+      // Skip all posts by thread starter
+      if (starterKey && normUser(username) === starterKey) continue;
+
+      // Only first post by each username counts
+      if (seen.has(username)) continue;
+
+      const sidebarText = extractAlt2CellText(postHtml);
+      const linkedIds = extractLinkedIdsFromSidebarText(sidebarText);
+      const postText = extractPostMessageText(postHtml);
+      const targetId = findIdInPostText(postText, linkedIds);
+
+      seen.set(username, targetId);
+    }
+  }
+
+  processPage(page1Html);
+
+  for (let p = 2; p <= pageCount; p++) {
+    await sleep(PAGE_DELAY_MS);
+    const url = buildPageUrl(threadUrl, p);
+    const html = await fetchWithTimeout(url);
+    processPage(html);
+  }
+
+  if (seen.size === 0) {
+    warnings.push("No posters found (thread empty, inaccessible, or HTML layout changed).");
+  }
+
+  return { pairs: seen, pageCount, warnings, starterName: starterName || "Unknown" };
+}
+
+async function dmChunked(user, header, lines) {
+  const dm = await user.createDM();
+
+  let cur = header.trim();
+  for (const line of lines) {
+    const add = (cur ? "\n" : "") + line;
+    if ((cur + add).length > DM_CHUNK_LIMIT) {
+      await dm.send(cur);
+      cur = line;
+    } else {
+      cur += add;
+    }
+  }
+  if (cur) await dm.send(cur);
+}
+
+export function registerForumList(register) {
+  register(
+    "!getforumlist",
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!isAdminOrPrivileged(message)) return;
+
+      const gid = message.guildId;
+      if (!gid) return;
+
+      if (scrapeLocksByGuild.get(gid)) {
+        await message.reply(
+          "⏳ A forum scrape is already running for this server. Try again in a moment."
+        );
+        return;
+      }
+
+      scrapeLocksByGuild.set(gid, true);
+
+      try {
+        const parsed = parseArgs(rest);
+        if (!parsed.ok) {
+          await message.reply(
+            "Usage:\n" +
+              "• `!getforumlist <forums.tppc.info thread url>`\n" +
+              "• `!getforumlist sorted <thread url>`\n" +
+              "• `!getforumlist nosorted <thread url>`\n" +
+              "\nExample:\n" +
+              "• `!getforumlist https://forums.tppc.info/showthread.php?t=641916`"
+          );
+          return;
+        }
+
+        const threadUrl = normalizeThreadUrl(parsed.url);
+        if (!threadUrl) {
+          await message.reply(
+            "❌ Invalid URL. Please provide a `forums.tppc.info/showthread.php?...` thread link."
+          );
+          return;
+        }
+
+        await message.reply("🔎 Scraping the forum thread… I’ll DM you the results.");
+
+        let result;
+        try {
+          result = await scrapeThreadUserIdPairs(threadUrl);
+        } catch (e) {
+          console.warn("[getforumlist] scrape failed:", e);
+          await message.reply(
+            "❌ Failed to scrape that thread (network/HTML issue). Try again later."
+          );
+          return;
+        }
+
+        const { pairs, pageCount, warnings, starterName } = result;
+
+        // Default is UNSORTED: preserve insertion order from Map
+        let rows = [];
+        for (const [username, rpgId] of pairs.entries()) {
+          rows.push({ username, rpgId: rpgId || "NO GOOD REFERENCE" });
+        }
+
+        if (parsed.sorted) {
+          rows.sort((a, b) =>
+            a.username.toLowerCase().localeCompare(b.username.toLowerCase())
+          );
+        }
+
+        const lines = rows.map((r) => `${r.username} - ${r.rpgId}`);
+
+        const header =
+          `TPPC Forums thread list for ${threadUrl} (Started by: ${starterName})\n` +
+          `Pages scanned: ${pageCount}\n` +
+          `Unique users (excluding starter): ${rows.length}\n` +
+          `Mode: ${parsed.sorted ? "sorted" : "nosorted"}\n` +
+          (warnings.length ? `⚠️ ${warnings.join(" ")}\n` : "") +
+          `\nusername - rpg id\n----------------`;
+
+        try {
+          await dmChunked(message.author, header, lines);
+          await message.reply(`✅ Done — DM’d you ${rows.length} entries.`);
+        } catch (e) {
+          console.warn("[getforumlist] DM failed:", e);
+          await message.reply(
+            "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
+          );
+          return;
+        }
+      } finally {
+        scrapeLocksByGuild.delete(gid);
+      }
+    },
+    "!getforumlist [sorted|nosorted] <threadUrl> — (admin) DM a list of forum posters as `username - rpg id`",
+    { admin: true }
+  );
+}
