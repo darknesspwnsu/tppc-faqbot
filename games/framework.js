@@ -146,7 +146,20 @@ export async function collectEntrantsByReactionsWithMax({
       });
     }
 
-    collector.on("end", (_c, reason) => resolve({ entrants, joinMsg, reason }));
+    collector.on("end", async (_c, reason) => {
+      // Best-effort: edit the join message to indicate entries are closed
+      try {
+        const closedText =
+          reason === "max"
+            ? "Entries have closed for this contest (max entrants reached)."
+            : "Entries have closed for this contest.";
+        await joinMsg.edit(closedText);
+
+      } catch {
+        // ignore (missing perms, message deleted, etc.)
+      }
+      resolve({ entrants, joinMsg, reason });
+    });
   });
 }
 
