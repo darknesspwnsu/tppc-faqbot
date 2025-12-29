@@ -251,7 +251,7 @@ export function registerRng(register) {
       await message.channel.send("Elimination has been cancelled!");
     },
     "?cancelelim — cancels the currently running elimination",
-    { aliases: ["?stopelim", "?endelim"] }
+    { aliases: ["?stopelim", "?endelim"], hideFromHelp: true }
   );
 
   register(
