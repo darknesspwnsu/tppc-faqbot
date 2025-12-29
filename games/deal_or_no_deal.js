@@ -246,18 +246,7 @@ export function registerDealOrNoDeal(register) {
         .setLabel("Prizes (one per line, Box 1..N)")
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(false)
-        .setPlaceholder(
-          [
-            "One prize per line (Box 1..N):",
-            "- Blank line or 'Empty' = empty box",
-            "",
-            "$1",
-            "$5",
-            "Golden Shiny Pikachu",
-            "Empty",
-            "...",
-          ].join("\n")
-        );
+        .setPlaceholder("One prize per line. Blank/Empty = empty box.");
 
       modal.addComponents(new ActionRowBuilder().addComponents(prizesInput));
       await interaction.showModal(modal);
