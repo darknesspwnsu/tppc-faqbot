@@ -1,11 +1,18 @@
 // games/auction.js
 //
-// Discord Auction (MVP)
+// Discord Auction (MVP) — framework-aligned + safety fixes
 // - One auction per guild
 // - In-memory only
 // - Private bids via buttons + modal
 // - Auto-finalize when all bids are in
 // - Full summary on end
+//
+// Safety fixes:
+// - Use TimerBag (state.timers) for round timers (no ghost timeouts after stop)
+// - Clear timers on round end / round start
+// - Status enforces same-channel when active
+// - Join uses framework reaction collector with removals tracking
+// - Avoid invalid message edit fields; safely attempt to remove reactions
 
 import {
   ActionRowBuilder,
@@ -27,6 +34,7 @@ import {
   parseDurationSeconds,
   formatDurationSeconds,
   safeEditById,
+  collectEntrantsByReactionsWithMax,
 } from "./framework.js";
 
 /* ============================== MANAGER ================================ */
@@ -111,11 +119,25 @@ function now() {
 }
 
 async function disableRoundButtons(auction, channel) {
-  if (!auction.roundMessageId) return;
+  if (!auction?.roundMessageId) return;
   await safeEditById(channel, auction.roundMessageId, { components: [buildBidRow(false)] });
 }
 
+function clearRoundTimers(auction) {
+  // TimerBag is owned by the manager and cleared automatically on stop.
+  // We still clear on round transitions to prevent overlap.
+  try {
+    auction?.timers?.clearAll?.();
+  } catch {}
+}
+
 async function endRound(auction, channel) {
+  if (!auction) return;
+  if (!channel?.send) return;
+
+  // ensure nothing else fires for this round
+  clearRoundTimers(auction);
+
   await disableRoundButtons(auction, channel);
 
   const bids = [...auction.bids.entries()]
@@ -130,7 +152,12 @@ async function endRound(auction, channel) {
   }
 
   const winner = bids[0];
-  auction.players.get(winner.uid).balance -= winner.amount;
+  const winnerPlayer = auction.players.get(winner.uid);
+
+  // Defensive: if somehow winner isn’t in players map, treat as no-op
+  if (winnerPlayer) {
+    winnerPlayer.balance -= winner.amount;
+  }
 
   auction.history.push({
     item: auction.activeItem,
@@ -142,11 +169,6 @@ async function endRound(auction, channel) {
 
   auction.activeItem = null;
   auction.bids.clear();
-
-  if (auction.timer) {
-    clearTimeout(auction.timer);
-    auction.timer = null;
-  }
 }
 
 function renderStatus(auction) {
@@ -168,11 +190,22 @@ function renderStatus(auction) {
   return out;
 }
 
+async function postSummary(channel, auction) {
+  if (!channel?.send) return;
+
+  if (auction.history.length) {
+    const lines = auction.history.map((r, i) => `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`);
+    await channel.send(`🪙 **Auction Summary**\n\n${lines.join("\n")}`);
+  } else {
+    await channel.send("🪙 **Auction ended. No items sold.**");
+  }
+}
+
 /* =========================== REGISTRATION =============================== */
 
 export function registerAuction(register) {
   // Framework QoL: !auctionhelp, !auctionrules, !auctionstatus, !cancelauction
-  // We implement cancel to preserve existing "end" behavior (summary + cleanup).
+  // Cancel behaves like `!auction end` (summary + cleanup).
   makeGameQoL(register, {
     manager,
     id: "auction",
@@ -181,17 +214,13 @@ export function registerAuction(register) {
     rulesText: auctionRulesText(),
     renderStatus: (st) => renderStatus(st),
     cancel: async (st, { message }) => {
-      // behave like `!auction end` (same summary format)
       if (!(await requireSameChannel({ message }, st, manager))) return;
 
+      // stop timers + disable buttons
+      clearRoundTimers(st);
       await disableRoundButtons(st, message.channel);
 
-      if (st.history.length) {
-        const lines = st.history.map((r, i) => `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`);
-        await message.channel.send(`🪙 **Auction Summary**\n\n${lines.join("\n")}`);
-      } else {
-        await message.channel.send("🪙 **Auction ended. No items sold.**");
-      }
+      await postSummary(message.channel, st);
 
       manager.stop({ guildId: st.guildId });
     },
@@ -207,11 +236,16 @@ export function registerAuction(register) {
       allowStatusSubcommand: true,
       onStatus: async ({ message }) => {
         if (!message.guild) return;
-        const st = manager.getState({ message, guildId: message.guild.id, channelId: message.channelId });
+        const guildId = message.guild.id;
+
+        const st = manager.getState({ guildId });
         if (!st) {
           await reply({ message }, "🪙 **Auction Status**\nNo active auction in this server.");
           return;
         }
+
+        if (!(await requireSameChannel({ message }, st, manager))) return;
+
         await reply({ message }, renderStatus(st));
       },
       onStart: async ({ message, rest }) => {
@@ -233,52 +267,38 @@ export function registerAuction(register) {
           const maxPlayers = Number(args[1]) || null;
           const startMoney = Number(args[2]) || 500;
 
-          const joinMsg = await message.channel.send(
-            `🪙 **Auction starting!**\nReact ✅ to join (${joinSeconds}s)`
-          );
-          await joinMsg.react("✅");
-
-          // Preserve old behavior: removals are tracked (dispose:true + remove handler)
-          const { entrants, reason } = await (async () => {
-            const res = await joinMsg
-              .createReactionCollector({
-                time: joinSeconds * 1000,
-                dispose: true,
-                filter: (r, u) => r.emoji.name === "✅" && !u.bot,
-              });
-
-            // Using a small wrapper keeps output identical to the old file.
-            // We still prefer the shared helper elsewhere; this part preserves "remove" semantics precisely.
-            const players = new Set();
-            return new Promise((resolve) => {
-              res.on("collect", (_r, user) => {
-                players.add(user.id);
-                if (maxPlayers && players.size >= maxPlayers) res.stop("max");
-              });
-              res.on("remove", (_r, user) => {
-                players.delete(user.id);
-              });
-              res.on("end", (_c, r) => resolve({ entrants: players, reason: r }));
-            });
-          })();
+          const { entrants, joinMsg, reason } = await collectEntrantsByReactionsWithMax({
+            channel: message.channel,
+            promptText: `🪙 **Auction starting!**\nReact ✅ to join (${joinSeconds}s)`,
+            durationMs: joinSeconds * 1000,
+            maxEntrants: maxPlayers,
+            emoji: "✅",
+            dispose: true, // preserve “unreact removes entrant”
+            trackRemovals: true,
+          });
 
           if (!entrants.size) {
             await message.channel.send("❌ Auction cancelled — no players.");
             return;
           }
 
+          // Close entries message (keep prior text behavior)
           await joinMsg.edit({
             content:
               reason === "max"
                 ? "🛑 **Auction entries are now closed (max players reached).**"
                 : "🛑 **Auction entries are now closed.**",
-            reactions: [],
           });
+
+          // Best-effort cleanup of reactions (may fail without perms)
+          try {
+            await joinMsg.reactions.removeAll();
+          } catch {}
 
           const players = new Map();
           for (const id of entrants) players.set(id, { balance: startMoney });
 
-          manager.tryStart(
+          const res = manager.tryStart(
             { guildId },
             {
               guildId,
@@ -288,11 +308,15 @@ export function registerAuction(register) {
               players,
               activeItem: null,
               bids: new Map(),
-              timer: null,
               roundMessageId: null,
               history: [],
             }
           );
+
+          if (!res.ok) {
+            await message.channel.send(res.errorText);
+            return;
+          }
 
           await message.channel.send(
             `✅ Auction created!\nPlayers: ${[...players.keys()].map((id) => `<@${id}>`).join(", ")}`
@@ -330,6 +354,9 @@ export function registerAuction(register) {
           const item = tokens.join(" ");
           if (!item) return;
 
+          // clear any prior round timers defensively
+          clearRoundTimers(auction);
+
           auction.activeItem = item;
           auction.bids.clear();
 
@@ -343,7 +370,8 @@ export function registerAuction(register) {
           auction.roundMessageId = msg.id;
 
           if (roundSeconds) {
-            auction.timer = setTimeout(() => endRound(auction, message.channel), roundSeconds * 1000);
+            // TimerBag-managed; auto-cleared on manager.stop()
+            auction.timers.setTimeout(() => endRound(auction, message.channel), roundSeconds * 1000);
           }
           return;
         }
@@ -358,6 +386,7 @@ export function registerAuction(register) {
           if (!ok) return;
 
           if (!auction.activeItem) return;
+
           await endRound(auction, message.channel);
           return;
         }
@@ -371,16 +400,10 @@ export function registerAuction(register) {
           );
           if (!ok) return;
 
+          clearRoundTimers(auction);
           await disableRoundButtons(auction, message.channel);
 
-          if (auction.history.length) {
-            const lines = auction.history.map(
-              (r, i) => `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`
-            );
-            await message.channel.send(`🪙 **Auction Summary**\n\n${lines.join("\n")}`);
-          } else {
-            await message.channel.send("🪙 **Auction ended. No items sold.**");
-          }
+          await postSummary(message.channel, auction);
 
           manager.stop({ guildId });
           return;
@@ -419,6 +442,7 @@ export function registerAuction(register) {
 
     const amount = Number(interaction.fields.getTextInputValue("amount"));
     const player = auction.players.get(interaction.user.id);
+
     if (!player || amount < 1 || amount > player.balance) {
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -429,8 +453,10 @@ export function registerAuction(register) {
 
     auction.bids.set(interaction.user.id, { amount, ts: now() });
 
+    // Auto-finalize when all bids are in
     if (auction.bids.size === auction.players.size) {
-      if (auction.timer) clearTimeout(auction.timer);
+      // stop any pending round timer
+      clearRoundTimers(auction);
       await endRound(auction, interaction.channel);
     }
 
