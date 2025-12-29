@@ -214,11 +214,6 @@ export function registerClosestRollWins(register) {
 
     const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
 
-    if (tokens.length === 1 && tokens[0].toLowerCase() === "help") {
-      await message.reply(helpText());
-      return;
-    }
-
     const res = manager.tryStart(
       { message, guildId: message.guildId, channelId: message.channelId },
       {
@@ -309,6 +304,19 @@ export function registerClosestRollWins(register) {
       helpText: CRW_HELP,
       rulesText: CRW_RULES,
       onStart: async ({ message, rest }) => startClosestRoll({ message, rest }),
+      onStatus: async ({ message }) => {
+        const st = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+        if (!st) return void (await message.reply(manager.noActiveText()));
+        if (!(await requireSameChannel({ message }, st, manager))) return;
+        await message.reply(
+          `🎯 **ClosestRoll is running** in ${channelMention(st.channelId)}\n` +
+          `Target: **${st.target}**\n` +
+          (st.endsAtMs ? `Time left: **${formatTimeLeftMs(st.endsAtMs - Date.now())}**\n` : `Time limit: *(none)*\n`) +
+          (st.best
+            ? `Best so far: ${mention(st.best.userId)} rolled **${st.best.roll}** (diff **${st.best.diff}**)`
+            : "Best so far: *(none)*")
+        );
+      },
     }),
     "!closestroll [0-101] [timeLimit] — starts ClosestRoll (alias: !cr)",
     { helpTier: "primary", aliases: ["!cr"] }
