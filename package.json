@@ -8,7 +8,11 @@
     "start": "node bot.js",
     "start:dev": "DOTENV_CONFIG_PATH=.env.development.local node bot.js",
     "pause:dev": "pkill -f 'node bot.js' && docker pause tppc-mysql",
-    "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js"
+    "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
@@ -18,5 +22,9 @@
     "dotenv": "^17.2.3",
     "fuse.js": "^7.1.0",
     "mysql2": "^3.16.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.16",
+    "vitest": "^4.0.16"
   }
 }
