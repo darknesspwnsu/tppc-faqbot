@@ -15,6 +15,41 @@ function lc(s) {
   return String(s ?? "").toLowerCase();
 }
 
+/**
+ * Normalize text for matching:
+ * - lowercase
+ * - treat punctuation/symbols as spaces
+ * - collapse whitespace
+ * - pad with spaces so we can do whole-word/phrase boundary checks
+ *
+ * Example:
+ *  "Hello, WORLD!!" -> " hello world "
+ */
+function normalizeForMatch(s) {
+  const t = lc(norm(s));
+
+  // Replace anything that's not a-z/0-9 with spaces.
+  // (This intentionally ignores accents/non-latin; fine for Discord + your use case)
+  const cleaned = t.replace(/[^a-z0-9]+/g, " ");
+
+  // Collapse whitespace and pad with spaces to enforce word boundaries
+  const collapsed = cleaned.replace(/\s+/g, " ").trim();
+  return collapsed ? ` ${collapsed} ` : " ";
+}
+
+/**
+ * Whole-word / whole-phrase match.
+ * Works because normalizeForMatch pads with spaces.
+ *
+ * phrase: "old" => " old "
+ * message: " gold " does NOT include " old "
+ */
+function includesWholePhrase(normalizedMessage, phrase) {
+  const p = normalizeForMatch(phrase);
+  if (!p || p === " ") return false;
+  return normalizedMessage.includes(p);
+}
+
 /* ------------------------------ whisper storage ----------------------------- */
 
 // We store all whispers for a guild under a sentinel "user_id" row.
@@ -111,7 +146,8 @@ async function ensureGuildLoaded(guildId) {
 }
 
 function phraseKey(phrase) {
-  return lc(norm(phrase));
+  // De-dupe whispers per-user by normalized phrase matching rules
+  return normalizeForMatch(phrase);
 }
 
 function addWhisper(state, phrase, ownerId, prize) {
@@ -236,7 +272,7 @@ export function registerWhispers(register) {
     }
   );
 
-  // Passive listener: detect phrases
+  // Passive listener: detect phrases (whole word / whole phrase)
   register.listener(async ({ message }) => {
     try {
       if (!message || message.author?.bot) return;
@@ -247,21 +283,23 @@ export function registerWhispers(register) {
       const content = norm(message.content);
       if (!content) return;
 
-      const lower = lc(content);
+      const normalizedMessage = normalizeForMatch(content);
 
       const state = await ensureGuildLoaded(guildId);
       if (!state.items.length) return;
 
       for (let i = 0; i < state.items.length; i++) {
         const w = state.items[i];
-        const p = phraseKey(w.phrase);
-        if (!p) continue;
+        const phrase = norm(w.phrase);
+        if (!phrase) continue;
 
-        if (lower.includes(p)) {
+        if (includesWholePhrase(normalizedMessage, phrase)) {
           const ownerId = w.ownerId;
           const prize = norm(w.prize);
 
-          let msgOut = `🎉 Congratulations, you have found the hidden phrase set by ${mention(ownerId)}!`;
+          let msgOut =
+            `🎉 Congratulations, you have found the hidden phrase set by ${mention(ownerId)}!` +
+            `\nPhrase: "${phrase}"`;
           if (prize) msgOut += `\nYou have won: ${prize}`;
 
           await message.reply({
