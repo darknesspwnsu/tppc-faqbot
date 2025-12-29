@@ -23,18 +23,25 @@
 // - max=NN      max players for join (2..50) [reaction-join only], optional
 // - turn=SS     skip timer seconds (10..300), default 30
 // - warn=SS     warn timer seconds (5..(turn-1)), default: floor(turn/2)
-//
-import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
-import { isAdminOrPrivileged } from "../auth.js";
 
-const activeGames = new Map(); // guildId -> game
+import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
+import {
+  clampInt,
+  createGameManager,
+  isAdminOrPrivilegedMessage,
+  makeGameQoL,
+  shuffleInPlace,
+  withGameSubcommands,
+} from "./framework.js";
+
+const manager = createGameManager({ id: "safarizone", prettyName: "Safari Zone", scope: "guild" });
 
 const SZ_ALIASES = ["!safarizone", "!safari", "!sz"];
 const PICK_ALIASES = ["!szpick", "!safaripick", "!picksz"];
 
 const DEFAULTS = {
   n: 5,
-  prizes: null,      // computed from N
+  prizes: null, // computed from N
   joinSeconds: 15,
   maxPlayers: null,
   turnSeconds: 30,
@@ -67,6 +74,28 @@ function szHelpText() {
   ].join("\n");
 }
 
+function szRulesText() {
+  return [
+    "**Safari Zone — Rules (layman)**",
+    "",
+    "A hidden set of 🎁 prizes is placed on a grid.",
+    "Players take turns picking a square like `A1` or `C5`.",
+    "When you pick:",
+    "• If it’s a prize, you get a 🎁 point.",
+    "• If not, it reveals an empty square.",
+    "",
+    "Turns are timed:",
+    "• You get a warning partway through.",
+    "• If you don’t pick in time, you’re skipped (not eliminated).",
+    "",
+    "Game ends when all squares are revealed.",
+  ].join("\n");
+}
+
+const SZ_HELP = szHelpText();
+const SZ_RULES = szRulesText();
+
+
 function parseMentionToken(token) {
   const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
   return m ? m[1] : null;
@@ -82,9 +111,15 @@ function parseKVInt(token, key) {
   return m ? Number(m[1]) : null;
 }
 
-function parseJoinToken(token) { return parseKVInt(token, "join"); }
-function parseMaxToken(token) { return parseKVInt(token, "max"); }
-function parseNToken(token) { return parseKVInt(token, "n"); }
+function parseJoinToken(token) {
+  return parseKVInt(token, "join");
+}
+function parseMaxToken(token) {
+  return parseKVInt(token, "max");
+}
+function parseNToken(token) {
+  return parseKVInt(token, "n");
+}
 function parsePrizesToken(token) {
   // allow prizes= or p=
   let v = parseKVInt(token, "prizes");
@@ -92,33 +127,15 @@ function parsePrizesToken(token) {
   v = parseKVInt(token, "p");
   return v;
 }
-function parseTurnToken(token) { return parseKVInt(token, "turn"); }
-function parseWarnToken(token) { return parseKVInt(token, "warn"); }
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+function parseTurnToken(token) {
+  return parseKVInt(token, "turn");
 }
-
-function clampInt(n, lo, hi) {
-  n = Number(n);
-  if (!Number.isFinite(n)) return null;
-  n = Math.floor(n);
-  if (n < lo || n > hi) return null;
-  return n;
+function parseWarnToken(token) {
+  return parseKVInt(token, "warn");
 }
 
 function idxFromRC(n, r, c) {
   return r * n + c;
-}
-
-function rcFromIdx(n, idx) {
-  const r = Math.floor(idx / n);
-  const c = idx % n;
-  return { r, c };
 }
 
 function parseCoord(raw, n) {
@@ -180,18 +197,15 @@ function buildGridText(game) {
 }
 
 function clearTurnTimers(game) {
-  if (!game) return;
-  try { if (game.warnTimeout) clearTimeout(game.warnTimeout); } catch {}
-  try { if (game.skipTimeout) clearTimeout(game.skipTimeout); } catch {}
-  game.warnTimeout = null;
-  game.skipTimeout = null;
+  if (!game?.timers?.clearAll) return;
+  game.timers.clearAll();
 }
 
 function endGame(guildId) {
-  const game = activeGames.get(guildId);
+  const game = manager.getState({ guildId });
   if (!game) return;
   clearTurnTimers(game);
-  activeGames.delete(guildId);
+  manager.stop({ guildId });
 }
 
 function remainingCovered(game) {
@@ -215,9 +229,17 @@ function nextPickerId(game) {
   // random unique each turn
   if (!game.remainingTurnCandidates || game.remainingTurnCandidates.length === 0) {
     // This should not happen if we configured properly, but recover gracefully:
-    game.remainingTurnCandidates = shuffle([...game.players]);
+    game.remainingTurnCandidates = shuffleInPlace([...game.players]);
   }
   return game.remainingTurnCandidates[game.remainingTurnCandidates.length - 1] || null;
+}
+
+function movePlayerToBack(players, userId) {
+  const i = players.indexOf(userId);
+  if (i === -1) return false;
+  const [p] = players.splice(i, 1);
+  players.push(p);
+  return true;
 }
 
 function advanceTurn(game, { skipped = false } = {}) {
@@ -248,14 +270,6 @@ function advanceTurn(game, { skipped = false } = {}) {
   }
 }
 
-function movePlayerToBack(players, userId) {
-  const i = players.indexOf(userId);
-  if (i === -1) return false;
-  const [p] = players.splice(i, 1);
-  players.push(p);
-  return true;
-}
-
 async function promptTurn(channel, game) {
   clearTurnTimers(game);
 
@@ -265,7 +279,7 @@ async function promptTurn(channel, game) {
   }
 
   const pid = nextPickerId(game);
-  game.turnOwnerId = pid; // <-- track who currently owns the turn
+  game.turnOwnerId = pid; // track who currently owns the turn
   if (!pid) {
     await channel.send("🏁 Game ended — no player available for the next turn.");
     endGame(game.guildId);
@@ -286,16 +300,16 @@ async function promptTurn(channel, game) {
   const warnAt = game.warnSeconds;
   const skipAt = game.turnSeconds;
 
-  game.warnTimeout = setTimeout(async () => {
-    const g = activeGames.get(game.guildId);
+  game.timers.setTimeout(async () => {
+    const g = manager.getState({ guildId: game.guildId });
     if (!g) return;
     const cur = g.turnOwnerId;
     if (cur !== pid) return;
     await channel.send(`⏳ <@${pid}>… hurry! The Safari Zone is closing soon!`);
   }, warnAt * 1000);
 
-  game.skipTimeout = setTimeout(async () => {
-    const g = activeGames.get(game.guildId);
+  game.timers.setTimeout(async () => {
+    const g = manager.getState({ guildId: game.guildId });
     if (!g) return;
     const cur = g.turnOwnerId;
     if (cur !== pid) return;
@@ -405,7 +419,11 @@ async function collectEntrantsByReactionsWithMax({ message, promptText, duration
   const joinMsg = await message.channel.send(promptText);
   const emoji = "✅";
 
-  try { await joinMsg.react(emoji); } catch { return new Set(); }
+  try {
+    await joinMsg.react(emoji);
+  } catch {
+    return new Set();
+  }
 
   const entrants = new Set();
   const filter = (reaction, user) => !user.bot && reaction.emoji?.name === emoji;
@@ -456,7 +474,7 @@ function validateAndBuildConfig(playersCount, opts) {
 
   return {
     ok: true,
-    config: { n, totalSquares, prizes, turnSeconds, warnSeconds, turnMode }
+    config: { n, totalSquares, prizes, turnSeconds, warnSeconds, turnMode },
   };
 }
 
@@ -464,7 +482,7 @@ async function startSafariZoneFromIds(message, idSet, parsedOpts) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
-  if (activeGames.has(guildId)) {
+  if (manager.getState({ guildId })) {
     await message.reply("⚠️ A Safari Zone game is already running!");
     return;
   }
@@ -490,36 +508,42 @@ async function startSafariZoneFromIds(message, idSet, parsedOpts) {
   const revealed = Array.from({ length: totalSquares }, () => false);
 
   // Players: randomize once for fixed rotation
-  const playersShuffled = shuffle([...players]);
+  const playersShuffled = shuffleInPlace([...players]);
 
-  const game = {
-    kind: "safari_zone",
-    guildId,
-    n,
-    totalSquares,
-    prizeCount: prizes,
-    prizes: prizeSet,
-    prizesFound: 0,
-    revealed,
-    revealedCount: 0,
+  const res = manager.tryStart(
+    { guildId },
+    {
+      kind: "safari_zone",
+      guildId,
+      n,
+      totalSquares,
+      prizeCount: prizes,
+      prizes: prizeSet,
+      prizesFound: 0,
+      revealed,
+      revealedCount: 0,
 
-    // turn logic
-    turnMode,
-    players: playersShuffled,
-    currentIndex: 0,
-    remainingTurnCandidates: turnMode === "random" ? shuffle([...playersShuffled]) : null,
+      // turn logic
+      turnMode,
+      players: playersShuffled,
+      currentIndex: 0,
+      remainingTurnCandidates: turnMode === "random" ? shuffleInPlace([...playersShuffled]) : null,
 
-    turnSeconds,
-    warnSeconds,
-    warnTimeout: null,
-    skipTimeout: null,
+      turnSeconds,
+      warnSeconds,
 
-    prizeFinds: new Map(), // userId -> count
-    skips: new Map(),      // userId -> skips
-    turnOwnerId: null,
-  };
+      prizeFinds: new Map(), // userId -> count
+      skips: new Map(), // userId -> skips
+      turnOwnerId: null,
+    }
+  );
 
-  activeGames.set(guildId, game);
+  if (!res.ok) {
+    await message.reply("⚠️ A Safari Zone game is already running!");
+    return;
+  }
+
+  const game = res.state;
 
   await message.channel.send(
     `🧭 **Safari Zone started!**\n` +
@@ -605,7 +629,10 @@ function computeConsumedTokens(tokens, opts) {
   const consumed = new Set();
 
   for (const t of tokens) {
-    if (parseMentionToken(t)) { consumed.add(t); continue; }
+    if (parseMentionToken(t)) {
+      consumed.add(t);
+      continue;
+    }
     if (parseNToken(t) != null && opts.n === parseNToken(t)) consumed.add(t);
 
     const p = parsePrizesToken(t);
@@ -623,83 +650,110 @@ function computeConsumedTokens(tokens, opts) {
 /* ------------------------------- registrations ------------------------------ */
 
 export function registerSafariZone(register) {
+  makeGameQoL(register, {
+    manager,
+    id: "sz",
+    prettyName: "Safari Zone",
+    helpText: SZ_HELP,
+    rulesText: SZ_RULES,
+    renderStatus: (game) =>
+      `🧭 **Safari Zone status**\n` +
+      `Mode: **${gameModeLabel(game)}** • Remaining squares: **${remainingCovered(game)}**\n` +
+      `${buildGridText(game)}`,
+  });
+
   // Start
   register(
     "!sz",
-    async ({ message, rest }) => {
-      if (!message.guild) return;
-      const guildId = message.guild.id;
-
-      if (activeGames.has(guildId)) {
-        await message.reply("⚠️ A Safari Zone game is already running!");
-        return;
-      }
-
-      const tokens = rest.trim().split(/\s+/).filter(Boolean);
-
-      if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
-        await message.reply(szHelpText());
-        return;
-      }
-
-      const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
-      const opts = parseSzOptions(tokens);
-
-      const v = validateJoinOptionsForMode(hasMentions, opts);
-      if (!v.ok) {
-        await message.reply(v.err);
-        return;
-      }
-
-      // strict arg validation
-      const consumed = computeConsumedTokens(tokens, opts);
-      const extras = tokens.filter((t) => !consumed.has(t));
-      if (extras.length > 0) {
-        await message.reply(
-          `❌ Unknown argument(s): ${extras.map((x) => `\`${x}\``).join(", ")}. Try \`!sz help\`.`
+    withGameSubcommands({
+      helpText: SZ_HELP,
+      rulesText: SZ_RULES,
+      onStatus: async ({ message }) => {
+        const game = manager.getState({ guildId: message.guild?.id });
+        if (!game || game.kind !== "safari_zone") {
+          await message.reply("❌ There is no active Safari Zone game.");
+          return;
+        }
+        await message.channel.send(
+          `🧭 **Safari Zone status**\n` +
+            `Mode: **${gameModeLabel(game)}** • Remaining squares: **${remainingCovered(game)}**\n` +
+            `${buildGridText(game)}`
         );
-        return;
-      }
+      },
+      onStart: async ({ message, rest }) => {
 
-      // Taglist mode
-      if (hasMentions) {
-        await startSafariZoneFromMessageMentions(message, opts);
-        return;
-      }
+        if (!message.guild) return;
+        const guildId = message.guild.id;
 
-      // Reaction-join mode
-      const joinSeconds = opts.joinSeconds ?? DEFAULTS.joinSeconds;
-      const maxPlayers = opts.maxPlayers ?? null;
+        if (manager.getState({ guildId })) {
+          await message.reply("⚠️ A Safari Zone game is already running!");
+          return;
+        }
 
-      const prompt =
-        `🧭 **Safari Zone** — React ✅ to join! (join window: ${joinSeconds}s` +
-        (maxPlayers ? `, max ${maxPlayers}` : "") +
-        `)\n` +
-        `📌 When it’s your turn, pick a square with \`!szpick A1\`.\n`;
+        const tokens = rest.trim().split(/\s+/).filter(Boolean);
 
-      let entrants;
-      if (maxPlayers) {
-        entrants = await collectEntrantsByReactionsWithMax({
-          message,
-          promptText: prompt,
-          durationMs: joinSeconds * 1000,
-          maxEntrants: maxPlayers
-        });
-      } else {
-        entrants = await collectEntrantsByReactions({
-          message,
-          promptText: prompt,
-          durationMs: joinSeconds * 1000
-        });
-      }
+        if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
+          await message.reply(SZ_HELP);
+          return;
+        }
 
-      if (!entrants || entrants.size < 2) {
-        await message.channel.send("❌ Not enough players joined (need at least 2).");
-        return;
-      }
+        const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
+        const opts = parseSzOptions(tokens);
 
-      await startSafariZoneFromIds(message, entrants, opts);
-    },
+        const v = validateJoinOptionsForMode(hasMentions, opts);
+        if (!v.ok) {
+          await message.reply(v.err);
+          return;
+        }
+
+        // strict arg validation
+        const consumed = computeConsumedTokens(tokens, opts);
+        const extras = tokens.filter((t) => !consumed.has(t));
+        if (extras.length > 0) {
+          await message.reply(`❌ Unknown argument(s): ${extras.map((x) => `\`${x}\``).join(", ")}. Try \`!sz help\`.`);
+          return;
+        }
+
+        // Taglist mode
+        if (hasMentions) {
+          await startSafariZoneFromMessageMentions(message, opts);
+          return;
+        }
+
+        // Reaction-join mode
+        const joinSeconds = opts.joinSeconds ?? DEFAULTS.joinSeconds;
+        const maxPlayers = opts.maxPlayers ?? null;
+
+        const prompt =
+          `🧭 **Safari Zone** — React ✅ to join! (join window: ${joinSeconds}s` +
+          (maxPlayers ? `, max ${maxPlayers}` : "") +
+          `)\n` +
+          `📌 When it’s your turn, pick a square with \`!szpick A1\`.\n`;
+
+        let entrants;
+        if (maxPlayers) {
+          entrants = await collectEntrantsByReactionsWithMax({
+            message,
+            promptText: prompt,
+            durationMs: joinSeconds * 1000,
+            maxEntrants: maxPlayers,
+          });
+        } else {
+          entrants = await collectEntrantsByReactions({
+            message,
+            promptText: prompt,
+            durationMs: joinSeconds * 1000,
+          });
+        }
+
+        if (!entrants || entrants.size < 2) {
+          await message.channel.send("❌ Not enough players joined (need at least 2).");
+          return;
+        }
+
+        await startSafariZoneFromIds(message, entrants, opts);
+      },
+    }),
     "!sz [options...] [@players...] — start Safari Zone (taglist or reaction-join). Use `!sz help`.",
     { helpTier: "primary", aliases: SZ_ALIASES.filter((a) => a !== "!sz") }
   );
@@ -711,7 +765,7 @@ export function registerSafariZone(register) {
       if (!message.guild) return;
       const guildId = message.guild.id;
 
-      const game = activeGames.get(guildId);
+      const game = manager.getState({ guildId });
       if (!game || game.kind !== "safari_zone") {
         await message.reply("❌ There is no active Safari Zone game.");
         return;
@@ -736,7 +790,7 @@ export function registerSafariZone(register) {
       if (!message.guild) return;
       const guildId = message.guild.id;
 
-      const game = activeGames.get(guildId);
+      const game = manager.getState({ guildId });
       if (!game || game.kind !== "safari_zone") {
         await message.reply("❌ There is no active Safari Zone game.");
         return;
@@ -759,13 +813,14 @@ export function registerSafariZone(register) {
       if (!message.guild) return;
       const guildId = message.guild.id;
 
-      const game = activeGames.get(guildId);
+      const game = manager.getState({ guildId });
       if (!game || game.kind !== "safari_zone") {
         await message.reply("❌ There is no active Safari Zone game.");
         return;
       }
 
-      if (!isAdminOrPrivileged(message)) return;
+      // Preserve existing behavior: non-admins get no response (silent return)
+      if (!isAdminOrPrivilegedMessage(message)) return;
 
       await message.channel.send("🧯 Safari Zone game ended by admin.");
       endGame(guildId);

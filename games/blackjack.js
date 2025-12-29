@@ -11,9 +11,26 @@
 //
 // Dealer rules: S17 (stand on all 17s, including soft 17)
 
-import { isAdminOrPrivileged } from "../auth.js";
+import { createGameManager, makeGameQoL, parseMentionIdsInOrder, shuffleInPlace, withGameSubcommands } from "./framework.js";
 
-const GAMES = new Map(); // guildId -> state
+const manager = createGameManager({ id: "blackjack", prettyName: "Blackjack", scope: "guild" });
+
+const BJ_HELP =
+  "**Blackjack help** (Dealer: S17)\n" +
+  "`!blackjack @p1 @p2 ...` — start round (tag-only)\n" +
+  "`!hit` — draw a card (current player)\n" +
+  "`!stand` — stand (current player)\n" +
+  "`!bjstatus` — show table status\n" +
+  "`!cancelblackjack` — cancel (admin/starter)";
+
+const BJ_RULES =
+  "**Blackjack — Rules (layman)**\n" +
+  "Goal: get as close to **21** as possible without going over.\n" +
+  "• `!hit` draws a card.\n" +
+  "• `!stand` locks your hand.\n" +
+  "If you go over 21, you bust.\n" +
+  "Dealer reveals and draws after everyone is done.\n" +
+  "Dealer rule: **S17** (stands on any 17).";
 
 // ---------- Card / Deck helpers ----------
 
@@ -25,15 +42,8 @@ function buildDeck() {
   for (const s of SUITS) {
     for (const r of RANKS) deck.push({ r, s });
   }
-  shuffle(deck);
+  shuffleInPlace(deck);
   return deck;
-}
-
-function shuffle(a) {
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
 }
 
 function cardValueRank(r) {
@@ -123,16 +133,6 @@ function isBlackjack(hand) {
   return (v1 === 11 && v2 === 10) || (v2 === 11 && v1 === 10);
 }
 
-function parseMentionIdsInOrder(text) {
-  // preserves order typed: <@123> or <@!123>
-  const s = String(text ?? "");
-  const ids = [];
-  const re = /<@!?(\d+)>/g;
-  let m;
-  while ((m = re.exec(s)) !== null) ids.push(m[1]);
-  return ids;
-}
-
 // ---------- State helpers ----------
 
 function gameLocationLine(st) {
@@ -144,12 +144,6 @@ function inSamePlace(message, st) {
   if (message.guildId !== st.guildId) return false;
   // Keep it simple and avoid cross-channel confusion:
   return message.channelId === st.channelId;
-}
-
-function canManage(message, st) {
-  if (!st) return false;
-  if (isAdminOrPrivileged(message)) return true;
-  return message.author?.id === st.creatorId;
 }
 
 function currentPlayer(st) {
@@ -243,7 +237,7 @@ function settleGame(st) {
 }
 
 async function endGame(message, guildId, reason, finalText) {
-  GAMES.delete(guildId);
+  manager.stop({ guildId });
   if (finalText) {
     await message.channel.send(finalText);
   } else {
@@ -251,131 +245,195 @@ async function endGame(message, guildId, reason, finalText) {
   }
 }
 
+async function runDealerAndFinish(message, st) {
+  const guildId = st.guildId;
+
+  // If everyone busted, dealer just reveals; no need to draw
+  const anyAlive = st.players.some((p) => p.status !== "busted");
+  if (anyAlive) {
+    // Dealer draws with S17
+    while (dealerShouldHit_S17(st.dealerHand)) {
+      st.dealerHand.push(st.deck.pop());
+      const total = bestTotal(st.dealerHand);
+      if (total > 21) break;
+    }
+  }
+
+  const results = settleGame(st);
+
+  const lines = [];
+  lines.push("🎴 **Dealer reveals**");
+  lines.push(statusText(st, true));
+  lines.push("");
+  lines.push("**Results:**");
+  for (const r of results) {
+    const emoji = r.outcome === "win" ? "✅" : r.outcome === "lose" ? "❌" : "➖";
+    const label = r.outcome === "win" ? "WIN" : r.outcome === "lose" ? "LOSE" : "PUSH";
+    lines.push(`${emoji} <@${r.userId}> — **${label}**`);
+  }
+
+  await endGame(message, guildId, "round complete", lines.join("\n"));
+}
+
 // ---------- Registration ----------
 
 export function registerBlackjack(register) {
+  makeGameQoL(register, {
+    manager,
+    id: "blackjack",
+    prettyName: "Blackjack",
+    helpText: BJ_HELP,
+    rulesText: BJ_RULES,
+    renderStatus: (st) => statusText(st, false),
+    manageDeniedText: "Nope — only admins or the blackjack starter can use that.",
+    cancel: async (st, { message }) => {
+      const finalText =
+        `🏁 **Blackjack cancelled**.\n` +
+        `${dealerUpCardLine(st)}\n\n` +
+        st.players.map(playerLine).join("\n");
+
+      // Preserve existing end behavior/output
+      await endGame(message, message.guildId, "cancelled", finalText);
+    },
+  });
+
   // !blackjack @p1 @p2 ...
   register(
     "!blackjack",
-    async ({ message, rest }) => {
-      if (!message.guildId) return;
+    withGameSubcommands({
+      helpText: BJ_HELP,
+      rulesText: BJ_RULES,
+      onStatus: async ({ message }) => {
+        const st = manager.getState({ guildId: message.guildId });
+        if (!st) return void (await message.reply("No active blackjack game in this server."));
+        if (message.channelId !== st.channelId) {
+          await message.reply(`Blackjack is running in <#${st.channelId}>. ${gameLocationLine(st)}`);
+          return;
+        }
+        await message.reply(statusText(st, false));
+      },
+      onStart: async ({ message, rest }) => {
 
-      const guildId = message.guildId;
+        if (!message.guildId) return;
 
-      if (GAMES.has(guildId)) {
-        const st = GAMES.get(guildId);
-        await message.reply(`⚠️ A blackjack game is already running.\n${gameLocationLine(st)}`);
-        return;
-      }
+        const guildId = message.guildId;
 
-      const mentionIds = parseMentionIdsInOrder(rest);
-      const arg = String(rest ?? "").trim();
-      if (!arg || arg.toLowerCase() === "help") {
-        await message.reply(
-          "**Blackjack help** (Dealer: S17)\n" +
-            "`!blackjack @p1 @p2 ...` — start round (tag-only)\n" +
-            "`!hit` — draw a card (current player)\n" +
-            "`!stand` — stand (current player)\n" +
-            "`!bjstatus` — show table status\n" +
-            "`!cancelblackjack` — cancel (admin/starter)"
+        const existing = manager.getState({ guildId });
+        if (existing) {
+          await message.reply(`⚠️ A blackjack game is already running.\n${gameLocationLine(existing)}`);
+          return;
+        }
+
+        const mentionIds = parseMentionIdsInOrder(rest);
+        const arg = String(rest ?? "").trim();
+        if (!arg || arg.toLowerCase() === "help") {
+          await message.reply(BJ_HELP);
+          return;
+        }
+
+        if (mentionIds.length === 0) {
+          await message.reply("❌ Tag at least 1 player.\nUsage: `!blackjack @p1 @p2 ...`");
+          return;
+        }
+
+        // Resolve mentioned users from Discord message mentions.
+        // Enforce strictness: every id must exist in mentions.users.
+        const mentionedUsers = message.mentions?.users;
+        if (!mentionedUsers) {
+          await message.reply("❌ Could not read mentions. Try again by tagging users normally.");
+          return;
+        }
+
+        const seen = new Set();
+        const players = [];
+
+        for (const id of mentionIds) {
+          if (seen.has(id)) {
+            await message.reply("❌ Duplicate player in tag list. Each player can only appear once.");
+            return;
+          }
+          const u = mentionedUsers.get(id);
+          if (!u) {
+            await message.reply("❌ Invalid mention in tag list. Please re-tag players cleanly.");
+            return;
+          }
+          if (u.bot) {
+            await message.reply("❌ Bots can’t play blackjack. Remove bot mentions from the tag list.");
+            return;
+          }
+          seen.add(id);
+          players.push({
+            userId: id,
+            hand: [],
+            status: "playing", // playing | stood | busted | blackjack
+          });
+        }
+
+        // Build state
+        const res = manager.tryStart(
+          { guildId },
+          {
+            guildId,
+            channelId: message.channelId,
+            creatorId: message.author.id,
+            deck: buildDeck(),
+            players,
+            dealerHand: [],
+            turnIndex: 0,
+          }
         );
-        return;
-      }
-
-      if (mentionIds.length === 0) {
-        await message.reply("❌ Tag at least 1 player.\nUsage: `!blackjack @p1 @p2 ...`");
-        return;
-      }
-
-      // Resolve mentioned users from Discord message mentions.
-      // Enforce strictness: every id must exist in mentions.users.
-      const mentionedUsers = message.mentions?.users;
-      if (!mentionedUsers) {
-        await message.reply("❌ Could not read mentions. Try again by tagging users normally.");
-        return;
-      }
-
-      const seen = new Set();
-      const players = [];
-
-      for (const id of mentionIds) {
-        if (seen.has(id)) {
-          await message.reply("❌ Duplicate player in tag list. Each player can only appear once.");
+        if (!res.ok) {
+          // Should not happen because we checked above, but keep safe
+          await message.reply(`⚠️ A blackjack game is already running.\n${gameLocationLine(manager.getState({ guildId }))}`);
           return;
         }
-        const u = mentionedUsers.get(id);
-        if (!u) {
-          await message.reply("❌ Invalid mention in tag list. Please re-tag players cleanly.");
+
+        const st = res.state;
+
+        // Deal initial cards: 2 each, then dealer 2
+        for (let round = 0; round < 2; round++) {
+          for (const p of st.players) p.hand.push(st.deck.pop());
+        }
+        st.dealerHand.push(st.deck.pop());
+        st.dealerHand.push(st.deck.pop());
+
+        // Auto-mark player blackjacks
+        for (const p of st.players) {
+          if (isBlackjack(p.hand)) p.status = "blackjack";
+        }
+
+        // Set first active player
+        st.turnIndex = 0;
+        while (st.turnIndex < st.players.length && st.players[st.turnIndex].status !== "playing") {
+          st.turnIndex++;
+        }
+
+        // If everyone is done immediately (all blackjack), go straight to dealer reveal/settle
+        if (allPlayersDone(st)) {
+          const results = settleGame(st);
+          const lines = [];
+          lines.push("🃏 **Blackjack** — Initial deal complete.");
+          lines.push(statusText(st, true));
+          lines.push("");
+          lines.push("**Results:**");
+          for (const r of results) {
+            const emoji = r.outcome === "win" ? "✅" : r.outcome === "lose" ? "❌" : "➖";
+            const label = r.outcome === "win" ? "WIN" : r.outcome === "lose" ? "LOSE" : "PUSH";
+            lines.push(`${emoji} <@${r.userId}> — **${label}**`);
+          }
+          await endGame(message, guildId, "round complete", lines.join("\n"));
           return;
         }
-        if (u.bot) {
-          await message.reply("❌ Bots can’t play blackjack. Remove bot mentions from the tag list.");
-          return;
-        }
-        seen.add(id);
-        players.push({
-          userId: id,
-          hand: [],
-          status: "playing", // playing | stood | busted | blackjack
-        });
-      }
 
-      // Build state
-      const st = {
-        guildId,
-        channelId: message.channelId,
-        creatorId: message.author.id,
-        deck: buildDeck(),
-        players,
-        dealerHand: [],
-        turnIndex: 0,
-      };
-
-      // Deal initial cards: 2 each, then dealer 2
-      for (let round = 0; round < 2; round++) {
-        for (const p of st.players) p.hand.push(st.deck.pop());
-      }
-      st.dealerHand.push(st.deck.pop());
-      st.dealerHand.push(st.deck.pop());
-
-      // Auto-mark player blackjacks
-      for (const p of st.players) {
-        if (isBlackjack(p.hand)) p.status = "blackjack";
-      }
-
-      // Set first active player
-      st.turnIndex = 0;
-      while (st.turnIndex < st.players.length && st.players[st.turnIndex].status !== "playing") {
-        st.turnIndex++;
-      }
-
-      GAMES.set(guildId, st);
-
-      // If everyone is done immediately (all blackjack), go straight to dealer reveal/settle
-      if (allPlayersDone(st)) {
-        const results = settleGame(st);
-        const lines = [];
-        lines.push("🃏 **Blackjack** — Initial deal complete.");
-        lines.push(statusText(st, true));
-        lines.push("");
-        lines.push("**Results:**");
-        for (const r of results) {
-          const emoji = r.outcome === "win" ? "✅" : r.outcome === "lose" ? "❌" : "➖";
-          const label = r.outcome === "win" ? "WIN" : r.outcome === "lose" ? "LOSE" : "PUSH";
-          lines.push(`${emoji} <@${r.userId}> — **${label}**`);
-        }
-        await endGame(message, guildId, "round complete", lines.join("\n"));
-        return;
-      }
-
-      await message.channel.send(
-        `🃏 **Blackjack started** (Dealer: **S17**)\n` +
-          `${dealerUpCardLine(st)}\n\n` +
-          st.players.map(playerLine).join("\n") +
-          `\n\nTurn: <@${currentPlayer(st).userId}>\n` +
-          `Use \`!hit\`, \`!stand\`, \`!bjstatus\`, or \`!cancelblackjack\`.`
-      );
-    },
+        await message.channel.send(
+          `🃏 **Blackjack started** (Dealer: **S17**)\n` +
+            `${dealerUpCardLine(st)}\n\n` +
+            st.players.map(playerLine).join("\n") +
+            `\n\nTurn: <@${currentPlayer(st).userId}>\n` +
+            `Use \`!hit\`, \`!stand\`, \`!bjstatus\`, or \`!cancelblackjack\`.`
+        );
+      },
+    }),
     "!blackjack @p1 @p2 ... — starts a blackjack round (tag-only, in order)",
     { helpTier: "primary" }
   );
@@ -384,7 +442,7 @@ export function registerBlackjack(register) {
   register(
     "!bjstatus",
     async ({ message }) => {
-      const st = GAMES.get(message.guildId);
+      const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
       if (message.channelId !== st.channelId) {
@@ -402,7 +460,7 @@ export function registerBlackjack(register) {
   register(
     "!hit",
     async ({ message }) => {
-      const st = GAMES.get(message.guildId);
+      const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
       if (!inSamePlace(message, st)) {
@@ -465,7 +523,7 @@ export function registerBlackjack(register) {
   register(
     "!stand",
     async ({ message }) => {
-      const st = GAMES.get(message.guildId);
+      const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
       if (!inSamePlace(message, st)) {
@@ -502,64 +560,4 @@ export function registerBlackjack(register) {
     "!stand — stand (current player only)",
     { hideFromHelp: true }
   );
-
-  // !cancelblackjack
-  register(
-    "!cancelblackjack",
-    async ({ message }) => {
-      const st = GAMES.get(message.guildId);
-      if (!st) return void (await message.reply("No active blackjack game to cancel."));
-
-      if (message.guildId !== st.guildId) return; // paranoia
-
-      if (message.channelId !== st.channelId) {
-        await message.reply(`Blackjack is running in <#${st.channelId}>. ${gameLocationLine(st)}`);
-        return;
-      }
-
-      if (!canManage(message, st)) {
-        await message.reply("Nope — only admins or the blackjack starter can use that.");
-        return;
-      }
-
-      const finalText =
-        `🏁 **Blackjack cancelled**.\n` +
-        `${dealerUpCardLine(st)}\n\n` +
-        st.players.map(playerLine).join("\n");
-
-      await endGame(message, message.guildId, "cancelled", finalText);
-    },
-    "!cancelblackjack — cancels blackjack (admin or starter)",
-    { admin: true }
-  );
-}
-
-async function runDealerAndFinish(message, st) {
-  const guildId = st.guildId;
-
-  // If everyone busted, dealer just reveals; no need to draw
-  const anyAlive = st.players.some((p) => p.status !== "busted");
-  if (anyAlive) {
-    // Dealer draws with S17
-    while (dealerShouldHit_S17(st.dealerHand)) {
-      st.dealerHand.push(st.deck.pop());
-      const total = bestTotal(st.dealerHand);
-      if (total > 21) break;
-    }
-  }
-
-  const results = settleGame(st);
-
-  const lines = [];
-  lines.push("🎴 **Dealer reveals**");
-  lines.push(statusText(st, true));
-  lines.push("");
-  lines.push("**Results:**");
-  for (const r of results) {
-    const emoji = r.outcome === "win" ? "✅" : r.outcome === "lose" ? "❌" : "➖";
-    const label = r.outcome === "win" ? "WIN" : r.outcome === "lose" ? "LOSE" : "PUSH";
-    lines.push(`${emoji} <@${r.userId}> — **${label}**`);
-  }
-
-  await endGame(message, guildId, "round complete", lines.join("\n"));
 }
