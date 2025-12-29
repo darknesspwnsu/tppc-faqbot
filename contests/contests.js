@@ -6,11 +6,13 @@
 import { registerRng } from "./rng.js";
 import { registerReactionContests } from "./reaction_contests.js";
 import { registerWhispers } from "./whispers.js";
+import { registerReading } from "./reading.js";
 
 const CONTEST_MODULES = [
   { id: "rng", register: registerRng },
   { id: "reaction_contests", register: registerReactionContests },
   { id: "whispers", register: registerWhispers },
+  { id: "reading", register: registerReading },
 ];
 
 export function registerContests(register) {
