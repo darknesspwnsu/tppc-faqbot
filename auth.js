@@ -1,14 +1,19 @@
 import { PermissionsBitField } from "discord.js";
+import fs from "fs";
+import path from "path";
 
-const PRIVILEGED_USERS = {
-  "329934860388925442": [  // TPPC Discord
-    "1008064043757600919",    // haunter07 
-    "855412889308233780",     // .dkns
-    "282116159686574081",     // cookiematchoo
-    "184299283049218049",     // _l3
-    "240964979459751937",     // webster.
-  ]
-};
+// Load privileged users from JSON
+let PRIVILEGED_USERS = {};
+
+try {
+  const filePath = path.resolve(process.cwd(), "data", "privileged_users.json");
+  const raw = fs.readFileSync(filePath, "utf8");
+  PRIVILEGED_USERS = JSON.parse(raw);
+  console.log("[AUTH] Loaded privileged users:", Object.keys(PRIVILEGED_USERS));
+} catch (err) {
+  console.warn("[AUTH] Could not load data/privileged_users.json — privileged users disabled");
+  PRIVILEGED_USERS = {};
+}
 
 function isAdmin(message) {
   if (!message.member) return false;
