@@ -22,20 +22,43 @@ export function nowMs() {
 
 /**
  * Extracts Discord mention IDs in the order they appear in the raw text.
- * Supports: <@123>, <@!123>, <@&role>, etc. (we only return user IDs)
+ * Supports: <@123> or <@!123>
  */
 export function parseMentionIdsInOrder(text) {
-  const s = String(text || "");
-  const out = [];
+  const s = String(text ?? "");
+  const ids = [];
   const re = /<@!?(\d+)>/g;
   let m;
-  while ((m = re.exec(s))) out.push(m[1]);
-  return out;
+  while ((m = re.exec(s)) !== null) ids.push(m[1]);
+  return ids;
 }
 
 /** Safer string trim for command rest args */
 export function cleanRest(rest) {
   return String(rest || "").trim();
+}
+
+/** Reusable shuffle (in-place Fisher-Yates) */
+export function shuffleInPlace(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Reusable int clamp/validate */
+export function clampInt(n, lo, hi) {
+  n = Number(n);
+  if (!Number.isFinite(n)) return null;
+  n = Math.floor(n);
+  if (n < lo || n > hi) return null;
+  return n;
+}
+
+/** Expose auth check so games can avoid importing auth.js directly */
+export function isAdminOrPrivilegedMessage(message) {
+  return Boolean(isAdminOrPrivileged(message));
 }
 
 /* --------------------------------- replies -------------------------------- */
@@ -221,7 +244,14 @@ export function createBoard(state, { messageIdField = "messageId" } = {}) {
 
 export async function guardBoardInteraction(
   interaction,
-  { manager, messageIdField = "messageId", state = null, requireSameChannelGuard = true, wrongUserText = null, allowUserIds = null } = {}
+  {
+    manager,
+    messageIdField = "messageId",
+    state = null,
+    requireSameChannelGuard = true,
+    wrongUserText = null,
+    allowUserIds = null,
+  } = {}
 ) {
   const st =
     state ||
@@ -401,22 +431,99 @@ export async function requireCanManage(
   return false;
 }
 
+/* ------------------------ main-command subcommands ------------------------- */
+
+/**
+ * Wrap a game's *primary* command handler (e.g. "!blackjack") so it consistently supports:
+ * - "!<game> help"
+ * - "!<game> rules"
+ * - (optional) "!<game> status"
+ *
+ * Everything else is passed through to `onStart`.
+ */
+export function withGameSubcommands({
+  helpText,
+  rulesText,
+  onStart,
+  onStatus,
+  allowStatusSubcommand = true,
+  helpAliases = ["help", "h", "?"],
+  rulesAliases = ["rules", "rule", "how", "howto"],
+  statusAliases = ["status"],
+} = {}) {
+  if (typeof onStart !== "function") {
+    throw new Error("withGameSubcommands requires an onStart({message,rest}) function");
+  }
+
+  return async ({ message, rest }) => {
+    const raw = String(rest ?? "").trim();
+    const a = raw.toLowerCase();
+
+    if (helpAliases.includes(a)) {
+      await reply({ message }, helpText || "No help available.");
+      return;
+    }
+
+    if (rulesAliases.includes(a)) {
+      await reply({ message }, rulesText || "No rules available.");
+      return;
+    }
+
+    if (allowStatusSubcommand && statusAliases.includes(a)) {
+      if (typeof onStatus === "function") return await onStatus({ message });
+      await reply({ message }, "Try the `!<game>status` command.");
+      return;
+    }
+
+    return await onStart({ message, rest });
+  };
+}
+
+/**
+ * Back-compat / nicer naming: this is the same thing as withGameSubcommands.
+ * Use whichever name you prefer in game files.
+ */
+export const withQoLSubcommands = withGameSubcommands;
+
 /* ------------------------- QoL command bundle helper ------------------------ */
 
-export function makeGameQoL(register, { manager, id, prettyName, helpText, renderStatus, cancel, end } = {}) {
+export function makeGameQoL(
+  register,
+  {
+    manager,
+    id,
+    prettyName,
+    helpText,
+    rulesText, // NEW
+    renderStatus,
+    cancel,
+    end,
+    manageDeniedText = null,
+  } = {}
+) {
   const label = prettyName || id || manager?.label || "game";
 
-  // Help
+  // Help (NOT primary)
   register(
     `!${id}help`,
     async ({ message }) => {
       await reply({ message }, helpText || `No help text available for ${label}.`);
     },
     `• !${id}help — show ${label} help`,
-    { helpTier: "primary" }
+    { helpTier: "normal" }
   );
 
-  // Status
+  // Rules (NOT primary)
+  register(
+    `!${id}rules`,
+    async ({ message }) => {
+      await reply({ message }, rulesText || `No rules text available for ${label}.`);
+    },
+    `• !${id}rules — show ${label} rules`,
+    { helpTier: "normal" }
+  );
+
+  // Status (NOT primary)
   register(
     `!${id}status`,
     async ({ message }) => {
@@ -434,10 +541,10 @@ export function makeGameQoL(register, { manager, id, prettyName, helpText, rende
       await reply({ message }, text);
     },
     `• !${id}status — show ${label} status`,
-    { helpTier: "primary" }
+    { helpTier: "normal" }
   );
 
-  // Cancel
+  // Cancel (NOT primary)
   register(
     `!cancel${id}`,
     async ({ message }) => {
@@ -451,7 +558,11 @@ export function makeGameQoL(register, { manager, id, prettyName, helpText, rende
       const ok = await requireCanManage(
         { message },
         st,
-        { ownerField: st.hostId ? "hostId" : "creatorId", managerLabel: label }
+        {
+          ownerField: st.hostId ? "hostId" : "creatorId",
+          managerLabel: label,
+          deniedText: manageDeniedText || null,
+        }
       );
       if (!ok) return;
 
@@ -463,10 +574,10 @@ export function makeGameQoL(register, { manager, id, prettyName, helpText, rende
       }
     },
     `• !cancel${id} — cancel the current ${label}`,
-    { helpTier: "primary" }
+    { helpTier: "normal" }
   );
 
-  // Optional hard-end alias
+  // Optional hard-end alias (hidden)
   if (end) {
     register(
       `!end${id}`,
@@ -481,7 +592,11 @@ export function makeGameQoL(register, { manager, id, prettyName, helpText, rende
         const ok = await requireCanManage(
           { message },
           st,
-          { ownerField: st.hostId ? "hostId" : "creatorId", managerLabel: label }
+          {
+            ownerField: st.hostId ? "hostId" : "creatorId",
+            managerLabel: label,
+            deniedText: manageDeniedText || null,
+          }
         );
         if (!ok) return;
 
