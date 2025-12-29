@@ -45,11 +45,19 @@ function minLevelForTarget(target, f) {
   }
   return lo;
 }
+function maxLevelForBudget(budget, f) {
+  if (!Number.isFinite(budget) || budget <= 0) return null;
+  if (f(1) > budget) return 0;
+  const firstTooExpensive = minLevelForTarget(budget + 1, f);
+  if (firstTooExpensive == null) return null;
+  return Math.max(0, firstTooExpensive - 1);
+}
+
 function levelForBuyerPays(target, ppEnabled) {
-  return minLevelForTarget(target, (L) => buyerPaysAtLevel(L, ppEnabled));
+  return maxLevelForBudget(target, (L) => buyerPaysAtLevel(L, ppEnabled));
 }
 function levelForSellerGets(target) {
-  return minLevelForTarget(target, (L) => sellerGetsAtLevel(L));
+  return maxLevelForBudget(target, (L) => sellerGetsAtLevel(L));
 }
 
 function makeMessage() {
@@ -166,7 +174,7 @@ describe("calculator.js", () => {
     expect(out).toContain(`Level: ${lvl}`);
   });
 
-  it("buy / buym produce minimum levels for PP no/yes", async () => {
+  it("buy / buym produce max affordable levels for PP no/yes", async () => {
     const target = 500_000_000;
     const no = levelForBuyerPays(target, false);
     const yes = levelForBuyerPays(target, true);
@@ -175,17 +183,19 @@ describe("calculator.js", () => {
     expect(msg.reply).toHaveBeenCalledTimes(1);
     const out = String(msg.reply.mock.calls[0][0]);
     expect(out).toContain("Buyer pays");
+    expect(out).toContain("Note: Prices are based on actual EXP");
     expect(out).toContain(`PP: no  → Level ${no}`);
     expect(out).toContain(`PP: yes → Level ${yes}`);
 
     const msg2 = await runBang(handlers, "!calculate", "buym 500");
     expect(msg2.reply).toHaveBeenCalledTimes(1);
     const out2 = String(msg2.reply.mock.calls[0][0]);
+    expect(out2).toContain("Note: Prices are based on actual EXP");
     expect(out2).toContain(`PP: no  → Level ${no}`);
     expect(out2).toContain(`PP: yes → Level ${yes}`);
   });
 
-  it("sell / sellm produce minimum level and show same level for PP no/yes", async () => {
+  it("sell / sellm produce max affordable level and show same level for PP no/yes", async () => {
     const target = 250_000_000;
     const lvl = levelForSellerGets(target);
 
@@ -193,12 +203,16 @@ describe("calculator.js", () => {
     expect(msg.reply).toHaveBeenCalledTimes(1);
     const out = String(msg.reply.mock.calls[0][0]);
     expect(out).toContain("Seller receives");
+    expect(out).toContain("max affordable level");
+    expect(out).toContain("Note: Prices are based on actual EXP");
     expect(out).toContain(`PP: no  → Level ${lvl}`);
     expect(out).toContain(`PP: yes → Level ${lvl}`);
 
     const msg2 = await runBang(handlers, "!calculate", "sellm 250");
     expect(msg2.reply).toHaveBeenCalledTimes(1);
     const out2 = String(msg2.reply.mock.calls[0][0]);
+    expect(out2).toContain("max affordable level");
+    expect(out2).toContain("Note: Prices are based on actual EXP");
     expect(out2).toContain(`PP: no  → Level ${lvl}`);
     expect(out2).toContain(`PP: yes → Level ${lvl}`);
   });

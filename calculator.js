@@ -100,13 +100,32 @@ function minLevelForTarget(target, f) {
   return lo;
 }
 
-function levelForBuyerPays(target, ppEnabled) {
-  return minLevelForTarget(target, (L) => buyerPaysAtLevel(L, ppEnabled));
+// NEW: Find maximum integer L such that f(L) <= budget (monotonic f).
+// We do this by finding the first L where f(L) > budget, then subtract 1.
+// Since f(L) is integer-valued here, "f(L) > budget" == "f(L) >= budget + 1".
+function maxLevelForBudget(budget, f) {
+  if (!Number.isFinite(budget) || budget <= 0) return null;
+
+  // If even level 1 is too expensive, max affordable is 0.
+  if (f(1) > budget) return 0;
+
+  const firstTooExpensive = minLevelForTarget(budget + 1, f);
+  if (firstTooExpensive === null) return null;
+
+  return Math.max(0, firstTooExpensive - 1);
 }
 
-function levelForSellerGets(target) {
-  return minLevelForTarget(target, (L) => sellerGetsAtLevel(L));
+function levelForBuyerPays(budget, ppEnabled) {
+  return maxLevelForBudget(budget, (L) => buyerPaysAtLevel(L, ppEnabled));
 }
+
+function levelForSellerGets(budget) {
+  // Match buy/buym semantics: max level whose seller payout is <= budget.
+  return maxLevelForBudget(budget, (L) => sellerGetsAtLevel(L));
+}
+
+const AFFORDABILITY_NOTE =
+  "> Note: Prices are based on actual EXP, not just the displayed level. A Pokémon with higher EXP may cost more even if it shows the same level.";
 
 function helpText() {
   // Keep this as plain text; Discord will render it nicely.
@@ -126,10 +145,10 @@ function helpText() {
     "• `ea <exp...>` — Add Exp values → level",
     "• `eba <exp_bil...>` — Add Exp values in billions → level",
     "• `ld <lvl1> <lvl2>` — Level difference (Exp diff → level)",
-    "• `buy <money>` — Buyer pays money → minimum level (shows PP no/yes)",
-    "• `buym <money_millions>` — Buyer pays (in millions) → minimum level (shows PP no/yes)",
-    "• `sell <money>` — Seller receives money → minimum level (PP no/yes will match)",
-    "• `sellm <money_millions>` — Seller receives (in millions) → minimum level (PP no/yes will match)",
+    "• `buy <money>` — Buyer pays money → **max affordable** level (shows PP no/yes)",
+    "• `buym <money_millions>` — Buyer pays (in millions) → **max affordable** level (shows PP no/yes)",
+    "• `sell <money>` — Seller receives money → **max affordable** level (PP no/yes will match)",
+    "• `sellm <money_millions>` — Seller receives (in millions) → **max affordable** level (PP no/yes will match)",
     "",
     "**Examples:**",
     "• `!calc l2e 125`",
@@ -143,7 +162,9 @@ function helpText() {
     "• `!calc buy 500000000`",
     "• `!calc buym 500`",
     "• `!calc sell 250000000`",
-    "• `!calc sellm 250`"
+    "• `!calc sellm 250`",
+    "",
+    AFFORDABILITY_NOTE
   ].join("\n");
 }
 
@@ -218,19 +239,20 @@ export function registerCalculator(register) {
       const moneyRaw = one();
       if (moneyRaw === null) return;
 
-      const target = fn === "buym" ? moneyRaw * 1_000_000 : moneyRaw;
-      if (!Number.isFinite(target) || target <= 0) return;
+      const budget = fn === "buym" ? moneyRaw * 1_000_000 : moneyRaw;
+      if (!Number.isFinite(budget) || budget <= 0) return;
 
-      const lvlNo = levelForBuyerPays(target, false);
-      const lvlYes = levelForBuyerPays(target, true);
+      const lvlNo = levelForBuyerPays(budget, false);
+      const lvlYes = levelForBuyerPays(budget, true);
 
       if (lvlNo === null || lvlYes === null) return;
 
       await message.reply(
         [
-          `Buyer pays $${formatInt(target)} → minimum level`,
+          `Buyer pays $${formatInt(budget)} → max affordable level`,
           `• PP: no  → Level ${lvlNo}`,
-          `• PP: yes → Level ${lvlYes}`
+          `• PP: yes → Level ${lvlYes}`,
+          AFFORDABILITY_NOTE
         ].join("\n")
       );
       return;
@@ -250,9 +272,10 @@ export function registerCalculator(register) {
       // Seller gets is independent of PP; show both for clarity, per your request.
       await message.reply(
         [
-          `Seller receives $${formatInt(target)} → minimum level`,
+          `Seller receives $${formatInt(target)} → max affordable level`,
           `• PP: no  → Level ${lvl}`,
-          `• PP: yes → Level ${lvl}`
+          `• PP: yes → Level ${lvl}`,
+          AFFORDABILITY_NOTE
         ].join("\n")
       );
       return;
