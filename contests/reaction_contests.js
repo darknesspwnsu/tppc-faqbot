@@ -43,15 +43,26 @@ function humanDuration(ms) {
   return `${totalHours} hour${totalHours === 1 ? "" : "s"}`;
 }
 
-async function buildNameList(client, userIds) {
+async function buildNameList(client, guild, userIds) {
   const names = [];
+
   for (const id of userIds) {
     try {
-      const u = await client.users.fetch(id);
-      const name = camelizeIfNeeded(u?.username || "");
+      // Prefer guild member (nickname / displayName)
+      const member = await guild.members.fetch(id).catch(() => null);
+
+      let rawName =
+        member?.displayName ||
+        member?.user?.username ||
+        "";
+
+      rawName = stripEmojisAndSymbols(rawName);
+      const name = camelizeIfNeeded(rawName);
+
       if (name) names.push(name);
     } catch {}
   }
+
   return names;
 }
 
@@ -65,6 +76,14 @@ async function finalizeCollector(messageId, reason = "timer") {
   if (typeof state.onDone === "function") {
     try { state.onDone(new Set(userIds), reason); } catch {}
   }
+}
+
+function stripEmojisAndSymbols(name) {
+  if (!name) return "";
+  // Remove emojis & symbols, keep letters/numbers/spaces
+  return name
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .trim();
 }
 
 function contestStartHelpText() {
@@ -245,7 +264,7 @@ export function registerReactionContests(register) {
       });
 
       const ids = [...entrants];
-      const names = await buildNameList(message.client, ids);
+      const names = await buildNameList(message.client, message.guild, ids);
 
       if (!names.length) {
         await message.channel.send("No one reacted...");
