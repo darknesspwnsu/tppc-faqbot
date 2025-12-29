@@ -13,6 +13,7 @@ import { registerHigherOrLower } from "./higher_or_lower.js";
 import { registerRPS } from "./rps.js";
 import { registerHangman } from "./hangman.js";
 import { registerDealOrNoDeal } from "./deal_or_no_deal.js";
+import { registerAuction } from "./auction.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -24,7 +25,8 @@ const GAME_MODULES = [
   { id: "higher_or_lower", register: registerHigherOrLower },
   { id: "rps", register: registerRPS },
   { id: "hangman", register: registerHangman },
-  { id: "deal_or_no_deal", register: registerDealOrNoDeal }
+  { id: "deal_or_no_deal", register: registerDealOrNoDeal },
+  { id: "auction", register: registerAuction }
 ];
 
 export function registerGames(register) {
