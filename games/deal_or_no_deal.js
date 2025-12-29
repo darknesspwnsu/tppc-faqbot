@@ -84,6 +84,31 @@ function unopenedIndices(game) {
   return out;
 }
 
+function dondHelpText() {
+  return [
+    "**Deal or No Deal — help**",
+    "",
+    "**Start (slash):**",
+    "• `/dond boxes:<2-25> contestant:@user`",
+    "  – Opens a modal where the host pastes the prize list.",
+    "  – One prize per line. Blank or `Empty` = empty box.",
+    "",
+    "**Contestant:**",
+    "• Chooses ONE box to **keep** using the buttons on the board.",
+    "",
+    "**Host / Admin / Privileged:**",
+    "• `!dondopen N` — open a **discarded** box (kept box is locked)",
+    "• `!dondswitch` — only when 2 unopened boxes remain (kept + 1 other)",
+    "• `!dondend [deal|nodeal]` — end the game",
+    "• `!dondoffer <text>` — announce banker offer (freeform)",
+    "• `!dondstatus` — show current board",
+    "• `!dondcancel` — cancel the game",
+    "",
+    "**Reveal:**",
+    "• `!dondreveal` — reveal all prizes from the last game",
+  ].join("\n");
+}
+
 function otherUnopenedIndex(game) {
   // Only valid when exactly 2 unopened remain: kept + 1 other.
   const un = unopenedIndices(game);
@@ -376,6 +401,27 @@ export function registerDealOrNoDeal(register) {
 
   // ---- Bang commands ----
 
+  // Bridge bang command for Games help (mirrors !hangman)
+  register(
+    "!dond",
+    async ({ message, rest }) => {
+      const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
+
+      if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
+        await message.reply(dondHelpText());
+        return;
+      }
+
+      await message.reply(
+        "Start Deal or No Deal with the slash command:\n" +
+        "• `/dond boxes:<2-25> contestant:@user`\n" +
+        "Type `!dond help` for full rules."
+      );
+    },
+    "!dond — start via `/dond`. Type `!dond help` for rules.",
+    { helpTier: "primary" }
+  );
+
   register(
     "!dondhelp",
     async ({ message }) => {
@@ -401,7 +447,7 @@ export function registerDealOrNoDeal(register) {
       );
     },
     "!dondhelp — help for Deal or No Deal",
-    { hideFromHelp: false }
+    { hideFromHelp: true }
   );
 
   register(
