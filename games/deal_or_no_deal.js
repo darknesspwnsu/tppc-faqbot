@@ -12,7 +12,7 @@
 //   Host then opens/discards boxes via bang commands.
 //   "Unopened boxes remaining" includes the kept box (it is unopened, just reserved).
 //
-// Host commands:
+// Host commands (legacy, kept):
 //   !dondopen <n>        -> open a DISCARDED box (never the kept box)
 //   !dondstatus
 //   !dondswitch          -> only when exactly 2 unopened boxes remain (kept + 1 other)
@@ -20,6 +20,10 @@
 //   !dondcancel
 //   !dondreveal          -> reveals last game's full box list
 //   !dondoffer <text...> -> (optional) announce banker offer (any freeform offer)
+//
+// Framework QoL (added):
+//   !dondhelp / !dondrules / !dondstatus
+//   !canceldond / !enddond (hidden from global help)
 //
 // One active game per guild. Game is bound to the start channel.
 
@@ -33,32 +37,28 @@ import {
   MessageFlags,
 } from "discord.js";
 
-import { isAdminOrPrivileged } from "../auth.js";
+import {
+  createGameManager,
+  createBoard,
+  guardBoardInteraction,
+  withGameSubcommands,
+  makeGameQoL,
+  reply,
+  clampInt,
+  requireActive,
+  requireSameChannel,
+  requireCanManage,
+  mention,
+  channelMention,
+  nowMs,
+} from "./framework.js";
 
-const ACTIVE = new Map();        // guildId -> game
 const LAST_BY_GUILD = new Map(); // guildId -> snapshot
 
 const MIN_BOXES = 2;
 const MAX_BOXES = 25;
 
-function clampInt(n, lo, hi) {
-  const x = Number(n);
-  if (!Number.isFinite(x) || !Number.isInteger(x)) return null;
-  if (x < lo || x > hi) return null;
-  return x;
-}
-
-function canManage(message, game) {
-  if (!game) return false;
-  if (isAdminOrPrivileged(message)) return true;
-  return message.author?.id === game.hostId;
-}
-
-function inSameChannel(msgOrInteraction, game) {
-  const gid = msgOrInteraction.guildId || msgOrInteraction.guild?.id;
-  const cid = msgOrInteraction.channelId || msgOrInteraction.channel?.id;
-  return Boolean(gid && cid && gid === game.guildId && cid === game.channelId);
-}
+/* --------------------------------- helpers -------------------------------- */
 
 function normalizePrizeLine(line) {
   const s = String(line ?? "").trim();
@@ -84,31 +84,6 @@ function unopenedIndices(game) {
   return out;
 }
 
-function dondHelpText() {
-  return [
-    "**Deal or No Deal — help**",
-    "",
-    "**Start (slash):**",
-    "• `/dond boxes:<2-25> contestant:@user`",
-    "  – Opens a modal where the host pastes the prize list.",
-    "  – One prize per line. Blank or `Empty` = empty box.",
-    "",
-    "**Contestant:**",
-    "• Chooses ONE box to **keep** using the buttons on the board.",
-    "",
-    "**Host / Admin / Privileged:**",
-    "• `!dondopen N` — open a **discarded** box (kept box is locked)",
-    "• `!dondswitch` — only when 2 unopened boxes remain (kept + 1 other)",
-    "• `!dondend [deal|nodeal]` — end the game",
-    "• `!dondoffer <text>` — announce banker offer (freeform)",
-    "• `!dondstatus` — show current board",
-    "• `!dondcancel` — cancel the game",
-    "",
-    "**Reveal:**",
-    "• `!dondreveal` — reveal all prizes from the last game",
-  ].join("\n");
-}
-
 function otherUnopenedIndex(game) {
   // Only valid when exactly 2 unopened remain: kept + 1 other.
   const un = unopenedIndices(game);
@@ -117,9 +92,41 @@ function otherUnopenedIndex(game) {
   return un[0] === game.keptIndex ? un[1] : un[0];
 }
 
+function snapshotGame(game) {
+  return {
+    guildId: game.guildId,
+    channelId: game.channelId,
+    hostId: game.hostId,
+    contestantId: game.contestantId,
+    n: game.n,
+    keptIndex: game.keptIndex,
+    dealTaken: Boolean(game.dealTaken),
+    endedAtMs: nowMs(),
+    boxes: game.boxes.map((b) => ({ prize: b.prize, opened: b.opened })),
+  };
+}
+
+function revealAllText(snap) {
+  const lines = [];
+  lines.push(`🧾 **Deal or No Deal — Full Reveal**`);
+  lines.push(`Host: ${mention(snap.hostId)} • Contestant: ${mention(snap.contestantId)}`);
+  if (snap.keptIndex != null) lines.push(`Kept box: **#${snap.keptIndex + 1}**`);
+  lines.push(`Deal taken: **${snap.dealTaken ? "YES" : "NO"}**`);
+  lines.push("");
+
+  for (let i = 0; i < snap.n; i++) {
+    const b = snap.boxes[i];
+    const kept = snap.keptIndex === i ? " 🔒(kept)" : "";
+    lines.push(`• Box #${i + 1}${kept}: ${b.prize}`);
+  }
+  return lines.join("\n");
+}
+
 function boardText(game) {
   const lines = [];
-  lines.push(`💼 **Deal or No Deal** — Host: <@${game.hostId}> • Contestant: <@${game.contestantId}>`);
+  lines.push(
+    `💼 **Deal or No Deal** — Host: ${mention(game.hostId)} • Contestant: ${mention(game.contestantId)}`
+  );
 
   if (game.phase === "choose_keep") {
     lines.push(`🎯 Contestant: choose a box to **KEEP** (buttons below).`);
@@ -175,51 +182,111 @@ function buildKeepButtons(game, { disabled = false } = {}) {
   return rows;
 }
 
-async function safeEditBoard(game, payload) {
-  try {
-    const ch = game.client?.channels?.cache?.get(game.channelId);
-    if (!ch) return false;
-    const msg = await ch.messages.fetch(game.boardMessageId);
-    if (!msg) return false;
-    await msg.edit(payload);
-    return true;
-  } catch {
-    return false;
-  }
+/* --------------------------------- help/rules ----------------------------- */
+
+function dondHelpText() {
+  return [
+    "**Deal or No Deal — help**",
+    "",
+    "**Start (slash):**",
+    "• `/dond boxes:<2-25> contestant:@user`",
+    "  – Opens a modal where the host pastes the prize list.",
+    "  – One prize per line. Blank or `Empty` = empty box.",
+    "",
+    "**Contestant:**",
+    "• Chooses ONE box to **keep** using the buttons on the board.",
+    "",
+    "**Host / Admin / Privileged:**",
+    "• `!dondopen N` — open a **discarded** box (kept box is locked)",
+    "• `!dondswitch` — only when 2 unopened boxes remain (kept + 1 other)",
+    "• `!dondend [deal|nodeal]` — end the game",
+    "• `!dondoffer <text>` — announce banker offer (freeform)",
+    "• `!dondstatus` — show current board",
+    "• `!dondcancel` — cancel the game",
+    "",
+    "**Reveal:**",
+    "• `!dondreveal` — reveal all prizes from the last game",
+    "",
+    "**QoL:**",
+    "• `!canceldond` / `!enddond` — framework aliases (host/admin)",
+  ].join("\n");
 }
 
-function snapshotGame(game) {
-  return {
-    guildId: game.guildId,
-    channelId: game.channelId,
-    hostId: game.hostId,
-    contestantId: game.contestantId,
-    n: game.n,
-    keptIndex: game.keptIndex,
-    dealTaken: Boolean(game.dealTaken),
-    endedAtMs: Date.now(),
-    boxes: game.boxes.map((b) => ({ prize: b.prize, opened: b.opened })),
-  };
+function dondRulesText() {
+  return [
+    "**Deal or No Deal — rules (simple)**",
+    "",
+    "1) Host starts with `/dond` and pastes prizes (one per line).",
+    "2) Contestant clicks ONE box to keep (it stays closed).",
+    "3) Host opens discarded boxes with `!dondopen N` (never the kept box).",
+    "4) When only two unopened boxes remain, host may `!dondswitch` and then `!dondend deal|nodeal`.",
+    "",
+    "Notes:",
+    "• This game is **guild-scoped**, but commands are **bound to the start channel**.",
+  ].join("\n");
 }
 
-function revealAllText(snap) {
-  const lines = [];
-  lines.push(`🧾 **Deal or No Deal — Full Reveal**`);
-  lines.push(`Host: <@${snap.hostId}> • Contestant: <@${snap.contestantId}>`);
-  if (snap.keptIndex != null) lines.push(`Kept box: **#${snap.keptIndex + 1}**`);
-  lines.push(`Deal taken: **${snap.dealTaken ? "YES" : "NO"}**`);
-  lines.push("");
-
-  for (let i = 0; i < snap.n; i++) {
-    const b = snap.boxes[i];
-    const kept = snap.keptIndex === i ? " 🔒(kept)" : "";
-    lines.push(`• Box #${i + 1}${kept}: ${b.prize}`);
-  }
-  return lines.join("\n");
-}
+/* --------------------------------- main ----------------------------------- */
 
 export function registerDealOrNoDeal(register) {
-  // /dond -> open modal (prize list only)
+  const id = "dond";
+  const prettyName = "Deal or No Deal";
+
+  const manager = createGameManager({ id, prettyName, scope: "guild" });
+
+  function getBoard(game) {
+    // We use framework board helper; message id field is "messageId"
+    return createBoard(game, { messageIdField: "messageId" });
+  }
+
+  async function updateBoard(game, { disable = false } = {}) {
+    const board = getBoard(game);
+    await board.update({
+      content: boardText(game),
+      components: buildKeepButtons(game, { disabled: disable }),
+    });
+  }
+
+  async function finalizeGame(game, { message = null, channel = null, mode = "ended", dealTaken = false } = {}) {
+    game.phase = "ended";
+    game.dealTaken = Boolean(dealTaken);
+
+    const snap = snapshotGame(game);
+    LAST_BY_GUILD.set(game.guildId, snap);
+
+    // Disable board buttons
+    await updateBoard(game, { disable: true });
+
+    // Clear active state
+    manager.stop({ guildId: game.guildId });
+
+    const ch = channel || (message ? message.channel : null);
+    if (!ch?.send) return;
+
+    if (mode === "cancelled") {
+      await ch.send("🛑 Cancelled. You can still run `!dondreveal` to show the snapshot prizes.");
+      return;
+    }
+
+    if (dealTaken) {
+      await ch.send(
+        `🤝 **DEAL TAKEN!** Game ended.\n` +
+          `Kept box **#${game.keptIndex + 1}** stays hidden.\n` +
+          `Use \`!dondreveal\` to show every box afterwards.`
+      );
+      return;
+    }
+
+    // nodeal
+    await ch.send(
+      `🏁 **NO DEAL!** ${mention(game.contestantId)} kept **Box #${game.keptIndex + 1}** → **${
+        game.boxes[game.keptIndex].prize
+      }**\n` + `Use \`!dondreveal\` to show all boxes.`
+    );
+  }
+
+  /* ------------------------------ slash: /dond ------------------------------ */
+
   register.slash(
     {
       name: "dond",
@@ -236,11 +303,11 @@ export function registerDealOrNoDeal(register) {
         return;
       }
 
-      if (ACTIVE.has(guildId)) {
-        const g = ACTIVE.get(guildId);
+      if (manager.isActive({ interaction, guildId })) {
+        const g = manager.getState({ interaction, guildId });
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
-          content: `⚠️ Deal or No Deal is already running in <#${g.channelId}>.`,
+          content: `⚠️ Deal or No Deal is already running in ${channelMention(g.channelId)}.`,
         });
         return;
       }
@@ -258,7 +325,10 @@ export function registerDealOrNoDeal(register) {
       }
 
       if (!contestant?.id || contestant.bot) {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "❌ Contestant must be a real user (not a bot)." });
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "❌ Contestant must be a real user (not a bot).",
+        });
         return;
       }
 
@@ -278,24 +348,25 @@ export function registerDealOrNoDeal(register) {
     }
   );
 
-  // Modal submit -> create game + board
+  /* --------------------------- modal submit -> start -------------------------- */
+
   register.component("dond_modal:", async ({ interaction }) => {
     if (!interaction.isModalSubmit?.()) return;
 
     const gid = interaction.guildId;
     if (!gid) return;
 
-    if (ACTIVE.has(gid)) {
-      const g = ACTIVE.get(gid);
+    if (manager.isActive({ interaction, guildId: gid })) {
+      const g = manager.getState({ interaction, guildId: gid });
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
-        content: `⚠️ Deal or No Deal is already running in <#${g.channelId}>.`,
+        content: `⚠️ Deal or No Deal is already running in ${channelMention(g.channelId)}.`,
       });
       return;
     }
 
-    const id = String(interaction.customId || "");
-    const parts = id.split(":"); // dond_modal:<n>:<contestantId>
+    const idStr = String(interaction.customId || "");
+    const parts = idStr.split(":"); // dond_modal:<n>:<contestantId>
     if (parts.length !== 3) {
       await interaction.reply({ flags: MessageFlags.Ephemeral, content: "❌ Invalid modal payload." });
       return;
@@ -317,11 +388,11 @@ export function registerDealOrNoDeal(register) {
     const raw = interaction.fields?.getTextInputValue?.("prizes") ?? "";
     const prizes = parsePrizesFromLines(raw, n);
 
-    const game = {
+    const init = {
       kind: "dond",
       client: interaction.client,
       guildId: gid,
-      channelId: channel.id,
+      channelId: channel.id, // bind to this channel
       hostId: interaction.user.id,
       contestantId,
       n,
@@ -329,134 +400,180 @@ export function registerDealOrNoDeal(register) {
       keptIndex: null,
       phase: "choose_keep", // choose_keep | running | final | ended
       dealTaken: false,
-      boardMessageId: null,
+      messageId: null, // board message id (framework field)
+      createdAtMs: nowMs(),
     };
 
-    const board = await channel.send({
+    const started = manager.tryStart({ interaction, guildId: gid, channelId: channel.id }, init);
+    if (!started.ok) {
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: started.errorText });
+      return;
+    }
+
+    const game = started.state;
+    const board = getBoard(game);
+
+    const msg = await board.post(channel, {
       content: boardText(game),
       components: buildKeepButtons(game),
     });
 
-    game.boardMessageId = board.id;
-    ACTIVE.set(gid, game);
+    if (!msg?.id) {
+      manager.stop({ guildId: gid });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Failed to post the game board." });
+      return;
+    }
 
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
       content:
-        `✅ Started Deal or No Deal in <#${channel.id}> for <@${contestantId}> with **${n}** boxes.\n` +
+        `✅ Started Deal or No Deal in ${channelMention(channel.id)} for ${mention(contestantId)} with **${n}** boxes.\n` +
         `Contestant should pick a kept box using the buttons on the board.`,
     });
   });
 
-  // Buttons: contestant picks kept box
+  /* ------------------------------- buttons ---------------------------------- */
+
   register.component("dond:keep:", async ({ interaction }) => {
     if (!interaction.isButton?.()) return;
 
-    const gid = interaction.guildId;
-    if (!gid) return;
+    const guarded = await guardBoardInteraction(interaction, {
+      manager,
+      messageIdField: "messageId",
+      // Only contestant can click keep
+      allowUserIds: [interaction.user?.id], // temp; we'll verify properly below with state
+    });
 
-    const game = ACTIVE.get(gid);
-    if (!game) return;
+    // guardBoardInteraction's allowUserIds check above isn't helpful yet because we don't know contestantId,
+    // so we re-check properly here (keeping guard’s other protections).
+    if (!guarded) return;
 
-    if (!inSameChannel(interaction, game)) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `This game is running in <#${game.channelId}>.` });
-      return;
-    }
+    const game = guarded.state;
+
+    // Enforce start-channel binding + correct user
+    if (!(await requireSameChannel({ interaction }, game, manager))) return;
 
     if (interaction.user.id !== game.contestantId) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Only the contestant can pick the kept box." });
+      try {
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Only the contestant can pick the kept box." });
+      } catch {}
       return;
     }
 
     if (game.phase !== "choose_keep") {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Kept box has already been chosen." });
+      try {
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Kept box has already been chosen." });
+      } catch {}
       return;
     }
 
     const idx = Number(String(interaction.customId).split(":").pop());
     if (!Number.isInteger(idx) || idx < 0 || idx >= game.n) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Invalid box." });
+      try {
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Invalid box." });
+      } catch {}
       return;
     }
 
     if (game.boxes[idx].opened) {
-      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "That box is already opened." });
+      try {
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "That box is already opened." });
+      } catch {}
       return;
     }
 
     game.keptIndex = idx;
     game.phase = "running";
 
-    await interaction.reply({ flags: MessageFlags.Ephemeral, content: `✅ You are keeping **Box #${idx + 1}**.` });
+    try {
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `✅ You are keeping **Box #${idx + 1}**.` });
+    } catch {}
 
-    await safeEditBoard(game, { content: boardText(game), components: buildKeepButtons(game) });
+    await updateBoard(game);
 
     try {
       await interaction.channel.send(
-        `🔒 <@${game.contestantId}> is keeping **Box #${idx + 1}**.\n` +
+        `🔒 ${mention(game.contestantId)} is keeping **Box #${idx + 1}**.\n` +
           `Host: open **discarded** boxes with \`!dondopen N\` (kept box is locked).`
       );
     } catch {}
   });
 
-  // ---- Bang commands ----
+  /* ------------------------------ framework QoL ----------------------------- */
 
-  // Bridge bang command for Games help (mirrors !hangman)
+  makeGameQoL(register, {
+    manager,
+    id,
+    prettyName,
+    helpText: dondHelpText(),
+    rulesText: dondRulesText(),
+    manageDeniedText: "Nope — only admins/privileged or the host can do that.",
+    renderStatus: (game) => boardText(game),
+    cancel: async (game, ctx) => {
+      // Snapshot + disable + stop
+      await updateBoard(game, { disable: true });
+      const snap = snapshotGame(game);
+      LAST_BY_GUILD.set(game.guildId, snap);
+      manager.stop({ guildId: game.guildId });
+      await reply(ctx, "🛑 Cancelled. You can still run `!dondreveal` to show the snapshot prizes.");
+    },
+    end: async (game, ctx) => {
+      // Hidden hard-end (does NOT decide deal/nodeal; legacy !dondend still exists)
+      await updateBoard(game, { disable: true });
+      const snap = snapshotGame(game);
+      LAST_BY_GUILD.set(game.guildId, snap);
+      manager.stop({ guildId: game.guildId });
+      await reply(ctx, "🏁 Deal or No Deal ended. Use `!dondreveal` if you want the full snapshot.");
+    },
+  });
+
+  /* ------------------------------ bang commands ----------------------------- */
+
+  // Primary: !dond supports "!dond help" / "!dond rules" via framework wrapper
   register(
     "!dond",
-    async ({ message, rest }) => {
-      const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
-
-      if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
-        await message.reply(dondHelpText());
-        return;
-      }
-
-      await message.reply(
-        "Start Deal or No Deal with the slash command:\n" +
-        "• `/dond boxes:<2-25> contestant:@user`\n" +
-        "Type `!dond help` for full rules."
-      );
-    },
+    withGameSubcommands({
+      helpText: dondHelpText(),
+      rulesText: dondRulesText(),
+      // Keep legacy behavior for non-subcommands:
+      onStart: async ({ message }) => {
+        await reply(
+          { message },
+          "Start Deal or No Deal with the slash command:\n" +
+            "• `/dond boxes:<2-25> contestant:@user`\n" +
+            "Type `!dond help` for full rules."
+        );
+      },
+      // Optional: status subcommand prints board or "no active"
+      onStatus: async ({ message }) => {
+        const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+        if (!game) return void (await reply({ message }, "No active Deal or No Deal game in this server."));
+        if (!(await requireSameChannel({ message }, game, manager))) return;
+        await reply({ message }, boardText(game));
+      },
+    }),
     "!dond — start via `/dond`. Type `!dond help` for rules.",
     { helpTier: "primary" }
   );
 
+  // Legacy: !dondhelp (wrapper to canonical framework help)
   register(
     "!dondhelp",
     async ({ message }) => {
-      await message.reply(
-        [
-          "**Deal or No Deal — Commands**",
-          "",
-          "**Start:**",
-          "• `/dond boxes:<2-25> contestant:@user` → opens modal for prize list",
-          "",
-          "**Contestant:**",
-          "• Picks a kept box using the board buttons",
-          "",
-          "**Host/Admin:**",
-          "• `!dondopen N` — open a **discarded** box (cannot open kept box)",
-          "• `!dondstatus` — show board state",
-          "• `!dondswitch` — only when 2 unopened remain (kept + 1 other)",
-          "• `!dondend [deal|nodeal]` — end game (deal hides kept prize until reveal)",
-          "• `!dondreveal` — reveal all prizes from last game snapshot",
-          "• `!dondcancel` — cancel current game",
-          "• `!dondoffer <text...>` — announce banker offer (any freeform offer)",
-        ].join("\n")
-      );
+      await reply({ message }, dondHelpText());
     },
     "!dondhelp — help for Deal or No Deal",
     { hideFromHelp: true }
   );
 
+  // Legacy: !dondstatus (wrapper)
   register(
     "!dondstatus",
     async ({ message }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game in this server."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Deal or No Deal is running in <#${game.channelId}>.`));
-      await message.reply(boardText(game));
+      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+      if (!game) return void (await reply({ message }, "No active Deal or No Deal game in this server."));
+      if (!(await requireSameChannel({ message }, game, manager))) return;
+      await reply({ message }, boardText(game));
     },
     "!dondstatus — show Deal or No Deal board",
     { hideFromHelp: true }
@@ -465,13 +582,19 @@ export function registerDealOrNoDeal(register) {
   register(
     "!dondoffer",
     async ({ message, rest }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Running in <#${game.channelId}>.`));
-      if (!canManage(message, game)) return void (await message.reply("Nope — only admins/privileged or the host can do that."));
+      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+      if (!game) return void (await reply({ message }, "No active Deal or No Deal game."));
+      if (!(await requireSameChannel({ message }, game, manager))) return;
+
+      const ok = await requireCanManage(
+        { message },
+        game,
+        { ownerField: "hostId", managerLabel: prettyName, deniedText: "Nope — only admins/privileged or the host can do that." }
+      );
+      if (!ok) return;
 
       const offer = String(rest ?? "").trim();
-      if (!offer) return void (await message.reply("Usage: `!dondoffer <banker offer text>`"));
+      if (!offer) return void (await reply({ message }, "Usage: `!dondoffer <banker offer text>`"));
 
       await message.channel.send(`📞 **BANKER OFFER:** ${offer}`);
     },
@@ -482,24 +605,30 @@ export function registerDealOrNoDeal(register) {
   register(
     "!dondopen",
     async ({ message, rest }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Running in <#${game.channelId}>.`));
-      if (!canManage(message, game)) return void (await message.reply("Nope — only admins/privileged or the host can do that."));
+      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+      if (!game) return void (await reply({ message }, "No active Deal or No Deal game."));
+      if (!(await requireSameChannel({ message }, game, manager))) return;
+
+      const ok = await requireCanManage(
+        { message },
+        game,
+        { ownerField: "hostId", managerLabel: prettyName, deniedText: "Nope — only admins/privileged or the host can do that." }
+      );
+      if (!ok) return;
 
       if (game.keptIndex == null) {
-        await message.reply("⚠️ Kept box not chosen yet. Contestant must pick a kept box first.");
+        await reply({ message }, "⚠️ Kept box not chosen yet. Contestant must pick a kept box first.");
         return;
       }
 
       const n = clampInt(String(rest ?? "").trim(), 1, game.n);
-      if (!n) return void (await message.reply(`Usage: \`!dondopen <1-${game.n}>\` (opens a discarded box)`));
+      if (!n) return void (await reply({ message }, `Usage: \`!dondopen <1-${game.n}>\` (opens a discarded box)`));
       const idx = n - 1;
 
       if (idx === game.keptIndex) {
-        return void (await message.reply(`❌ Box #${idx + 1} is the contestant’s **kept** box. Open a **discarded** box instead.`));
+        return void (await reply({ message }, `❌ Box #${idx + 1} is the contestant’s **kept** box. Open a **discarded** box instead.`));
       }
-      if (game.boxes[idx].opened) return void (await message.reply("That box is already opened."));
+      if (game.boxes[idx].opened) return void (await reply({ message }, "That box is already opened."));
 
       game.boxes[idx].opened = true;
       await message.channel.send(`🗑️ Discarded **Box #${idx + 1}** opened → **${game.boxes[idx].prize}**`);
@@ -507,7 +636,7 @@ export function registerDealOrNoDeal(register) {
       const remaining = unopenedIndices(game);
       if (remaining.length === 2) game.phase = "final";
 
-      await safeEditBoard(game, { content: boardText(game), components: buildKeepButtons(game) });
+      await updateBoard(game);
 
       if (game.phase === "final") {
         const other = otherUnopenedIndex(game);
@@ -525,21 +654,27 @@ export function registerDealOrNoDeal(register) {
   register(
     "!dondswitch",
     async ({ message }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Running in <#${game.channelId}>.`));
-      if (!canManage(message, game)) return void (await message.reply("Nope — only admins/privileged or the host can do that."));
+      const game = await requireActive({ message, guildId: message.guildId, channelId: message.channelId }, manager);
+      if (!game) return;
+      if (!(await requireSameChannel({ message }, game, manager))) return;
 
-      if (game.keptIndex == null) return void (await message.reply("Kept box not chosen yet."));
+      const ok = await requireCanManage(
+        { message },
+        game,
+        { ownerField: "hostId", managerLabel: prettyName, deniedText: "Nope — only admins/privileged or the host can do that." }
+      );
+      if (!ok) return;
+
+      if (game.keptIndex == null) return void (await reply({ message }, "Kept box not chosen yet."));
       const other = otherUnopenedIndex(game);
       if (other == null) {
-        return void (await message.reply("❌ Switch is only allowed when exactly 2 unopened boxes remain (kept + 1 other)."));
+        return void (await reply({ message }, "❌ Switch is only allowed when exactly 2 unopened boxes remain (kept + 1 other)."));
       }
 
       const prev = game.keptIndex;
       game.keptIndex = other;
 
-      await safeEditBoard(game, { content: boardText(game), components: buildKeepButtons(game) });
+      await updateBoard(game);
       await message.channel.send(`🔁 Switched kept box from **#${prev + 1}** to **#${game.keptIndex + 1}**.`);
     },
     "!dondswitch — swap kept box with the other final box",
@@ -549,68 +684,63 @@ export function registerDealOrNoDeal(register) {
   register(
     "!dondend",
     async ({ message, rest }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Running in <#${game.channelId}>.`));
-      if (!canManage(message, game)) return void (await message.reply("Nope — only admins/privileged or the host can do that."));
+      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+      if (!game) return void (await reply({ message }, "No active Deal or No Deal game."));
+      if (!(await requireSameChannel({ message }, game, manager))) return;
 
-      if (game.keptIndex == null) return void (await message.reply("Kept box not chosen yet."));
+      const ok = await requireCanManage(
+        { message },
+        game,
+        { ownerField: "hostId", managerLabel: prettyName, deniedText: "Nope — only admins/privileged or the host can do that." }
+      );
+      if (!ok) return;
+
+      if (game.keptIndex == null) return void (await reply({ message }, "Kept box not chosen yet."));
 
       const mode = String(rest ?? "").trim().toLowerCase();
-
       if (mode !== "deal" && mode !== "nodeal") {
-        await message.reply("Usage: `!dondend deal` or `!dondend nodeal`");
+        await reply({ message }, "Usage: `!dondend deal` or `!dondend nodeal`");
         return;
       }
 
       const isDeal = mode === "deal";
 
-      game.phase = "ended";
-      game.dealTaken = isDeal;
-
-      const snap = snapshotGame(game);
-      LAST_BY_GUILD.set(game.guildId, snap);
-      ACTIVE.delete(game.guildId);
-
-      await safeEditBoard(game, {
-        content: boardText(game),
-        components: buildKeepButtons(game, { disabled: true }),
-      });
-
-      if (isDeal) {
-        await message.channel.send(
-          `🤝 **DEAL TAKEN!** Game ended.\n` +
-            `Kept box **#${game.keptIndex + 1}** stays hidden.\n` +
-            `Use \`!dondreveal\` to show every box afterwards.`
-        );
-      } else {
-        await message.channel.send(
-          `🏁 **NO DEAL!** <@${game.contestantId}> kept **Box #${game.keptIndex + 1}** → **${game.boxes[game.keptIndex].prize}**\n` +
-            `Use \`!dondreveal\` to show all boxes.`
-        );
-      }
+      // Snapshot + stop + message outputs identical to legacy behavior
+      const channel = message.channel;
+      await finalizeGame(game, { message, channel, mode: "ended", dealTaken: isDeal });
     },
     "!dondend [deal|nodeal] — end Deal or No Deal",
     { admin: true, hideFromHelp: true }
   );
 
+  // Legacy: !dondcancel (wrapper to canonical cancel logic)
   register(
     "!dondcancel",
     async ({ message }) => {
-      const game = ACTIVE.get(message.guildId);
-      if (!game) return void (await message.reply("No active Deal or No Deal game."));
-      if (!inSameChannel(message, game)) return void (await message.reply(`Running in <#${game.channelId}>.`));
-      if (!canManage(message, game)) return void (await message.reply("Nope — only admins/privileged or the host can do that."));
+      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
+      if (!game) return void (await reply({ message }, "No active Deal or No Deal game."));
+      if (!(await requireSameChannel({ message }, game, manager))) return;
 
+      const ok = await requireCanManage(
+        { message },
+        game,
+        { ownerField: "hostId", managerLabel: prettyName, deniedText: "Nope — only admins/privileged or the host can do that." }
+      );
+      if (!ok) return;
+
+      // Keep legacy "cancelled by X" board content line
+      await updateBoard(game, { disable: true });
       const snap = snapshotGame(game);
       LAST_BY_GUILD.set(game.guildId, snap);
-      ACTIVE.delete(game.guildId);
 
-      await safeEditBoard(game, {
-        content: `🛑 **Deal or No Deal cancelled** by <@${message.author.id}>.\n\n` + boardText({ ...game, phase: "ended" }),
+      // Try to edit board content with the legacy cancelled header (without breaking buttons disable)
+      const board = getBoard(game);
+      await board.update({
+        content: `🛑 **Deal or No Deal cancelled** by ${mention(message.author.id)}.\n\n` + boardText({ ...game, phase: "ended" }),
         components: buildKeepButtons(game, { disabled: true }),
       });
 
+      manager.stop({ guildId: game.guildId });
       await message.channel.send("🛑 Cancelled. You can still run `!dondreveal` to show the snapshot prizes.");
     },
     "!dondcancel — cancel Deal or No Deal",
@@ -622,7 +752,7 @@ export function registerDealOrNoDeal(register) {
     async ({ message }) => {
       const snap = LAST_BY_GUILD.get(message.guildId);
       if (!snap) {
-        await message.reply("No previous Deal or No Deal snapshot to reveal yet.");
+        await reply({ message }, "No previous Deal or No Deal snapshot to reveal yet.");
         return;
       }
       await message.channel.send(revealAllText(snap));
