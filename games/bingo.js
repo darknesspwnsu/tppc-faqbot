@@ -1,11 +1,11 @@
 // games/bingo.js
 //
-// Kanto Region Bingo (generic range bingo):
-// - One bingo game active for the whole bot (global singleton)
-// - !bingo <min-max> [optional drawn list]  -> start/resume
-// - !draw                                  -> draw next number (no repeats) + show list
-// - !getbingolist                           -> show drawn numbers (comma-separated)
-// - !cancelbingo                            -> admin or starter only
+// Guild-scoped Bingo (range draw bingo):
+// - One bingo game per guild (NOT channel-scoped)
+// - Start/resume:   !bingo <min-max> [optional drawn list]
+// - Draw next:      !bingodraw   (alias: !draw, hidden)
+// - Show list:      !bingolist   (alias: !getbingolist, hidden)
+// - Cancel:         !cancelbingo (and framework aliases !bingostatus/!bingohelp/!bingorules etc)
 //
 // Resume format examples:
 //   !bingo 1-151
@@ -16,20 +16,23 @@
 // Notes:
 // - Range must be positive integers, min < max
 // - Draw list must be unique, within range, and cannot exceed range size
-// - If all numbers are already drawn, the game auto-ends.
+// - If all numbers are already drawn, the game auto-ends
+// - Commands can be used from ANY channel in the guild (by design)
 
-import { isAdminOrPrivileged } from "../auth.js";
+import {
+  createGameManager,
+  withGameSubcommands,
+  makeGameQoL,
+  reply,
+  mention,
+  channelMention,
+  nowMs,
+  clampInt,
+  requireActive,
+  requireCanManage,
+} from "./framework.js";
 
-const ACTIVE = {
-  // global singleton (only one bingo at a time)
-  state: null
-  // state = {
-  //   guildId, channelId, creatorId,
-  //   min, max, size,
-  //   drawn: number[],        // in draw order
-  //   drawnSet: Set<number>,  // fast checks
-  // }
-};
+/* --------------------------------- parsing -------------------------------- */
 
 function parseRangeToken(token) {
   // Accept "1-151" (also allow en-dash/em-dash)
@@ -46,11 +49,8 @@ function parseRangeToken(token) {
 
 function parseDrawList(raw) {
   // Accept comma-separated and/or whitespace separated numbers.
-  // Examples:
-  //  "1,2,3" / "1, 2, 3" / "1 2 3" / "1,2 3"
   const s = String(raw ?? "").trim();
   if (!s) return [];
-
   return s
     .split(/[,\s]+/g)
     .map((x) => x.trim())
@@ -58,23 +58,9 @@ function parseDrawList(raw) {
     .map((x) => Number(x));
 }
 
-function canManageBingo(message, state) {
-  if (!state) return false;
-  if (isAdminOrPrivileged(message)) return true;
-  return message.author?.id && message.author.id === state.creatorId;
-}
-
-function gameLocationLine(state) {
-  return `Started by <@${state.creatorId}> in <#${state.channelId}>`;
-}
-
 function fmtList(arr) {
   if (!arr || arr.length === 0) return "(none yet)";
   return arr.join(", ");
-}
-
-function randChoice(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function buildRemainingArray(state) {
@@ -85,223 +71,270 @@ function buildRemainingArray(state) {
   return out;
 }
 
-async function endGame(message, reason) {
-  const st = ACTIVE.state;
-  ACTIVE.state = null;
-  if (st) {
-    await message.channel.send(
-      `🏁 **Bingo ended** (${reason}).\nDrawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}`
-    );
-  } else {
-    await message.channel.send(`🏁 **Bingo ended** (${reason}).`);
-  }
+function randChoice(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/* --------------------------------- text ---------------------------------- */
+
+function helpText(id) {
+  return (
+    `**Bingo help**\n` +
+    `• \`!${id} <min-max> [optional drawnlist]\` — start/resume (example: \`!${id} 1-151 5,12,77\`)\n` +
+    `• \`!${id}draw\` — draw a new number (no repeats)\n` +
+    `• \`!${id}list\` — show drawn list\n` +
+    `• \`!${id}status\` — show current game info\n` +
+    `• \`!end${id}\` — end immediately (host/admin)\n\n` +
+    `• \`!cancel${id}\` — cancel (host/admin)\n\n` +
+    `Shortcuts:\n` +
+    `• \`!${id} help\`, \`!${id} rules\` also work`
+  );
+}
+
+function rulesText(id) {
+  return (
+    `**Bingo rules (simple)**\n` +
+    `1) Start a game with a number range, like \`!${id} 1-151\`.\n` +
+    `2) Each time you run \`!${id}draw\`, the bot picks a random number in that range that hasn’t been drawn yet.\n` +
+    `3) The bot keeps a running list of everything drawn.\n` +
+    `4) When all numbers are drawn, the game ends automatically.\n\n` +
+    `Notes:\n` +
+    `• This bingo is **guild-scoped**, not channel-scoped — you can draw in one channel and post the list in another.\n` +
+    `• Host/admin can cancel anytime with \`!cancel${id}\`.`
+  );
+}
+
+/* --------------------------------- game ---------------------------------- */
+
 export function registerBingo(register) {
-  // !bingo <min-max> [optional drawn list]
-  register(
-    "!bingo",
-    async ({ message, rest }) => {
-      if (!message.guildId) return;
+  const id = "bingo";
+  const prettyName = "Bingo";
 
-      const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
+  // Guild-scoped (one per server). Not channel-scoped by design.
+  const manager = createGameManager({ id, prettyName, scope: "guild" });
 
-      if (tokens.length === 0 || tokens[0].toLowerCase() === "help") {
-        await message.reply(
-          "**Bingo help**\n" +
-          "`!bingo <min-max> [optional drawnlist]` — start/resume\n" +
-          "Examples: `!bingo 1-151` | `!bingo 1-151 5,12,77`\n" +
-          "`!draw` — draw a new number\n" +
-          "`!getbingolist` — show drawn list\n" +
-          "`!cancelbingo` — cancel (admin/starter)"
-        );
+  // IMPORTANT: we intentionally do NOT enforce same-channel usage for Bingo.
+  // The framework QoL helpers call requireSameChannel internally, so we override
+  // the manager channel guard to always allow.
+  manager.isSameChannel = () => true;
+
+  async function endGame(ctx, state, reason) {
+    manager.stop(ctx);
+    await reply(ctx, `🏁 **Bingo ended** (${reason}).\nDrawn (${state.drawn.length}/${state.size}): ${fmtList(state.drawn)}`);
+  }
+
+  async function drawNext({ message }) {
+    const st = await requireActive({ message, guildId: message.guildId, channelId: message.channelId }, manager);
+    if (!st) return;
+
+    const remainingArr = buildRemainingArray(st);
+    if (remainingArr.length === 0) {
+      await endGame({ message, guildId: message.guildId }, st, "no numbers left to draw");
+      return;
+    }
+
+    const pick = randChoice(remainingArr);
+    st.drawn.push(pick);
+    st.drawnSet.add(pick);
+
+    const remaining = st.size - st.drawn.length;
+
+    await message.channel.send(
+      `🎲 **Draw:** **${pick}**\n` +
+        `Drawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}\n` +
+        `Remaining: **${remaining}**`
+    );
+
+    if (remaining <= 0) {
+      await endGame({ message, guildId: message.guildId }, st, "no numbers left to draw");
+    }
+  }
+
+  async function showList({ message }) {
+    const st = manager.getState({ message, guildId: message.guildId });
+    if (!st) {
+      await reply({ message }, manager.noActiveText());
+      return;
+    }
+    await reply({ message }, `Drawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}`);
+  }
+
+  async function startOrResume({ message, rest }) {
+    if (!message.guildId) return;
+
+    const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) {
+      await reply({ message }, `Usage: \`!${id} <min-max> [optional drawnlist]\`\nTry: \`!${id}help\``);
+      return;
+    }
+
+    const range = parseRangeToken(tokens[0]);
+    if (!range) {
+      await reply({ message }, "❌ Invalid range. Use `min-max` (example: `1-151`).");
+      return;
+    }
+
+    const min = clampInt(range.min, 1, 1_000_000_000);
+    const max = clampInt(range.max, 1, 1_000_000_000);
+    if (min == null || max == null) {
+      await reply({ message }, "❌ Range values must be **positive integers**.");
+      return;
+    }
+    if (min >= max) {
+      await reply({ message }, "❌ Invalid range. Must be `min < max` (example: `1-151`).");
+      return;
+    }
+
+    const size = max - min + 1;
+    if (size > 50_000) {
+      await reply({ message }, "❌ Range too large (max 50,000 numbers).");
+      return;
+    }
+
+    // Optional drawn list is everything after the range token
+    const drawnRaw = tokens.slice(1).join(" ").trim();
+    const drawnNums = parseDrawList(drawnRaw);
+
+    // Validate drawn list
+    const drawn = [];
+    const drawnSet = new Set();
+
+    for (const x of drawnNums) {
+      if (!Number.isFinite(x) || !Number.isInteger(x)) {
+        await reply({ message }, "❌ Resume list contains a non-integer value.");
         return;
       }
-
-      const rangeTok = tokens[0];
-      const range = parseRangeToken(rangeTok);
-      if (!range) {
-        await message.reply("❌ Invalid range. Use `min-max` (example: `1-151`).");
+      if (x < min || x > max) {
+        await reply({ message }, `❌ Resume list value \`${x}\` is out of range (${min}-${max}).`);
         return;
       }
-
-      const { min, max } = range;
-
-      if (!Number.isInteger(min) || !Number.isInteger(max) || min <= 0 || max <= 0) {
-        await message.reply("❌ Range values must be **positive integers**.");
+      if (drawnSet.has(x)) {
+        await reply({ message }, `❌ Resume list contains a duplicate: \`${x}\`.`);
         return;
       }
-      if (min >= max) {
-        await message.reply("❌ Invalid range. Must be `min < max` (example: `1-151`).");
-        return;
-      }
+      drawnSet.add(x);
+      drawn.push(x);
+    }
 
-      const size = max - min + 1;
-      if (size <= 0) {
-        await message.reply("❌ Invalid range size.");
-        return;
-      }
-      if (size > 50_000) {
-        await message.reply("❌ Range too large (max 50,000 numbers).");
-        return;
-      }
+    if (drawn.length > size) {
+      await reply({ message }, "❌ Resume list cannot be larger than the range size.");
+      return;
+    }
 
-      // If a game is active, block starting a new one.
-      // (This is your “only one game at a time” rule, global singleton.)
-      const existing = ACTIVE.state;
-      if (existing) {
-        await message.reply(
-          `⚠️ A bingo game is already running.\n` +
-            `${gameLocationLine(existing)}\n` +
-            `Use \`!draw\`, \`!getbingolist\`, or \`!cancelbingo\`.`
-        );
-        return;
-      }
-
-      // Optional drawn list is everything after the range token
-      const drawnRaw = tokens.slice(1).join(" ").trim();
-      const drawnNums = parseDrawList(drawnRaw);
-
-      // Validate drawn list
-      const drawn = [];
-      const drawnSet = new Set();
-
-      for (const x of drawnNums) {
-        if (!Number.isFinite(x) || !Number.isInteger(x)) {
-          await message.reply("❌ Resume list contains a non-integer value.");
-          return;
-        }
-        if (x < min || x > max) {
-          await message.reply(`❌ Resume list value \`${x}\` is out of range (${min}-${max}).`);
-          return;
-        }
-        if (drawnSet.has(x)) {
-          await message.reply(`❌ Resume list contains a duplicate: \`${x}\`.`);
-          return;
-        }
-        drawnSet.add(x);
-        drawn.push(x);
-      }
-
-      if (drawn.length > size) {
-        await message.reply("❌ Resume list cannot be larger than the range size.");
-        return;
-      }
-
-      // Create state
-      ACTIVE.state = {
+    const start = manager.tryStart(
+      { message, guildId: message.guildId, channelId: message.channelId },
+      {
         guildId: message.guildId,
-        channelId: message.channelId,
+        startChannelId: message.channelId,
         creatorId: message.author.id,
         min,
         max,
         size,
         drawn,
-        drawnSet
-      };
-
-      // Auto-end if already complete
-      if (drawn.length === size) {
-        await endGame(message, "all numbers already drawn (resume complete)");
-        return;
+        drawnSet,
+        createdAtMs: nowMs(),
       }
+    );
 
-      const remaining = size - drawn.length;
-      const resumeNote = drawn.length ? ` (resumed with ${drawn.length} already drawn)` : "";
-      await message.channel.send(
-        `✅ **Bingo started** — Range: **${min}-${max}** (${size} total)${resumeNote}\n` +
-          `Remaining: **${remaining}**\n` +
-          `Draw with \`!draw\`. View list with \`!getbingolist\`. Cancel with \`!cancelbingo\`.`
+    if (!start.ok) {
+      await reply({ message }, start.errorText);
+      return;
+    }
+
+    const st = start.state;
+
+    // Auto-end if already complete
+    if (st.drawn.length === st.size) {
+      await endGame({ message, guildId: message.guildId }, st, "all numbers already drawn (resume complete)");
+      return;
+    }
+
+    const remaining = st.size - st.drawn.length;
+    const resumeNote = st.drawn.length ? ` (resumed with ${st.drawn.length} already drawn)` : "";
+    const startCh = st.startChannelId ? channelMention(st.startChannelId) : "(unknown channel)";
+
+    await message.channel.send(
+      `✅ **Bingo started** — Range: **${st.min}-${st.max}** (${st.size} total)${resumeNote}\n` +
+        `Host: ${mention(st.creatorId)} • Started in: ${startCh}\n` +
+        `Remaining: **${remaining}**\n` +
+        `Draw with \`!${id}draw\`. View list with \`!${id}list\`. Cancel with \`!cancel${id}\`.`
+    );
+  }
+
+  /* ------------------------------ registrations ------------------------------ */
+
+  // Framework-standard QoL commands: !bingohelp/!bingorules/!bingostatus/!cancelbingo (+ !endbingo hidden)
+  makeGameQoL(register, {
+    manager,
+    id,
+    prettyName,
+    helpText: helpText(id),
+    rulesText: rulesText(id),
+    manageDeniedText: "Nope — only admins or the bingo starter can use that.",
+    renderStatus: (st) => {
+      const started = st.startChannelId ? channelMention(st.startChannelId) : "(unknown channel)";
+      const remaining = st.size - st.drawn.length;
+      return (
+        `✅ **Bingo is running** (guild-scoped)\n` +
+        `Range: **${st.min}-${st.max}** (${st.size} total)\n` +
+        `Drawn: **${st.drawn.length}** • Remaining: **${remaining}**\n` +
+        `Host: ${mention(st.creatorId)} • Started in: ${started}\n` +
+        `Commands can be used from **any channel** in this server.`
       );
     },
-    "!bingo <min-max> [drawnlist] — starts/resumes a bingo draw (example: `!bingo 1-151 5,12,77`)",
+    cancel: async (st, ctx) => {
+      await endGame({ message: ctx.message, guildId: ctx.message.guildId }, st, "cancelled");
+    },
+    end: async (st, ctx) => {
+      await endGame({ message: ctx.message, guildId: ctx.message.guildId }, st, "ended");
+    },
+  });
+
+  // Primary command: !bingo (supports "!bingo help" and "!bingo rules")
+  register(
+    `!${id}`,
+    withGameSubcommands({
+      helpText: helpText(id),
+      rulesText: rulesText(id),
+      onStart: startOrResume,
+      onStatus: async ({ message }) => {
+        // Route to the framework status command behavior for consistent output.
+        const st = manager.getState({ message, guildId: message.guildId });
+        if (!st) {
+          await reply({ message }, manager.noActiveText());
+          return;
+        }
+        const remaining = st.size - st.drawn.length;
+        const started = st.startChannelId ? channelMention(st.startChannelId) : "(unknown channel)";
+        await reply(
+          { message },
+          `✅ **Bingo is running** (guild-scoped)\n` +
+            `Range: **${st.min}-${st.max}** (${st.size} total)\n` +
+            `Drawn: **${st.drawn.length}** • Remaining: **${remaining}**\n` +
+            `Host: ${mention(st.creatorId)} • Started in: ${started}`
+        );
+      },
+    }),
+    `!${id} <min-max> [drawnlist] — start/resume Bingo (example: \`!${id} 1-151 5,12,77\`)`,
     { helpTier: "primary" }
   );
 
-  // !draw
+  // Namespaced commands (visible)
   register(
-    "!draw",
+    `!${id}draw`,
     async ({ message }) => {
-      const st = ACTIVE.state;
-      if (!st) {
-        await message.reply("No active bingo game. Start one with `!bingo 1-151`.");
-        return;
-      }
-
-      // Restrict draws to same guild (since state stores channel/guild)
-      if (message.guildId !== st.guildId) {
-        await message.reply(`A bingo game is running elsewhere. ${gameLocationLine(st)}.`);
-        return;
-      }
-
-      const remainingArr = buildRemainingArray(st);
-      if (remainingArr.length === 0) {
-        await endGame(message, "no numbers left to draw");
-        return;
-      }
-
-      const pick = randChoice(remainingArr);
-      st.drawn.push(pick);
-      st.drawnSet.add(pick);
-
-      const remaining = st.size - st.drawn.length;
-
-      await message.channel.send(
-        `🎲 **Draw:** **${pick}**\n` +
-          `Drawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}\n` +
-          `Remaining: **${remaining}**`
-      );
-
-      if (remaining <= 0) {
-        await endGame(message, "no numbers left to draw");
-      }
+      await drawNext({ message });
     },
-    "!draw — draws a new number and prints the draw list",
-    { hideFromHelp: true }
+    `• !${id}draw — draw a new number (no repeats)`,
+    { helpTier: "normal" }
   );
 
-  // !getbingolist
   register(
-    "!getbingolist",
+    `!${id}list`,
     async ({ message }) => {
-      const st = ACTIVE.state;
-      if (!st) {
-        await message.reply("No active bingo game.");
-        return;
-      }
-      if (message.guildId !== st.guildId) {
-        await message.reply(`A bingo game is running elsewhere. ${gameLocationLine(st)}.`);
-        return;
-      }
-
-      await message.reply(`Drawn (${st.drawn.length}/${st.size}): ${fmtList(st.drawn)}`);
+      await showList({ message });
     },
-    "!getbingolist — prints the drawn numbers in order",
-    { hideFromHelp: true }
-  );
-
-  // !cancelbingo (admin or starter)
-  register(
-    "!cancelbingo",
-    async ({ message }) => {
-      const st = ACTIVE.state;
-      if (!st) {
-        await message.reply("No active bingo game to cancel.");
-        return;
-      }
-      if (message.guildId !== st.guildId) {
-        await message.reply(`A bingo game is running elsewhere. ${gameLocationLine(st)}.`);
-        return;
-      }
-
-      if (!canManageBingo(message, st)) {
-        await message.reply("Nope — only admins or the bingo starter can use that.");
-        return;
-      }
-
-      await endGame(message, "cancelled");
-    },
-    "!cancelbingo — cancels the current bingo (admin or starter)",
-    { admin: true }
+    `• !${id}list — show drawn numbers`,
+    { helpTier: "normal" }
   );
 }
