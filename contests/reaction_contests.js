@@ -67,6 +67,34 @@ async function finalizeCollector(messageId, reason = "timer") {
   }
 }
 
+function contestStartHelpText() {
+  return [
+    "**Contest Start — Help**",
+    "",
+    "**Start:**",
+    "• `!conteststart <time> [quota]`",
+    "• `!conteststart <mode> <time> [quota]`",
+    "",
+    "**Modes:**",
+    "• `list` (default) — prints a space-separated list of entrants",
+    "• `choose` — picks 1 winner",
+    "• `elim` — runs elimination until 1 remains (2s between rounds)",
+    "",
+    "**Time:**",
+    "• `30sec`, `5min`, `1hour`",
+    "",
+    "**Quota (optional):**",
+    "• Ends early once N entrants have reacted",
+    "",
+    "**Examples:**",
+    "• `!conteststart 2min`",
+    "• `!conteststart list 1min 20`",
+    "• `!conteststart choose 30sec`",
+    "• `!conteststart elim 2min 10`",
+    ""
+  ].join("\n");
+}
+
 export function installReactionHooks(client) {
   if (reactionHooksInstalled) return;
   reactionHooksInstalled = true;
@@ -159,6 +187,13 @@ export function registerReactionContests(register) {
     "!conteststart",
     async ({ message, rest }) => {
       if (!message.guildId) return;
+
+      const t = rest.trim().toLowerCase();
+      if (!t || t === "help" || t === "h" || t === "?") {
+        await message.reply(contestStartHelpText());
+        return;
+      }
+
       if (!canManageContest(message)) return;
 
       const tokens = rest.trim().split(/\s+/).filter(Boolean);
