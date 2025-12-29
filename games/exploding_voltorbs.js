@@ -6,13 +6,14 @@
 // - Default mode: suddendeath (first boom ends the game)
 // - Optional mode: elim (boom eliminates holder; continues until one player remains)
 // - Someone "holds" the Voltorb, can pass via mention (cannot pass to self)
-// - Optional flag: nopingpong (elim mode only; prevents immediate pass-back while 3+ alive)
+// - Optional flag: nopingpong (prevents immediate pass-back while 3+ alive)
 //
 // UX improvements:
 // - Cooloff between rounds (10-15s) before next holder announcement + scheduling
 // - In elim mode: show remaining players after each explosion
 // - End game cleanly to prevent “extra message after win”
 // - Add spacing between successive bot messages by bundling round output into fewer sends
+// - FIX: do not “tick” for next holder before "Next up" message (suppress scares during cooloff)
 
 import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import { isAdminOrPrivileged } from "../auth.js";
@@ -180,13 +181,16 @@ function scheduleExplosion(message, guildId) {
       return;
     }
 
-    // Round cooloff + next holder
+    // Round cooloff + next holder (FIX: do not set holderId until round begins)
     const remainingLine = `Remaining: ${formatRemainingList(g.aliveIds)}`;
     const cooloffMs = randCooloffMs();
     const cooloffSec = Math.round(cooloffMs / 1000);
 
     const nextHolderId = randChoiceFromSet(g.aliveIds);
-    g.holderId = nextHolderId;
+
+    // Enter cooloff state; suppress scare ticks; hold next holder pending
+    g.pendingHolderId = nextHolderId;
+    g.coolingOff = true;
 
     // Reset pingpong memory each explosion (new "round" baseline)
     // This prevents weird edge cases where lastHolderId points to someone already eliminated.
@@ -201,6 +205,16 @@ function scheduleExplosion(message, guildId) {
     setTimeout(async () => {
       const still = activeGames.get(guildId);
       if (!still) return;
+
+      // Round begins now
+      if (still.pendingHolderId) {
+        still.holderId = still.pendingHolderId;
+      } else {
+        // Fallback: should never happen, but stay safe
+        still.holderId = randChoiceFromSet(still.aliveIds);
+      }
+      still.pendingHolderId = null;
+      still.coolingOff = false;
 
       await message.channel.send(`🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
       scheduleExplosion(message, guildId);
@@ -265,6 +279,9 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg,
     const g = activeGames.get(guildId);
     if (!g) return;
 
+    // FIX: don't “tick” during the between-round cooloff
+    if (g.coolingOff) return;
+
     if (Math.random() < 0.30) {
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
       message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
@@ -281,7 +298,9 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg,
     maxSeconds,
     explosionTimeout: null,
     scareInterval,
-    noPingPong: !!flags.noPingPong
+    noPingPong: !!flags.noPingPong,
+    coolingOff: false,
+    pendingHolderId: null
   });
 
   const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
@@ -358,6 +377,9 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
     const g = activeGames.get(guildId);
     if (!g) return;
 
+    // FIX: don't “tick” during the between-round cooloff
+    if (g.coolingOff) return;
+
     if (Math.random() < 0.30) {
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
       message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
@@ -374,7 +396,9 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
     maxSeconds,
     explosionTimeout: null,
     scareInterval,
-    noPingPong: !!flags.noPingPong
+    noPingPong: !!flags.noPingPong,
+    coolingOff: false,
+    pendingHolderId: null
   });
 
   const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
