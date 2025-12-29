@@ -72,6 +72,17 @@ async function finalizeCollector(messageId, reason = "timer") {
 
   activeCollectorsByMessage.delete(messageId);
 
+  // Edit the original entry message like the old behavior
+  try {
+    const channel = await state.client.channels.fetch(state.channelId);
+    if (channel?.isTextBased?.()) {
+      const msg = await channel.messages.fetch(messageId);
+      await msg.edit("Entries have closed for this contest.");
+    }
+  } catch (e) {
+    console.warn("Failed to edit contest message:", e);
+  }
+
   const userIds = [...state.entrants];
   if (typeof state.onDone === "function") {
     try { state.onDone(new Set(userIds), reason); } catch {}
@@ -177,6 +188,7 @@ export async function collectEntrantsByReactions({
     const timeout = setTimeout(() => finalizeCollector(joinMsg.id, "timer"), durationMs);
 
     activeCollectorsByMessage.set(joinMsg.id, {
+      client: message.client,
       guildId: message.guildId,
       channelId: message.channelId,
       endsAtMs: Date.now() + durationMs,
