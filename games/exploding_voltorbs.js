@@ -2,15 +2,22 @@
 //
 // Exploding Voltorbs:
 // - One game active per guild
-// - Starter provides a taglist (mentions). Only tagged players can play.
+// - Starter provides a taglist (mentions) OR uses reaction join
 // - Default mode: suddendeath (first boom ends the game)
 // - Optional mode: elim (boom eliminates holder; continues until one player remains)
 // - Someone "holds" the Voltorb, can pass via mention (cannot pass to self)
+// - Optional flag: nopingpong (elim mode only; prevents immediate pass-back while 3+ alive)
+//
+// UX improvements:
+// - Cooloff between rounds (10-15s) before next holder announcement + scheduling
+// - In elim mode: show remaining players after each explosion
+// - End game cleanly to prevent “extra message after win”
+// - Add spacing between successive bot messages by bundling round output into fewer sends
 
 import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
-const activeGames = new Map(); // guildId -> { holderId, aliveIds:Set, allowedIds:Set, mode, minSeconds, maxSeconds, explosionTimeout, scareInterval }
+const activeGames = new Map(); // guildId -> game
 
 const scareMessages = [
   "⚡ The Voltorb crackles ominously...",
@@ -20,21 +27,27 @@ const scareMessages = [
   "🧨 The fuse looks... shorter than before."
 ];
 
+const ROUND_COOLOFF_MIN_SEC = 10;
+const ROUND_COOLOFF_MAX_SEC = 15;
+
 function evHelpText() {
   return [
     "**Exploding Voltorbs — Help**",
     "",
     "**Start game:**",
-    "• Using a list: `!ev [min-max] [mode] @user1 @user2 ...`",
-    "  – Example: `!ev 30-90s elim @a @b @c`",
+    "• Using a list: `!ev [min-max] [mode] [nopingpong] @user1 @user2 ...`",
+    "  – Example: `!ev 30-90s elim nopingpong @a @b @c`",
     "",
-    "• Using reactions: `!ev [min-max] [mode] [join_window]`",
+    "• Using reactions: `!ev [min-max] [mode] [nopingpong] [join_window]`",
     "  – Join window is between 10 to 120 seconds",
-    "  – Example: `!ev 10-25s elim 60s`",
+    "  – Example: `!ev 10-25s elim nopingpong 60s`",
     "",
     "**Modes:**",
     "• `elim` — exploding player is eliminated; game continues until one remains",
     "• `suddendeath` (or `sd`) — first person to explode loses; game ends",
+    "",
+    "**Optional flags:**",
+    "• `nopingpong` — prevents immediate pass-back while 3+ players remain",
     "",
     "**During the game:**",
     "• `!pass @user` — the current holder can pass the Voltorb to a participant",
@@ -44,7 +57,6 @@ function evHelpText() {
 }
 
 function parseMentionToken(token) {
-  // Discord mention tokens look like <@123> or <@!123>
   const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
   return m ? m[1] : null;
 }
@@ -77,19 +89,43 @@ function parseJoinWindowToken(token) {
   return Number(m[1]);
 }
 
+function parseFlagToken(token) {
+  if (!token) return null;
+  const t = String(token).trim().toLowerCase();
+  if (t === "nopingpong" || t === "nopong" || t === "antipong") return "nopingpong";
+  return null;
+}
+
 function randChoiceFromSet(set) {
   const arr = Array.from(set);
+  if (!arr.length) return null;
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function clearGameTimers(game) {
   if (!game) return;
-  try {
-    if (game.explosionTimeout) clearTimeout(game.explosionTimeout);
-  } catch {}
-  try {
-    if (game.scareInterval) clearInterval(game.scareInterval);
-  } catch {}
+  try { if (game.explosionTimeout) clearTimeout(game.explosionTimeout); } catch {}
+  try { if (game.scareInterval) clearInterval(game.scareInterval); } catch {}
+}
+
+function endGame(guildId) {
+  const game = activeGames.get(guildId);
+  if (!game) return null;
+  clearGameTimers(game);
+  activeGames.delete(guildId);
+  return game;
+}
+
+function formatRemainingList(aliveIds) {
+  const ids = Array.from(aliveIds || []);
+  if (!ids.length) return "(none)";
+  return ids.map((id) => `<@${id}>`).join(", ");
+}
+
+function randCooloffMs() {
+  const sec =
+    Math.floor(Math.random() * (ROUND_COOLOFF_MAX_SEC - ROUND_COOLOFF_MIN_SEC + 1)) + ROUND_COOLOFF_MIN_SEC;
+  return sec * 1000;
 }
 
 function scheduleExplosion(message, guildId) {
@@ -110,45 +146,69 @@ function scheduleExplosion(message, guildId) {
 
     const blownId = g.holderId;
 
-    await message.channel.send(
-      `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!`
-    );
-
     if (g.mode === "suddendeath") {
-      // End immediately after first boom
-      clearGameTimers(g);
-      activeGames.delete(guildId);
+      // End immediately after first boom — kill timers first to prevent extra messages
+      endGame(guildId);
+
+      await message.channel.send(
+        `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
+        `🏁 **Game over!** (suddendeath)`
+      );
       return;
     }
 
-    // Elim mode: remove blown player and continue until one remains
+    // elim mode
     g.aliveIds.delete(blownId);
 
+    // If game is now won, end cleanly BEFORE sending final
     if (g.aliveIds.size <= 1) {
       const winnerId = randChoiceFromSet(g.aliveIds);
+      endGame(guildId);
+
       if (winnerId) {
-        await message.channel.send(`🏆 <@${winnerId}> wins **Exploding Voltorbs**!`);
+        await message.channel.send(
+          `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
+          `Remaining: ${formatRemainingList(new Set([winnerId]))}\n\n` +
+          `🏆 <@${winnerId}> wins **Exploding Voltorbs**!`
+        );
       } else {
-        await message.channel.send("🏁 Game ended — no winner (everyone exploded?).");
+        await message.channel.send(
+          `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
+          `🏁 Game ended — no winner (everyone exploded?).`
+        );
       }
-      clearGameTimers(g);
-      activeGames.delete(guildId);
       return;
     }
 
-    // Choose next holder from remaining alive players
-    g.holderId = randChoiceFromSet(g.aliveIds);
+    // Round cooloff + next holder
+    const remainingLine = `Remaining: ${formatRemainingList(g.aliveIds)}`;
+    const cooloffMs = randCooloffMs();
+    const cooloffSec = Math.round(cooloffMs / 1000);
+
+    const nextHolderId = randChoiceFromSet(g.aliveIds);
+    g.holderId = nextHolderId;
+
+    // Reset pingpong memory each explosion (new "round" baseline)
+    // This prevents weird edge cases where lastHolderId points to someone already eliminated.
+    g.lastHolderId = null;
 
     await message.channel.send(
-      `🔄 Next up: <@${g.holderId}> is now holding the Voltorb! (elim continues)`
+      `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
+      `${remainingLine}\n\n` +
+      `⏳ Next round in **${cooloffSec}s**...`
     );
 
-    // Schedule next explosion round
-    scheduleExplosion(message, guildId);
+    setTimeout(async () => {
+      const still = activeGames.get(guildId);
+      if (!still) return;
+
+      await message.channel.send(`🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
+      scheduleExplosion(message, guildId);
+    }, cooloffMs);
   }, explodeDelayMs);
 }
 
-export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg) {
+export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
@@ -157,7 +217,6 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
     return;
   }
 
-  // Only players explicitly in idSet are enrolled (starter is NOT auto-enrolled).
   const allowedIds = new Set([...idSet].filter(Boolean));
   const aliveIds = new Set(allowedIds);
 
@@ -195,9 +254,7 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
     }
   }
 
-  const mode = modeArg || "suddendeath"; // default per your preference
-
-  // Pick random initial holder from enrolled players
+  const mode = modeArg || "suddendeath";
   const holderId = randChoiceFromSet(aliveIds);
   if (!holderId) {
     message.reply("❌ Could not choose a starting holder.");
@@ -208,40 +265,39 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg)
     const g = activeGames.get(guildId);
     if (!g) return;
 
-    if (Math.random() < 0.35) {
+    if (Math.random() < 0.30) {
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
-      message.channel.send(
-        `${scare}\n` +
-        `━━━━━━━━━━━━━━━━━━━\n` +
-        `👀 <@${g.holderId}> is holding the Voltorb.\n` +
-        `━━━━━━━━━━━━━━━━━━━`
-      );
+      message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
     }
   }, 8000);
 
   activeGames.set(guildId, {
     holderId,
+    lastHolderId: null, // needed for nopingpong
     allowedIds,
     aliveIds,
     mode,
     minSeconds,
     maxSeconds,
     explosionTimeout: null,
-    scareInterval
+    scareInterval,
+    noPingPong: !!flags.noPingPong
   });
+
+  const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
 
   message.channel.send(
     `⚡ **Exploding Voltorbs started!**\n` +
-      `🎮 Mode: **${mode}**\n` +
+      `🎮 Mode: **${mode}**${flagLine}\n` +
       `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
-      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}`
+      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}\n\n` +
       `💣 <@${holderId}> is holding the Voltorb!`
   );
 
   scheduleExplosion(message, guildId);
 }
 
-export function startExplodingVoltorbs(message, rangeArg, modeArg) {
+export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
@@ -250,8 +306,6 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
     return;
   }
 
-  // Mention-based enrollment: ONLY mentioned users are enrolled.
-  // (Starter is NOT auto-enrolled unless they tag themselves.)
   const mentioned = getMentionedUsers(message);
   const allowedIds = new Set();
   for (const u of mentioned) {
@@ -294,11 +348,9 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
     }
   }
 
-  const mode = modeArg || "suddendeath"; // default per your request
-
+  const mode = modeArg || "suddendeath";
   const aliveIds = new Set(allowedIds);
 
-  // Pick random initial holder from tagged players
   const holderId = randChoiceFromSet(aliveIds);
   if (!holderId) return;
 
@@ -306,32 +358,35 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg) {
     const g = activeGames.get(guildId);
     if (!g) return;
 
-    if (Math.random() < 0.35) {
+    if (Math.random() < 0.30) {
       const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
-      message.channel.send(`${scare}\n👀 <@${g.holderId}> is holding the Voltorb.`);
+      message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
     }
   }, 8000);
 
   activeGames.set(guildId, {
     holderId,
+    lastHolderId: null, // needed for nopingpong
     allowedIds,
     aliveIds,
     mode,
     minSeconds,
     maxSeconds,
     explosionTimeout: null,
-    scareInterval
+    scareInterval,
+    noPingPong: !!flags.noPingPong
   });
+
+  const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
 
   message.channel.send(
     `⚡ **Exploding Voltorbs started!**\n` +
-      `🎮 Mode: **${mode}**\n` +
+      `🎮 Mode: **${mode}**${flagLine}\n` +
       `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
-      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}\n` +
+      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}\n\n` +
       `💣 <@${holderId}> is holding the Voltorb!`
   );
 
-  // Schedule first explosion
   scheduleExplosion(message, guildId);
 }
 
@@ -346,16 +401,10 @@ export function passVoltorb(message) {
   }
 
   // Only participants can interact with the game
-  if (game.allowedIds && !game.allowedIds.has(message.author?.id)) {
-    //message.reply("❌ You’re not in this game’s taglist.");
-    return;
-  }
+  if (game.allowedIds && !game.allowedIds.has(message.author?.id)) return;
 
   // Only the current holder can pass
-  if (game.holderId !== message.author?.id) {
-    //message.reply("❌ You’re not holding the Voltorb!");
-    return;
-  }
+  if (game.holderId !== message.author?.id) return;
 
   const target = message.mentions?.users?.first?.();
   if (!target) {
@@ -378,16 +427,28 @@ export function passVoltorb(message) {
     return;
   }
 
-  // In elim mode, cannot pass to someone already eliminated
   if (game.mode === "elim" && game.aliveIds && !game.aliveIds.has(target.id)) {
     message.reply("❌ That player has already been eliminated.");
     return;
   }
 
+  // nopingpong: prevent immediate pass-back while 3+ active players remain (any mode)
+  // ignored at 2 players, since ping-pong is unavoidable
+  if (game.noPingPong && game.aliveIds?.size >= 3) {
+    // lastHolderId is who passed it to the current holder on the previous pass
+    if (game.lastHolderId && target.id === game.lastHolderId) {
+      message.reply("🚫 No ping-pong! You can’t pass it straight back — pick someone else.");
+      return;
+    }
+  }
+
+  // Update pingpong memory + holder
+  game.lastHolderId = message.author.id;
   game.holderId = target.id;
 
   message.channel.send(
-    `🔁 <@${message.author.id}> passed the Voltorb to <@${target.id}>!\n` + `💣 The ticking continues...`
+    `🔁 <@${message.author.id}> passed the Voltorb to <@${target.id}>!\n\n` +
+      `💣 The ticking continues...`
   );
 }
 
@@ -401,9 +462,7 @@ export function endVoltorbGame(message, { reason = "ended" } = {}) {
     return;
   }
 
-  clearGameTimers(game);
-  activeGames.delete(guildId);
-
+  endGame(guildId);
   message.channel.send(`🧯 Voltorb game ${reason}.`);
 }
 
@@ -416,25 +475,15 @@ export function registerExplodingVoltorbs(register) {
     async ({ message, rest }) => {
       if (!message.guild) return;
 
-      // Tokens can include optional range + optional mode, in either order.
-      // Examples:
-      //   !ev @a @b
-      //   !ev elim @a @b
-      //   !ev 10-30s @a @b
-      //   !ev 10-30s elim @a @b
-      //   !ev elim 10-30s @a @b
-
       const tokens = rest.trim().split(/\s+/).filter(Boolean);
 
-      // `!ev` with no arguments
       if (tokens.length === 0) {
         await message.reply(
-          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
+          "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
         );
         return;
       }
 
-      // `!ev help`
       if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
         await message.reply(evHelpText());
         return;
@@ -443,19 +492,22 @@ export function registerExplodingVoltorbs(register) {
       let rangeArg = null;
       let modeArg = null;
       let joinSeconds = null;
+      let noPingPong = false;
 
-      for (let i = 0; i < Math.min(tokens.length, 5); i++) {
+      for (let i = 0; i < Math.min(tokens.length, 6); i++) {
         if (!rangeArg && parseRangeToken(tokens[i])) rangeArg = tokens[i];
         if (!modeArg && parseModeToken(tokens[i])) modeArg = parseModeToken(tokens[i]);
+
         const js = parseJoinWindowToken(tokens[i]);
         if (joinSeconds == null && js != null) joinSeconds = js;
+
+        const fl = parseFlagToken(tokens[i]);
+        if (fl === "nopingpong") noPingPong = true;
       }
 
       const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
       if (hasMentions && joinSeconds != null) {
-        await message.reply(
-          "❌ Join window only works with reaction-join (no @mention list)."
-        );
+        await message.reply("❌ Join window only works with reaction-join (no @mention list).");
         return;
       }
 
@@ -466,8 +518,7 @@ export function registerExplodingVoltorbs(register) {
         }
       }
 
-      // Validate: apart from range/mode/mentions, no extra garbage tokens.
-      // This prevents "!ev blahblah" from silently starting a reaction join.
+      // Validate tokens: apart from range/mode/flags/mentions/joinSeconds, no extras
       const consumed = new Set();
       for (const t of tokens) {
         if (rangeArg && t === rangeArg) consumed.add(t);
@@ -475,61 +526,56 @@ export function registerExplodingVoltorbs(register) {
         const m = parseModeToken(t);
         if (m && modeArg === m) consumed.add(t);
 
+        const fl = parseFlagToken(t);
+        if (fl) consumed.add(t);
+
         const js = parseJoinWindowToken(t);
         if (js != null && joinSeconds === js) consumed.add(t);
 
         if (parseMentionToken(t)) consumed.add(t);
       }
       const extras = tokens.filter((t) => !consumed.has(t));
-
-      // Reaction-join path only allows [range] [mode] (or nothing).
-      // Mention-based path allows [range] [mode] + mentions only.
       if (extras.length > 0) {
         await message.reply(
-          "❌ Use: `!ev [min-max] [mode] [@player list]/[join_window]`.\nType `!ev help` for more info."
+          "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
         );
         return;
       }
 
-      // If no taglist is provided, run a reaction-join window (like !conteststart)
+      const flags = { noPingPong };
+
+      // Reaction-join path if no mentions
       if (!hasMentions) {
         const modeLabel = modeArg || "suddendeath";
         const modeLabelCapitalized = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
         const rangeLabel = rangeArg ? ` • Range: **${rangeArg}**` : "";
+        const flagLabel = noPingPong ? ` • Ping-pong: **OFF**` : "";
         const durationMs = (joinSeconds ?? 15) * 1000;
 
-        const reactMessage = await collectEntrantsByReactions({
+        const entrants = await collectEntrantsByReactions({
           message,
           promptText:
             `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
-            `Mode: **${modeLabelCapitalized}**${rangeLabel}`,
+            `Mode: **${modeLabelCapitalized}**${rangeLabel}${flagLabel}`,
           durationMs
         });
 
-       if (entrants.size < 2) {
-          try {
-            await reactMessage.edit(
-              reactMessage.content + "\n❌ Not enough players joined (need at least 2)."
-            );
-          } catch {
-            await message.channel.send("❌ Not enough players joined (need at least 2).");
-          }
+        if (entrants.size < 2) {
+          await message.channel.send("❌ Not enough players joined (need at least 2).");
           return;
         }
 
-        // Starter is NOT auto-enrolled. Only reactors are players.
-        startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg);
+        startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg, flags);
         return;
       }
 
       // Mention-based start path
-      startExplodingVoltorbs(message, rangeArg, modeArg);
+      startExplodingVoltorbs(message, rangeArg, modeArg, flags);
     },
-    "!ev [min-max[s|sec|seconds]] [elim|suddendeath] @players — start Exploding Voltorbs (default 30-90s, default mode suddendeath). If no @players, uses reaction join.",
+    "!ev [min-max[s|sec|seconds]] [elim|suddendeath] [nopingpong] @players — start Exploding Voltorbs (default 30-90s, default mode suddendeath). If no @players, uses reaction join.",
     { helpTier: "primary", aliases: ["!explodingvoltorbs", "!voltorb"] }
   );
 
-  // Pass (canonical)
   register(
     "!pass",
     async ({ message }) => {
@@ -540,7 +586,6 @@ export function registerExplodingVoltorbs(register) {
     { hideFromHelp: true, aliases: ["!passvoltorb", "!pv", "!passv"] }
   );
 
-  // End (admin-only)
   register(
     "!endvoltorb",
     async ({ message }) => {
