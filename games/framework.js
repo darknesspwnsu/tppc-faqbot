@@ -61,6 +61,95 @@ export function isAdminOrPrivilegedMessage(message) {
   return Boolean(isAdminOrPrivileged(message));
 }
 
+/* ------------------------------ durations -------------------------------- */
+
+/**
+ * Parses:
+ *  - "30" => 30
+ *  - "10s", "10sec", "10seconds"
+ *  - "5m", "5min", "5minutes"
+ *  - "2h", "2hr", "2hours"
+ *
+ * Returns:
+ *  - number (seconds) on success
+ *  - null on invalid
+ *  - def if raw is falsy
+ *
+ * (Kept intentionally “simple + permissive” to preserve existing game behavior.)
+ */
+export function parseDurationSeconds(raw, def) {
+  if (!raw) return def;
+  const s = String(raw).trim().toLowerCase();
+  if (/^\d+$/.test(s)) return Number(s);
+
+  const m = s.match(
+    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours)$/
+  );
+  if (!m) return null;
+
+  const v = Number(m[1]);
+  const u = m[2];
+  if (u.startsWith("s")) return v;
+  if (u.startsWith("m")) return v * 60;
+  if (u.startsWith("h")) return v * 3600;
+  return null;
+}
+
+export function formatDurationSeconds(sec) {
+  return sec ? `${sec}s` : "NONE";
+}
+
+/* ------------------------------ reactions -------------------------------- */
+
+/**
+ * Generic ✅-join pattern (reaction collector).
+ *
+ * Options allow matching existing game behavior:
+ * - trackRemovals: when true, removes users on unreact (requires dispose:true)
+ * - dispose: pass through to collector (needed if you want "remove" events)
+ */
+export async function collectEntrantsByReactionsWithMax({
+  channel,
+  promptText,
+  durationMs,
+  maxEntrants,
+  emoji = "✅",
+  dispose = false,
+  trackRemovals = false,
+}) {
+  const joinMsg = await channel.send(promptText);
+
+  try {
+    await joinMsg.react(emoji);
+  } catch {
+    return { entrants: new Set(), joinMsg };
+  }
+
+  const entrants = new Set();
+  const filter = (reaction, user) => !user.bot && reaction.emoji?.name === emoji;
+
+  return new Promise((resolve) => {
+    const collector = joinMsg.createReactionCollector({
+      filter,
+      time: durationMs,
+      dispose: Boolean(dispose),
+    });
+
+    collector.on("collect", (_reaction, user) => {
+      entrants.add(user.id);
+      if (maxEntrants && entrants.size >= maxEntrants) collector.stop("max");
+    });
+
+    if (trackRemovals) {
+      collector.on("remove", (_reaction, user) => {
+        entrants.delete(user.id);
+      });
+    }
+
+    collector.on("end", (_c, reason) => resolve({ entrants, joinMsg, reason }));
+  });
+}
+
 /* --------------------------------- replies -------------------------------- */
 
 async function safeReplyInteraction(interaction, payload) {
@@ -494,7 +583,7 @@ export function makeGameQoL(
     id,
     prettyName,
     helpText,
-    rulesText, // NEW
+    rulesText,
     renderStatus,
     cancel,
     end,

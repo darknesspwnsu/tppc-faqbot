@@ -17,52 +17,21 @@ import {
   MessageFlags,
 } from "discord.js";
 
-import { isAdminOrPrivileged } from "../auth.js";
+import {
+  createGameManager,
+  withGameSubcommands,
+  makeGameQoL,
+  reply,
+  requireSameChannel,
+  requireCanManage,
+  parseDurationSeconds,
+  formatDurationSeconds,
+  safeEditById,
+} from "./framework.js";
 
-/* =============================== STATE ================================= */
+/* ============================== MANAGER ================================ */
 
-const ACTIVE = new Map(); // guildId -> auction session
-
-/* ============================== HELPERS ================================ */
-
-function parseDurationSeconds(raw, def) {
-  if (!raw) return def;
-  const s = String(raw).trim().toLowerCase();
-  if (/^\d+$/.test(s)) return Number(s);
-
-  const m = s.match(
-    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours)$/
-  );
-  if (!m) return null;
-
-  const v = Number(m[1]);
-  const u = m[2];
-  if (u.startsWith("s")) return v;
-  if (u.startsWith("m")) return v * 60;
-  if (u.startsWith("h")) return v * 3600;
-  return null;
-}
-
-function canManage(message, auction) {
-  if (!auction) return false;
-  if (isAdminOrPrivileged(message)) return true;
-  return message.author.id === auction.hostId;
-}
-
-function inSameChannel(message, auction) {
-  return (
-    message.guild.id === auction.guildId &&
-    message.channel.id === auction.channelId
-  );
-}
-
-function now() {
-  return Date.now();
-}
-
-function formatDuration(sec) {
-  return sec ? `${sec}s` : "NONE";
-}
+const manager = createGameManager({ id: "auction", prettyName: "Auction", scope: "guild" });
 
 /* ============================== TEXT =================================== */
 
@@ -123,9 +92,7 @@ function buildBidRow(active) {
 }
 
 function buildBidModal() {
-  const modal = new ModalBuilder()
-    .setCustomId("auction:bidmodal")
-    .setTitle("Place Your Bid");
+  const modal = new ModalBuilder().setCustomId("auction:bidmodal").setTitle("Place Your Bid");
 
   const amount = new TextInputBuilder()
     .setCustomId("amount")
@@ -139,23 +106,21 @@ function buildBidModal() {
 
 /* ============================ ROUND LOGIC =============================== */
 
-async function disableRoundButtons(auction) {
+function now() {
+  return Date.now();
+}
+
+async function disableRoundButtons(auction, channel) {
   if (!auction.roundMessageId) return;
-  try {
-    const ch = await auction.client.channels.fetch(auction.channelId);
-    const msg = await ch.messages.fetch(auction.roundMessageId);
-    await msg.edit({ components: [buildBidRow(false)] });
-  } catch {}
+  await safeEditById(channel, auction.roundMessageId, { components: [buildBidRow(false)] });
 }
 
 async function endRound(auction, channel) {
-  await disableRoundButtons(auction);
+  await disableRoundButtons(auction, channel);
 
   const bids = [...auction.bids.entries()]
     .map(([uid, b]) => ({ uid, ...b }))
-    .sort((a, b) =>
-      b.amount !== a.amount ? b.amount - a.amount : a.ts - b.ts
-    );
+    .sort((a, b) => (b.amount !== a.amount ? b.amount - a.amount : a.ts - b.ts));
 
   if (!bids.length) {
     await channel.send(`⏹️ **${auction.activeItem} — no bids placed.**`);
@@ -173,10 +138,7 @@ async function endRound(auction, channel) {
     amount: winner.amount,
   });
 
-  await channel.send(
-    `🏆 **${auction.activeItem} sold!**\n` +
-      `Winner: <@${winner.uid}> — **${winner.amount}**`
-  );
+  await channel.send(`🏆 **${auction.activeItem} sold!**\nWinner: <@${winner.uid}> — **${winner.amount}**`);
 
   auction.activeItem = null;
   auction.bids.clear();
@@ -187,99 +149,120 @@ async function endRound(auction, channel) {
   }
 }
 
+function renderStatus(auction) {
+  const players = [...auction.players.entries()]
+    .map(([id, p]) => `• <@${id}> — ${p.balance}`)
+    .join("\n");
+
+  let out =
+    `🪙 **Auction Status**\n` +
+    `Host: <@${auction.hostId}>\n\n` +
+    `Players (${auction.players.size}):\n${players}\n\n` +
+    `Rounds completed: ${auction.history.length}\n`;
+
+  if (auction.activeItem) {
+    out += `Current item: **${auction.activeItem}**\n` + `Bids: ${auction.bids.size}/${auction.players.size}`;
+  } else {
+    out += `Current round: none`;
+  }
+  return out;
+}
+
 /* =========================== REGISTRATION =============================== */
 
 export function registerAuction(register) {
+  // Framework QoL: !auctionhelp, !auctionrules, !auctionstatus, !cancelauction
+  // We implement cancel to preserve existing "end" behavior (summary + cleanup).
+  makeGameQoL(register, {
+    manager,
+    id: "auction",
+    prettyName: "Auction",
+    helpText: auctionHelpText(),
+    rulesText: auctionRulesText(),
+    renderStatus: (st) => renderStatus(st),
+    cancel: async (st, { message }) => {
+      // behave like `!auction end` (same summary format)
+      if (!(await requireSameChannel({ message }, st, manager))) return;
+
+      await disableRoundButtons(st, message.channel);
+
+      if (st.history.length) {
+        const lines = st.history.map((r, i) => `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`);
+        await message.channel.send(`🪙 **Auction Summary**\n\n${lines.join("\n")}`);
+      } else {
+        await message.channel.send("🪙 **Auction ended. No items sold.**");
+      }
+
+      manager.stop({ guildId: st.guildId });
+    },
+    // Keep same “manage” semantics: admin/privileged OR host
+    manageDeniedText: null,
+  });
+
   register(
     "!auction",
-    async ({ message, rest }) => {
-      if (!message.guild) return;
-
-      const args = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
-      const sub = (args.shift() || "").toLowerCase();
-      const guildId = message.guild.id;
-
-      /* ---------- ALWAYS AVAILABLE ---------- */
-
-      if (sub === "help") {
-        await message.reply(auctionHelpText());
-        return;
-      }
-
-      if (sub === "rules") {
-        await message.reply(auctionRulesText());
-        return;
-      }
-
-      if (sub === "status") {
-        const auction = ACTIVE.get(guildId);
-        if (!auction) {
-          await message.reply(
-            "🪙 **Auction Status**\nNo active auction in this server."
-          );
+    withGameSubcommands({
+      helpText: auctionHelpText(),
+      rulesText: auctionRulesText(),
+      allowStatusSubcommand: true,
+      onStatus: async ({ message }) => {
+        if (!message.guild) return;
+        const st = manager.getState({ message, guildId: message.guild.id, channelId: message.channelId });
+        if (!st) {
+          await reply({ message }, "🪙 **Auction Status**\nNo active auction in this server.");
           return;
         }
+        await reply({ message }, renderStatus(st));
+      },
+      onStart: async ({ message, rest }) => {
+        if (!message.guild) return;
 
-        const players = [...auction.players.entries()]
-          .map(([id, p]) => `• <@${id}> — ${p.balance}`)
-          .join("\n");
+        const args = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
+        const sub = (args.shift() || "").toLowerCase();
+        const guildId = message.guild.id;
 
-        let out =
-          `🪙 **Auction Status**\n` +
-          `Host: <@${auction.hostId}>\n\n` +
-          `Players (${auction.players.size}):\n${players}\n\n` +
-          `Rounds completed: ${auction.history.length}\n`;
-
-        if (auction.activeItem) {
-          out +=
-            `Current item: **${auction.activeItem}**\n` +
-            `Bids: ${auction.bids.size}/${auction.players.size}`;
-        } else {
-          out += `Current round: none`;
-        }
-
-        await message.reply(out);
-        return;
-      }
-
-      /* ---------- JOIN ---------- */
-
-      if (sub === "join") {
-        if (ACTIVE.has(guildId)) {
-          await message.reply("⚠️ An auction is already running.");
-          return;
-        }
-
-        const joinSeconds = parseDurationSeconds(args[0], 30);
-        const maxPlayers = Number(args[1]) || null;
-        const startMoney = Number(args[2]) || 500;
-
-        const joinMsg = await message.channel.send(
-          `🪙 **Auction starting!**\nReact ✅ to join (${joinSeconds}s)`
-        );
-        await joinMsg.react("✅");
-
-        const players = new Map();
-        const collector = joinMsg.createReactionCollector({
-          time: joinSeconds * 1000,
-          dispose: true,
-          filter: (r, u) => r.emoji.name === "✅" && !u.bot,
-        });
-
-        collector.on("collect", (_, user) => {
-          if (players.has(user.id)) return;
-          players.set(user.id, { balance: startMoney });
-          if (maxPlayers && players.size >= maxPlayers) {
-            collector.stop("max");
+        /* ---------- JOIN ---------- */
+        if (sub === "join") {
+          const existing = manager.getState({ guildId });
+          if (existing) {
+            await message.reply("⚠️ An auction is already running.");
+            return;
           }
-        });
 
-        collector.on("remove", (_, user) => {
-          players.delete(user.id);
-        });
+          const joinSeconds = parseDurationSeconds(args[0], 30);
+          const maxPlayers = Number(args[1]) || null;
+          const startMoney = Number(args[2]) || 500;
 
-        collector.on("end", async (_c, reason) => {
-          if (!players.size) {
+          const joinMsg = await message.channel.send(
+            `🪙 **Auction starting!**\nReact ✅ to join (${joinSeconds}s)`
+          );
+          await joinMsg.react("✅");
+
+          // Preserve old behavior: removals are tracked (dispose:true + remove handler)
+          const { entrants, reason } = await (async () => {
+            const res = await joinMsg
+              .createReactionCollector({
+                time: joinSeconds * 1000,
+                dispose: true,
+                filter: (r, u) => r.emoji.name === "✅" && !u.bot,
+              });
+
+            // Using a small wrapper keeps output identical to the old file.
+            // We still prefer the shared helper elsewhere; this part preserves "remove" semantics precisely.
+            const players = new Set();
+            return new Promise((resolve) => {
+              res.on("collect", (_r, user) => {
+                players.add(user.id);
+                if (maxPlayers && players.size >= maxPlayers) res.stop("max");
+              });
+              res.on("remove", (_r, user) => {
+                players.delete(user.id);
+              });
+              res.on("end", (_c, r) => resolve({ entrants: players, reason: r }));
+            });
+          })();
+
+          if (!entrants.size) {
             await message.channel.send("❌ Auction cancelled — no players.");
             return;
           }
@@ -292,112 +275,120 @@ export function registerAuction(register) {
             reactions: [],
           });
 
-          ACTIVE.set(guildId, {
-            guildId,
-            channelId: message.channel.id,
-            hostId: message.author.id,
-            client: message.client,
-            players,
-            activeItem: null,
-            bids: new Map(),
-            timer: null,
-            roundMessageId: null,
-            history: [],
+          const players = new Map();
+          for (const id of entrants) players.set(id, { balance: startMoney });
+
+          manager.tryStart(
+            { guildId },
+            {
+              guildId,
+              channelId: message.channel.id,
+              client: message.client,
+              hostId: message.author.id,
+              players,
+              activeItem: null,
+              bids: new Map(),
+              timer: null,
+              roundMessageId: null,
+              history: [],
+            }
+          );
+
+          await message.channel.send(
+            `✅ Auction created!\nPlayers: ${[...players.keys()].map((id) => `<@${id}>`).join(", ")}`
+          );
+          return;
+        }
+
+        /* ---------- EVERYTHING BELOW REQUIRES AUCTION ---------- */
+
+        const auction = manager.getState({ guildId });
+        if (!auction) {
+          await message.reply("No active auction.");
+          return;
+        }
+
+        if (!(await requireSameChannel({ message }, auction, manager))) return;
+
+        /* ---------- START ROUND ---------- */
+        if (sub === "start") {
+          const ok = await requireCanManage(
+            { message },
+            auction,
+            { ownerField: "hostId", managerLabel: "auction", deniedText: null }
+          );
+          if (!ok) return;
+
+          let roundSeconds = null;
+          let tokens = args;
+          const maybe = parseDurationSeconds(args.at(-1), null);
+          if (maybe != null) {
+            roundSeconds = maybe;
+            tokens = args.slice(0, -1);
+          }
+
+          const item = tokens.join(" ");
+          if (!item) return;
+
+          auction.activeItem = item;
+          auction.bids.clear();
+
+          const msg = await message.channel.send({
+            content:
+              `🔔 **Auction started!**\nItem: **${item}**\n` +
+              `Round time: **${formatDurationSeconds(roundSeconds)}**`,
+            components: [buildBidRow(true)],
           });
 
-          await message.channel.send(
-            `✅ Auction created!\nPlayers: ${[...players.keys()]
-              .map((id) => `<@${id}>`)
-              .join(", ")}`
-          );
-        });
-        return;
-      }
+          auction.roundMessageId = msg.id;
 
-      /* ---------- EVERYTHING BELOW REQUIRES AUCTION ---------- */
-
-      const auction = ACTIVE.get(guildId);
-      if (!auction) {
-        await message.reply("No active auction.");
-        return;
-      }
-
-      if (!inSameChannel(message, auction)) {
-        await message.reply(`Auction is running in <#${auction.channelId}>.`);
-        return;
-      }
-
-      /* ---------- START ROUND ---------- */
-
-      if (sub === "start") {
-        if (!canManage(message, auction)) return;
-
-        let roundSeconds = null;
-        let tokens = args;
-        const maybe = parseDurationSeconds(args.at(-1), null);
-        if (maybe != null) {
-          roundSeconds = maybe;
-          tokens = args.slice(0, -1);
+          if (roundSeconds) {
+            auction.timer = setTimeout(() => endRound(auction, message.channel), roundSeconds * 1000);
+          }
+          return;
         }
 
-        const item = tokens.join(" ");
-        if (!item) return;
-
-        auction.activeItem = item;
-        auction.bids.clear();
-
-        const msg = await message.channel.send({
-          content:
-            `🔔 **Auction started!**\nItem: **${item}**\n` +
-            `Round time: **${formatDuration(roundSeconds)}**`,
-          components: [buildBidRow(true)],
-        });
-
-        auction.roundMessageId = msg.id;
-
-        if (roundSeconds) {
-          auction.timer = setTimeout(
-            () => endRound(auction, message.channel),
-            roundSeconds * 1000
+        /* ---------- END ROUND ---------- */
+        if (sub === "endround") {
+          const ok = await requireCanManage(
+            { message },
+            auction,
+            { ownerField: "hostId", managerLabel: "auction", deniedText: null }
           );
-        }
-        return;
-      }
+          if (!ok) return;
 
-      /* ---------- END ROUND ---------- */
-
-      if (sub === "endround") {
-        if (!canManage(message, auction)) return;
-        if (!auction.activeItem) return;
-        await endRound(auction, message.channel);
-        return;
-      }
-
-      /* ---------- END AUCTION ---------- */
-
-      if (sub === "end") {
-        if (!canManage(message, auction)) return;
-
-        await disableRoundButtons(auction);
-
-        if (auction.history.length) {
-          const lines = auction.history.map(
-            (r, i) =>
-              `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`
-          );
-          await message.channel.send(
-            `🪙 **Auction Summary**\n\n${lines.join("\n")}`
-          );
-        } else {
-          await message.channel.send("🪙 **Auction ended. No items sold.**");
+          if (!auction.activeItem) return;
+          await endRound(auction, message.channel);
+          return;
         }
 
-        ACTIVE.delete(guildId);
-        return;
-      }
+        /* ---------- END AUCTION ---------- */
+        if (sub === "end") {
+          const ok = await requireCanManage(
+            { message },
+            auction,
+            { ownerField: "hostId", managerLabel: "auction", deniedText: null }
+          );
+          if (!ok) return;
 
-      await message.reply("Unknown subcommand. Try `!auction help`.");
-    },
+          await disableRoundButtons(auction, message.channel);
+
+          if (auction.history.length) {
+            const lines = auction.history.map(
+              (r, i) => `${i + 1}) **${r.item}** — <@${r.winnerId}> (${r.amount})`
+            );
+            await message.channel.send(`🪙 **Auction Summary**\n\n${lines.join("\n")}`);
+          } else {
+            await message.channel.send("🪙 **Auction ended. No items sold.**");
+          }
+
+          manager.stop({ guildId });
+          return;
+        }
+
+        await message.reply("Unknown subcommand. Try `!auction help`.");
+      },
+    }),
     "!auction — run a private bidding auction",
     { category: "Games", helpTier: "primary" }
   );
@@ -405,7 +396,7 @@ export function registerAuction(register) {
   /* ========================= COMPONENTS ================================ */
 
   register.component("auction:bid", async ({ interaction }) => {
-    const auction = ACTIVE.get(interaction.guildId);
+    const auction = manager.getState({ guildId: interaction.guildId });
     if (!auction || !auction.activeItem) {
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -417,7 +408,7 @@ export function registerAuction(register) {
   });
 
   register.component("auction:bidmodal", async ({ interaction }) => {
-    const auction = ACTIVE.get(interaction.guildId);
+    const auction = manager.getState({ guildId: interaction.guildId });
     if (!auction || !auction.activeItem) {
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
@@ -450,7 +441,7 @@ export function registerAuction(register) {
   });
 
   register.component("auction:mybid", async ({ interaction }) => {
-    const auction = ACTIVE.get(interaction.guildId);
+    const auction = manager.getState({ guildId: interaction.guildId });
     const bid = auction?.bids.get(interaction.user.id);
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
@@ -459,7 +450,7 @@ export function registerAuction(register) {
   });
 
   register.component("auction:balance", async ({ interaction }) => {
-    const auction = ACTIVE.get(interaction.guildId);
+    const auction = manager.getState({ guildId: interaction.guildId });
     const p = auction?.players.get(interaction.user.id);
     await interaction.reply({
       flags: MessageFlags.Ephemeral,
