@@ -24,7 +24,7 @@
 //
 // Flavor inspiration: your Team Rocket lines.
 
-import { collectEntrantsByReactions } from "../contests.js";
+import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const activeGames = new Map(); // guildId -> game state

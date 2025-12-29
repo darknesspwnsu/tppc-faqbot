@@ -24,7 +24,7 @@
 // - turn=SS     skip timer seconds (10..300), default 30
 // - warn=SS     warn timer seconds (5..(turn-1)), default: floor(turn/2)
 //
-import { collectEntrantsByReactions } from "../contests.js";
+import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const activeGames = new Map(); // guildId -> game

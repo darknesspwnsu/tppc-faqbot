@@ -7,7 +7,7 @@
 // - Optional mode: elim (boom eliminates holder; continues until one player remains)
 // - Someone "holds" the Voltorb, can pass via mention (cannot pass to self)
 
-import { collectEntrantsByReactions } from "../contests.js";
+import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const activeGames = new Map(); // guildId -> { holderId, aliveIds:Set, allowedIds:Set, mode, minSeconds, maxSeconds, explosionTimeout, scareInterval }

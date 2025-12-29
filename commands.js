@@ -25,7 +25,7 @@
 
 import { REST, Routes } from "discord.js";
 
-import { registerContests } from "./contests.js";
+import { registerContests } from "./contests/contests.js";
 import { registerTrades } from "./trades.js";
 import { registerGames } from "./games/games.js";
 
