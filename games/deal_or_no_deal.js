@@ -557,6 +557,12 @@ export function registerDealOrNoDeal(register) {
       if (game.keptIndex == null) return void (await message.reply("Kept box not chosen yet."));
 
       const mode = String(rest ?? "").trim().toLowerCase();
+
+      if (mode !== "deal" && mode !== "nodeal") {
+        await message.reply("Usage: `!dondend deal` or `!dondend nodeal`");
+        return;
+      }
+
       const isDeal = mode === "deal";
 
       game.phase = "ended";
