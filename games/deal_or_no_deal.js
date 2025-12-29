@@ -556,29 +556,6 @@ export function registerDealOrNoDeal(register) {
     { helpTier: "primary" }
   );
 
-  // Legacy: !dondhelp (wrapper to canonical framework help)
-  register(
-    "!dondhelp",
-    async ({ message }) => {
-      await reply({ message }, dondHelpText());
-    },
-    "!dondhelp — help for Deal or No Deal",
-    { hideFromHelp: true }
-  );
-
-  // Legacy: !dondstatus (wrapper)
-  register(
-    "!dondstatus",
-    async ({ message }) => {
-      const game = manager.getState({ message, guildId: message.guildId, channelId: message.channelId });
-      if (!game) return void (await reply({ message }, "No active Deal or No Deal game in this server."));
-      if (!(await requireSameChannel({ message }, game, manager))) return;
-      await reply({ message }, boardText(game));
-    },
-    "!dondstatus — show Deal or No Deal board",
-    { hideFromHelp: true }
-  );
-
   register(
     "!dondoffer",
     async ({ message, rest }) => {

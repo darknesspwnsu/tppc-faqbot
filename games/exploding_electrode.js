@@ -51,7 +51,6 @@ const DEFAULTS = {
 };
 
 const EE_ALIASES = ["!explodingelectrode", "!electrode", "!ee"];
-const PICK_ALIASES = ["!pick", "!p"];
 
 /* --------------------------------- text ---------------------------------- */
 
@@ -641,7 +640,7 @@ export function registerExplodingElectrode(register) {
       await resolvePick(message.channel, manager, game, message.author.id);
     },
     "!pick — pick a Poké Ball (only on your turn)",
-    { hideFromHelp: true, aliases: ["!p"] }
+    { hideFromHelp: true }
   );
 
   // Legacy admin-only force-end wrapper (kept for muscle memory)
