@@ -253,6 +253,18 @@ export function buildCommandRegistry({ client } = {}) {
       return;
     }
 
+    // Modal submits route by customId prefix (same as buttons/selects)
+    if (interaction.isModalSubmit?.()) {
+      const customId = interaction.customId ? String(interaction.customId) : "";
+      if (!customId) return;
+
+      const match = components.find((c) => customId.startsWith(c.prefix));
+      if (match?.handler) {
+        await match.handler({ interaction });
+      }
+      return;
+    }
+
     // Components: buttons, selects, etc.
     const customId = interaction.customId ? String(interaction.customId) : "";
     if (customId) {
