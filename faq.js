@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Fuse from "fuse.js";
 import { createWikiService } from "./wiki.js";
+import { isAdminOrPrivileged } from "./auth.js";
 
 /**
  * Read numeric env var from the first key that exists and parses as a number.
@@ -375,13 +376,6 @@ export function registerInfoCommands(register) {
   const ngs = loadNgsOnce();
   const glossary = loadGlossaryOnce();
 
-  function isAdmin(message) {
-    return (
-      message.member?.permissions?.has("Administrator") ||
-      message.member?.permissions?.has("ManageGuild")
-    );
-  }
-
   register(
     "!faq",
     async ({ message, rest }) => {
@@ -405,7 +399,7 @@ export function registerInfoCommands(register) {
   register(
     "!faqreload",
     async ({ message }) => {
-      if (!isAdmin(message)) return;
+      if (!isAdminOrPrivileged(message)) return;
 
       try {
         const info = faq.reload();
