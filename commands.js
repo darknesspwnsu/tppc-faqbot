@@ -34,6 +34,8 @@ import { registerTools } from "./tools.js";
 import { registerToybox } from "./toybox.js";
 
 import { registerHelpbox } from "./helpbox.js";
+import { registerVerifyMe } from "./verification/verifyme.js";
+import { registerWhois } from "./verification/whois.js";
 
 import { handleRarityInteraction } from "./rarity.js";
 
@@ -198,6 +200,9 @@ export function buildCommandRegistry({ client } = {}) {
 
   // FAQ / Wiki / NG / Rules / Glossary (moved into faq.js)
   registerInfoCommands(withCategory(register, "Info"));
+  // Verification
+  registerVerifyMe(withCategory(register, "Info"));
+  registerWhois(withCategory(register, "Info"));
 
   // Core / fun / contests
   registerContests(withCategory(register, "Contests"));
@@ -210,6 +215,7 @@ export function buildCommandRegistry({ client } = {}) {
 
   // Helpbox (registers /help + help buttons + !help)
   registerHelpbox(withCategory(register, "Info"), { helpModel });
+
 
   /* ------------------------------- dispatchers ------------------------------ */
 
