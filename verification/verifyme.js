@@ -207,7 +207,7 @@ async function findForumUserIdByUsername(baseUrl, forumUsername) {
   while (page <= maxPage) {
     const url = `${baseUrl}/memberlist.php?ltr=${encodeURIComponent(ltr)}&pp=${perPage}&sort=username&order=asc&page=${page}`;
     const html = await fetchForumPage(url);
-    if (!html) return null;
+    if (!html) return { userId: null, error: "memberlist_fetch_failed" };
 
     if (page === 1) {
       const total = parseMemberListTotal(html);
@@ -215,12 +215,12 @@ async function findForumUserIdByUsername(baseUrl, forumUsername) {
     }
 
     const userId = findUserIdInMemberListHtml(html, forumUsername);
-    if (userId) return userId;
+    if (userId) return { userId, error: null };
 
     page++;
   }
 
-  return null;
+  return { userId: null, error: null };
 }
 
 function extractTrainerIdsFromProfile(html) {
@@ -232,14 +232,16 @@ function extractTrainerIdsFromProfile(html) {
 }
 
 async function lookupForumTrainerIds(baseUrl, forumUsername) {
-  const userId = await findForumUserIdByUsername(baseUrl, forumUsername);
-  if (!userId) return { userId: null, ids: [] };
+  const found = await findForumUserIdByUsername(baseUrl, forumUsername);
+  if (found?.error) return { userId: null, ids: [], error: found.error };
+  const userId = found?.userId || null;
+  if (!userId) return { userId: null, ids: [], error: null };
 
   const profileUrl = `${baseUrl}/member.php?u=${encodeURIComponent(userId)}`;
   const html = await fetchForumPage(profileUrl);
-  if (!html) return { userId, ids: [] };
+  if (!html) return { userId, ids: [], error: "profile_fetch_failed" };
 
-  return { userId, ids: extractTrainerIdsFromProfile(html) };
+  return { userId, ids: extractTrainerIdsFromProfile(html), error: null };
 }
 
 async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
@@ -248,12 +250,16 @@ async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
   const saved = await getSavedId({ guildId, userId: member.id }).catch(() => null);
   if (saved != null) return;
 
-  const { ids } = await lookupForumTrainerIds(baseUrl, forumUsername);
+  const { ids, error } = await lookupForumTrainerIds(baseUrl, forumUsername);
 
   let content =
     "✅ You have successfully been verified on the TPPC Discord.\n";
 
-  if (ids.length) {
+  if (error) {
+    console.error(`[verifyme] forum ID lookup failed for "${forumUsername}": ${error}`);
+    content +=
+      "To link your TPPC Trainer ID, use `!id <id>` in the #botspam channel on the TPPC server.";
+  } else if (ids.length) {
     const idList = ids.map((id) => `#${id}`).join(", ");
     const cmdList = ids.map((id) => `!id ${id}`).join("\n");
     content +=
