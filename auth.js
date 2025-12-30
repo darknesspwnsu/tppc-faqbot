@@ -6,12 +6,12 @@ import path from "path";
 let PRIVILEGED_USERS = {};
 
 try {
-  const filePath = path.resolve(process.cwd(), "data", "privileged_users.json");
+  const filePath = path.resolve(process.cwd(), "configs", "privileged_users.json");
   const raw = fs.readFileSync(filePath, "utf8");
   PRIVILEGED_USERS = JSON.parse(raw);
   console.log("[AUTH] Loaded privileged users:", Object.keys(PRIVILEGED_USERS));
 } catch (err) {
-  console.warn("[AUTH] Could not load data/privileged_users.json — privileged users disabled");
+  console.warn("[AUTH] Could not load configs/privileged_users.json — privileged users disabled");
   PRIVILEGED_USERS = {};
 }
 

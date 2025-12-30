@@ -16,7 +16,7 @@
 // IMPORTANT:
 // - Never echo tokens in Discord.
 // - Escape forum username for Discord display only (do NOT modify stored forum username).
-// - Approval workflow is configured per guild in data/verification_config.json.
+// - Approval workflow is configured per guild in configs/verification_config.json.
 
 import crypto from "crypto";
 import fs from "fs";
@@ -45,8 +45,8 @@ let _cfgCache = null;
 function loadVerificationConfig() {
   if (_cfgCache) return _cfgCache;
 
-  // verification/.. -> project root -> data/verification_config.json
-  const p = path.join(__dirname, "..", "data", "verification_config.json");
+  // verification/.. -> project root -> configs/verification_config.json
+  const p = path.join(__dirname, "..", "configs", "verification_config.json");
   const raw = fs.readFileSync(p, "utf8");
   _cfgCache = JSON.parse(raw);
   return _cfgCache;
