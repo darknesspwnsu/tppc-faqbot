@@ -10,6 +10,7 @@
 
 import { PermissionsBitField } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { CONTEST_ROLES_BY_GUILD } from "../configs/contest_roles.js";
 import { parseDurationSeconds, formatDurationSeconds } from "../shared/time_utils.js";
 
 /* --------------------------------- basics -------------------------------- */
@@ -20,6 +21,106 @@ export function mention(userId) {
 
 export function channelMention(channelId) {
   return `<#${channelId}>`;
+}
+
+function contestRoleConfigFor({ guildId, channelId, applyTo }) {
+  const g = CONTEST_ROLES_BY_GUILD?.[String(guildId || "")];
+  const cfg = g?.[String(channelId || "")];
+  if (!cfg?.roleId) return null;
+  const apply = Array.isArray(cfg.applyTo) ? cfg.applyTo : [];
+  if (!apply.includes(applyTo)) return null;
+  return cfg;
+}
+
+async function updateRoleMembers({ guild, roleId, userIds, action }) {
+  const added = [];
+  const failed = [];
+  const ids = Array.isArray(userIds) ? userIds : [];
+  if (!guild?.members?.fetch || !roleId || !ids.length) return { added, failed };
+
+  const members = await guild.members.fetch({ user: ids }).catch(() => null);
+
+  for (const id of ids) {
+    const m = members?.get?.(id) || guild.members?.cache?.get?.(id);
+    if (!m) {
+      failed.push(id);
+      continue;
+    }
+    try {
+      if (action === "add") await m.roles.add(roleId);
+      else await m.roles.remove(roleId);
+      added.push(id);
+    } catch {
+      failed.push(id);
+    }
+  }
+
+  return { added, failed };
+}
+
+async function notifyRoleErrors(ctx, roleId, failedIds) {
+  if (!failedIds.length) return;
+  const list = failedIds.map(mention).join(", ");
+  const content = `⚠️ Could not assign <@&${roleId}> to: ${list}`;
+
+  if (ctx?.message) {
+    try {
+      await ctx.message.reply(content);
+    } catch {}
+    return;
+  }
+
+  if (ctx?.interaction) {
+    try {
+      if (ctx.interaction.deferred || ctx.interaction.replied) {
+        await ctx.interaction.followUp({ content, ephemeral: true });
+      } else {
+        await ctx.interaction.reply({ content, ephemeral: true });
+      }
+    } catch {}
+  }
+}
+
+export async function assignContestRoleForEntrants(ctx, entrants, applyTo = "game_join_react") {
+  const ids = Array.from(entrants || []).filter(Boolean);
+  if (!ids.length) return { assignment: null, failedIds: [] };
+
+  const guildId = ctx?.message?.guildId || ctx?.interaction?.guildId;
+  const channelId = ctx?.message?.channelId || ctx?.interaction?.channelId;
+  if (!guildId || !channelId) return { assignment: null, failedIds: [] };
+
+  const cfg = contestRoleConfigFor({ guildId, channelId, applyTo });
+  if (!cfg) return { assignment: null, failedIds: [] };
+
+  const guild = ctx?.message?.guild || ctx?.interaction?.guild;
+  if (!guild) return { assignment: null, failedIds: ids };
+
+  const { added, failed } = await updateRoleMembers({ guild, roleId: cfg.roleId, userIds: ids, action: "add" });
+
+  if (failed.length) await notifyRoleErrors(ctx, cfg.roleId, failed);
+
+  const assignment =
+    added.length > 0
+      ? { roleId: cfg.roleId, userIds: added, guildId: String(guildId), channelId: String(channelId) }
+      : null;
+
+  return { assignment, failedIds: failed };
+}
+
+async function cleanupContestRoleAssignment(state) {
+  const assignment = state?.contestRoleAssignment;
+  if (!assignment?.roleId || !Array.isArray(assignment.userIds) || !assignment.userIds.length) return;
+
+  const client = state.client;
+  const guildId = state.guildId;
+  if (!client || !guildId) return;
+
+  const guild =
+    client.guilds?.cache?.get?.(guildId) ||
+    (client.guilds?.fetch ? await client.guilds.fetch(guildId).catch(() => null) : null);
+  if (!guild) return;
+
+  await updateRoleMembers({ guild, roleId: assignment.roleId, userIds: assignment.userIds, action: "remove" });
 }
 
 export function nowMs() {
@@ -470,6 +571,9 @@ export function createGameManager({ id, prettyName, scope = "guild" } = {}) {
 
   function stop(ctx) {
     const st = getState(ctx);
+    if (st?.contestRoleAssignment) {
+      void cleanupContestRoleAssignment(st);
+    }
     if (st?.timers?.clearAll) st.timers.clearAll();
     clearState(ctx);
     return st;

@@ -27,6 +27,7 @@
 import {
   clampInt,
   collectEntrantsByReactionsWithMax,
+  assignContestRoleForEntrants,
   createGameManager,
   isAdminOrPrivilegedMessage,
   makeGameQoL,
@@ -445,7 +446,7 @@ function validateAndBuildConfig(playersCount, opts) {
   };
 }
 
-async function startSafariZoneFromIds(message, idSet, parsedOpts) {
+async function startSafariZoneFromIds(message, idSet, parsedOpts, { assignRole = false } = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
@@ -514,6 +515,11 @@ async function startSafariZoneFromIds(message, idSet, parsedOpts) {
   }
 
   const game = res.state;
+
+  if (assignRole) {
+    const { assignment } = await assignContestRoleForEntrants({ message }, players);
+    if (assignment) game.contestRoleAssignment = assignment;
+  }
 
   await message.channel.send(
     `🧭 **Safari Zone started!**\n` +
@@ -715,7 +721,7 @@ export function registerSafariZone(register) {
           return;
         }
 
-        await startSafariZoneFromIds(message, entrants, opts);
+        await startSafariZoneFromIds(message, entrants, opts, { assignRole: true });
       },
     }),
     "!sz [options...] [@players...] — start Safari Zone (taglist or reaction-join). Use `!sz help`.",

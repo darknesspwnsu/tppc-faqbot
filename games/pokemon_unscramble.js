@@ -10,6 +10,7 @@
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } from "discord.js";
 import {
   collectEntrantsByReactionsWithMax,
+  assignContestRoleForEntrants,
   createGameManager,
   makeGameQoL,
   mention,
@@ -497,6 +498,9 @@ export function registerPokemonUnscramble(register) {
       }
       return;
     }
+
+    const { assignment } = await assignContestRoleForEntrants({ interaction }, entrants);
+    if (assignment) res.state.contestRoleAssignment = assignment;
 
     await channel.send(
       `✅ **Pokemon Unscramble started!**\n` +

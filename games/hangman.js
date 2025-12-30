@@ -24,6 +24,7 @@ import { MessageFlags } from "discord.js";
 import {
   createGameManager,
   collectEntrantsByReactionsWithMax,
+  assignContestRoleForEntrants,
   makeGameQoL,
   reply,
   requireSameChannel,
@@ -468,6 +469,9 @@ export function registerHangman(register) {
         await channel.send(res.errorText);
         return;
       }
+
+      const { assignment } = await assignContestRoleForEntrants({ interaction }, entrants);
+      if (assignment) res.state.contestRoleAssignment = assignment;
 
       const st = res.state;
 

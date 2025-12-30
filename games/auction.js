@@ -35,6 +35,7 @@ import {
   formatDurationSeconds,
   safeEditById,
   collectEntrantsByReactionsWithMax,
+  assignContestRoleForEntrants,
 } from "./framework.js";
 
 /* ============================== MANAGER ================================ */
@@ -317,6 +318,9 @@ export function registerAuction(register) {
             await message.channel.send(res.errorText);
             return;
           }
+
+          const { assignment } = await assignContestRoleForEntrants({ message }, entrants);
+          if (assignment) res.state.contestRoleAssignment = assignment;
 
           await message.channel.send(
             `✅ Auction created!\nPlayers: ${[...players.keys()].map((id) => `<@${id}>`).join(", ")}`

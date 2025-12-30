@@ -15,7 +15,12 @@
 // - Add spacing between successive bot messages by bundling round output into fewer sends
 // - FIX: do not “tick” for next holder before "Next up" message (suppress scares during cooloff)
 
-import { collectEntrantsByReactionsWithMax, createGameManager, withGameSubcommands } from "./framework.js";
+import {
+  collectEntrantsByReactionsWithMax,
+  createGameManager,
+  withGameSubcommands,
+  assignContestRoleForEntrants,
+} from "./framework.js";
 import { getMentionedUsers, parseMentionToken, registerHelpAndRules } from "./helpers.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
@@ -257,7 +262,7 @@ function scheduleScares(game) {
   }, 8000);
 }
 
-function startGameFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
+async function startGameFromIds(message, idSet, rangeArg, modeArg, flags = {}, { assignRole = false } = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
@@ -336,6 +341,11 @@ function startGameFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
     return;
   }
 
+  if (assignRole) {
+    const { assignment } = await assignContestRoleForEntrants({ message }, aliveIds);
+    if (assignment) res.state.contestRoleAssignment = assignment;
+  }
+
   const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
 
   message.channel.send(
@@ -348,13 +358,15 @@ function startGameFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
 
   scheduleScares(res.state);
   scheduleExplosion(res.state);
+
+  return res.state;
 }
 
-export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
-  startGameFromIds(message, idSet, rangeArg, modeArg, flags);
+export async function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg, flags = {}, options = {}) {
+  return await startGameFromIds(message, idSet, rangeArg, modeArg, flags, options);
 }
 
-export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
+export async function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
   const mentioned = getMentionedUsers(message);
   const allowedIds = new Set();
   for (const u of mentioned) {
@@ -368,7 +380,7 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
     return;
   }
 
-  startGameFromIds(message, allowedIds, rangeArg, modeArg, flags);
+  return await startGameFromIds(message, allowedIds, rangeArg, modeArg, flags);
 }
 
 export function passVoltorb(message) {
@@ -578,12 +590,12 @@ export function registerExplodingVoltorbs(register) {
             return;
           }
 
-          startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg, flags);
+          await startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg, flags, { assignRole: true });
           return;
         }
 
         // Mention-based start path
-        startExplodingVoltorbs(message, rangeArg, modeArg, flags);
+        await startExplodingVoltorbs(message, rangeArg, modeArg, flags);
       },
     }),
     "!ev [min-max[s|sec|seconds]] [elim|suddendeath] [nopingpong] @players — start Exploding Voltorbs (default 30-90s, default mode suddendeath). If no @players, uses reaction join.",

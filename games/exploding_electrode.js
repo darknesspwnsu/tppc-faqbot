@@ -39,6 +39,7 @@ import {
   parseMentionIdsInOrder,
   shuffleInPlace,
   collectEntrantsByReactionsWithMax,
+  assignContestRoleForEntrants,
 } from "./framework.js";
 import { validateJoinAndMaxForMode } from "./helpers.js";
 
@@ -446,7 +447,7 @@ async function resolvePick(channel, manager, game, pickerId) {
 
 /* ------------------------------- start logic ------------------------------ */
 
-async function startFromIds(message, manager, idSet, parsedOpts) {
+async function startFromIds(message, manager, idSet, parsedOpts, { assignRole = false } = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
@@ -471,6 +472,7 @@ async function startFromIds(message, manager, idSet, parsedOpts) {
     guildId,
     channelId: message.channel.id,
     creatorId: message.author.id,
+    client: message.client,
     players,
     aliveIds: new Set(players),
     currentIndex: startIdx,
@@ -489,6 +491,11 @@ async function startFromIds(message, manager, idSet, parsedOpts) {
   }
 
   const game = started.state;
+
+  if (assignRole) {
+    const { assignment } = await assignContestRoleForEntrants({ message }, players);
+    if (assignment) game.contestRoleAssignment = assignment;
+  }
 
   await message.channel.send(
     `⚡ **Exploding Electrode started!**\n` +
@@ -618,7 +625,7 @@ export function registerExplodingElectrode(register) {
           return;
         }
 
-        await startFromIds(message, manager, entrants, opts);
+        await startFromIds(message, manager, entrants, opts, { assignRole: true });
       },
     }),
     "!ee [options...] [@players...] — start Exploding Electrode (taglist or reaction-join). Use `!ee help`.",
