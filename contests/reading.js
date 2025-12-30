@@ -1,4 +1,11 @@
 // contests/reading.js
+//
+// Reading tracker (message commands):
+// - !startReading [phrase]
+// - !endReading
+//
+// Scope:
+// - Guild + channel scoped; tracks unique responders in that channel only.
 import { isAdminOrPrivileged } from "../auth.js";
 
 // Keyed by "guildId:channelId"

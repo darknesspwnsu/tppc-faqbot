@@ -1,6 +1,6 @@
 // contests/get_forum_list.js
 //
-// Admin utility (SLASH ONLY): Scrape forums.tppc.info thread posters and DM a list of
+// Admin/privileged utility (SLASH ONLY): Scrape forums.tppc.info thread posters and DM a list of
 // "username - rpgId" (one per line), based on contest_help_main.py logic,
 // with additional rules:
 //
@@ -282,7 +282,7 @@ export function registerForumList(register) {
   register.slash(
     {
       name: "getforumlist",
-      description: "Scrape a TPPC forum thread and DM a username - rpg id list (admin only)",
+      description: "Scrape a TPPC forum thread and DM a username - rpg id list (admin/privileged)",
       options: [
         {
           type: 3, // STRING

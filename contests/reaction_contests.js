@@ -1,4 +1,9 @@
 // contests/reaction_contests.js
+//
+// Reaction-based contest helper:
+// - Command: !conteststart [mode] <time> [quota]
+// - Modes: list | choose | elim
+// - Guild + channel scoped to the start message
 import { isAdminOrPrivileged } from "../auth.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
 

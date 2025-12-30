@@ -1,4 +1,9 @@
 // contests/rng.js
+//
+// RNG utilities (exposed per guild):
+// - !/?roll, !/?choose, !/?elim
+// - ?cancelelim (hidden)
+// - !awesome, !coinflip (legacy)
 import { isAdminOrPrivileged } from "../auth.js";
 import { onAwesomeRoll } from "../games/closest_roll_wins.js";
 

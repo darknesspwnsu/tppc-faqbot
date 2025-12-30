@@ -1,4 +1,12 @@
 // contests/whispers.js
+//
+// Whisper phrases (slash only):
+// - /whisper phrase:<text> prize:<optional>
+// - /listwhispers
+//
+// Behavior:
+// - Phrases are matched as whole words/phrases in public chat.
+// - When found, the phrase is announced and removed.
 import { getUserText, setUserText } from "../db.js";
 
 /* ------------------------------- small helpers ------------------------------ */
