@@ -127,11 +127,12 @@ export function buildCommandRegistry({ client } = {}) {
 
     const allow = Array.isArray(p.allow) ? p.allow.map(String) : null;
     const deny = Array.isArray(p.deny) ? p.deny.map(String) : null;
+    const silent = p.silent === undefined ? true : Boolean(p.silent);
 
     return {
       allow: allow && allow.length ? allow : null,
       deny: deny && deny.length ? deny : null,
-      silent: Boolean(p.silent),
+      silent,
     };
   }
 
@@ -185,7 +186,12 @@ export function buildCommandRegistry({ client } = {}) {
         const exp = exposureFor(ctx.message?.guildId, logicalId);
         if (exp === "bang") {
           const gate = allowedInChannel(ctx.message, logicalId);
-          if (!gate.ok) return;
+          if (!gate.ok) {
+            if (!gate.silent) {
+              await ctx.message?.reply("This command isn’t allowed in this channel.");
+            }
+            return;
+          }
           return handler(ctx);
         }
         return; // silent for q + off
@@ -201,7 +207,12 @@ export function buildCommandRegistry({ client } = {}) {
         const exp = exposureFor(ctx.message?.guildId, logicalId);
         if (exp === "q") {
           const gate = allowedInChannel(ctx.message, logicalId);
-          if (!gate.ok) return;
+          if (!gate.ok) {
+            if (!gate.silent) {
+              await ctx.message?.reply("This command isn’t allowed in this channel.");
+            }
+            return;
+          }
           return handler(ctx);
         }
         return; // silent for bang + off
@@ -457,8 +468,8 @@ export function buildCommandRegistry({ client } = {}) {
       for (const h of messageHooks) {
         try {
           await h({ message });
-        } catch {
-          // isolate failures
+        } catch (err) {
+          console.error("[COMMANDS] message hook error:", err);
         }
       }
     }
