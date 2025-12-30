@@ -776,8 +776,10 @@ export function registerSafariZone(register) {
         return;
       }
 
-      // Preserve existing behavior: non-admins get no response (silent return)
-      if (!isAdminOrPrivilegedMessage(message)) return;
+      if (!isAdminOrPrivilegedMessage(message)) {
+        await message.reply("Nope — only admins can end the Safari Zone game.");
+        return;
+      }
 
       await message.channel.send("🧯 Safari Zone game ended by admin.");
       endGame(guildId);

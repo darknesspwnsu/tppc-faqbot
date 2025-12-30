@@ -382,10 +382,16 @@ export function passVoltorb(message) {
   }
 
   // Only participants can interact with the game
-  if (game.allowedIds && !game.allowedIds.has(message.author?.id)) return;
+  if (game.allowedIds && !game.allowedIds.has(message.author?.id)) {
+    message.reply("❌ You are not in this Voltorb game.");
+    return;
+  }
 
   // Only the current holder can pass
-  if (game.holderId !== message.author?.id) return;
+  if (game.holderId !== message.author?.id) {
+    message.reply(`❌ Only the current holder can pass. Current holder: <@${game.holderId}>.`);
+    return;
+  }
 
   const target = message.mentions?.users?.first?.();
   if (!target) {
