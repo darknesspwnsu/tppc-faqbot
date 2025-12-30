@@ -2,7 +2,7 @@
 //
 // Pokemon Unscramble:
 // - One game active per guild, restricted to start channel
-// - Start via !pokeunscramble (mentions or reaction join) or /pokeunscramble (reaction join)
+// - Start via /pokeunscramble (reaction join)
 // - Fixed number of rounds (default 1)
 // - Optional time limit per round
 // - Word list provided by host (slash modal or list= on message command)
@@ -14,13 +14,11 @@ import {
   makeGameQoL,
   mention,
   nowMs,
-  parseDurationSeconds,
-  reply,
   requireSameChannel,
   shuffleInPlace,
   withGameSubcommands,
 } from "./framework.js";
-import { getMentionedUsers, validateJoinAndMaxForMode } from "./helpers.js";
+import { validateJoinAndMaxForMode } from "./helpers.js";
 
 const manager = createGameManager({ id: "pokemon_unscramble", prettyName: "Pokemon Unscramble", scope: "guild" });
 
@@ -67,17 +65,13 @@ function makeHelpText() {
   return [
     "**Pokemon Unscramble — Help**",
     "",
-    "**Start (mentions):**",
-    "• `!pokeunscramble list=PIKACHU,EEVEE @user1 @user2 ...`",
-    "",
-    "**Start (reaction join):**",
-    "• `!pokeunscramble list=PIKACHU,EEVEE join=20 [max=8]`",
+    "**Start:**",
     "• `/pokeunscramble` (opens a modal for the word list)",
     "",
-    "**Options:**",
-    "• `time=NN` — round time limit in seconds (default 20)",
-    "• `rounds=NN` — number of rounds (default 1)",
-    "• `join=NN` / `max=NN` — reaction join only",
+    "**Options (slash):**",
+    "• `time` — round time limit in seconds (default 20)",
+    "• `rounds` — number of rounds (default 1)",
+    "• `join` / `max` — reaction join options",
     "",
     "**Play:**",
     "• Unscramble the Pokemon name and type it in chat.",
@@ -103,59 +97,6 @@ function makeRulesText() {
 const HELP_TEXT = makeHelpText();
 const RULES_TEXT = makeRulesText();
 
-function parseOptions(tokens) {
-  const opts = {
-    timeSeconds: null,
-    joinSeconds: null,
-    maxPlayers: null,
-    roundsTarget: null,
-    listRaw: null,
-  };
-
-  for (const t of tokens) {
-    const s = String(t ?? "").trim();
-    if (!s) continue;
-
-    if (s.startsWith("time=")) {
-      const raw = s.slice(5);
-      const sec = parseDurationSeconds(raw, null);
-      if (sec != null) opts.timeSeconds = sec;
-      continue;
-    }
-
-    if (s.startsWith("join=")) {
-      const raw = s.slice(5);
-      const sec = parseDurationSeconds(raw, null);
-      if (sec != null) opts.joinSeconds = sec;
-      continue;
-    }
-
-    if (s.startsWith("max=")) {
-      const raw = s.slice(4);
-      const n = Number(raw);
-      if (Number.isFinite(n)) opts.maxPlayers = n;
-      continue;
-    }
-
-    if (s.startsWith("rounds=")) {
-      const raw = s.slice(7);
-      const n = Number(raw);
-      if (Number.isFinite(n)) opts.roundsTarget = n;
-      continue;
-    }
-
-    if (s.startsWith("list=")) {
-      opts.listRaw = s.slice(5);
-      continue;
-    }
-
-    if (/^\d+$/.test(s) && opts.timeSeconds == null) {
-      opts.timeSeconds = Number(s);
-    }
-  }
-
-  return opts;
-}
 
 function validateTargets(roundsTarget, wordList) {
   const rounds = Number(roundsTarget ?? 1);
@@ -288,10 +229,6 @@ function buildStartState({ guildId, channelId, creatorId, players, timeLimitSec,
   };
 }
 
-function buildWordListFromOptions(listRaw) {
-  const words = parseWordList(listRaw);
-  return words.length ? words : null;
-}
 
 export function registerPokemonUnscramble(register) {
   makeGameQoL(register, {
@@ -315,135 +252,7 @@ export function registerPokemonUnscramble(register) {
       rulesText: RULES_TEXT,
       onStart: async ({ message, rest }) => {
         if (!message.guild) return;
-
-        const existing = manager.getState({ guildId: message.guild.id });
-        if (existing) {
-          await message.reply(`⚠️ Pokemon Unscramble is already running in <#${existing.channelId}>.`);
-          return;
-        }
-
-        const tokens = String(rest ?? "").trim().split(/\s+/).filter(Boolean);
-        const opts = parseOptions(tokens);
-        const timeLimitSec = opts.timeSeconds ?? DEFAULT_TIME_SEC;
-
-        if (!Number.isFinite(timeLimitSec) || timeLimitSec < 5 || timeLimitSec > 120) {
-          await message.reply("❌ `time=` must be between 5 and 120 seconds.");
-          return;
-        }
-
-        const wordList = buildWordListFromOptions(opts.listRaw);
-        if (!wordList) {
-          await message.reply("❌ Provide a word list with `list=` or use `/pokeunscramble`.");
-          return;
-        }
-
-        const targets = validateTargets(opts.roundsTarget, wordList);
-        if (!targets.ok) {
-          await message.reply(targets.err);
-          return;
-        }
-
-        const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
-        const joinCheck = validateJoinAndMaxForMode({
-          hasMentions,
-          joinSeconds: opts.joinSeconds,
-          maxPlayers: opts.maxPlayers,
-          defaultJoinSeconds: DEFAULT_JOIN_SEC,
-          joinMin: 5,
-          joinMax: 120,
-          maxMin: 1,
-          maxMax: 50,
-          mentionErrorText: "❌ `join=` and `max=` are only valid for reaction-join (no @mentions).",
-          joinErrorText: "❌ `join=` must be between 5 and 120 seconds.",
-          maxErrorText: "❌ `max=` must be between 1 and 50.",
-        });
-        if (!joinCheck.ok) {
-          await message.reply(joinCheck.err);
-          return;
-        }
-
-        if (!hasMentions) {
-          const joinSeconds = joinCheck.joinSeconds ?? DEFAULT_JOIN_SEC;
-          const { entrants } = await collectEntrantsByReactionsWithMax({
-            channel: message.channel,
-            promptText: `🧩 **Pokemon Unscramble** — react ✅ to join! (join window: ${joinSeconds}s)`,
-            durationMs: joinSeconds * 1000,
-            maxEntrants: joinCheck.maxPlayers ?? null,
-            emoji: "✅",
-            dispose: true,
-            trackRemovals: true,
-          });
-
-          if (!entrants.size) {
-            await message.channel.send("❌ No players joined.");
-            return;
-          }
-
-          const players = [...entrants].filter(Boolean);
-          const res = manager.tryStart(
-            { guildId: message.guild.id },
-            buildStartState({
-              guildId: message.guild.id,
-              channelId: message.channelId,
-              creatorId: message.author?.id || null,
-              players,
-              timeLimitSec,
-              roundsTarget: targets.roundsTarget,
-              wordList,
-              client: message.client,
-            })
-          );
-
-          if (!res.ok) {
-            await message.reply(res.errorText);
-            return;
-          }
-
-          await message.channel.send(
-            `✅ **Pokemon Unscramble started!**\n` +
-              `Players: ${players.map(mention).join(", ")}\n` +
-              `Rounds: **${targets.roundsTarget}**\n` +
-              `Time limit: **${timeLimitSec}s**`
-          );
-
-          await startRound(res.state, message.channel);
-          return;
-        }
-
-        const mentioned = getMentionedUsers(message);
-        const players = mentioned.filter((u) => u?.id && !u.bot).map((u) => u.id);
-        if (!players.length) {
-          await message.reply("❌ You need to mention at least one player.");
-          return;
-        }
-
-        const res = manager.tryStart(
-          { guildId: message.guild.id },
-          buildStartState({
-            guildId: message.guild.id,
-            channelId: message.channelId,
-            creatorId: message.author?.id || null,
-            players,
-            timeLimitSec,
-            roundsTarget: targets.roundsTarget,
-            wordList,
-            client: message.client,
-          })
-        );
-
-        if (!res.ok) {
-          await message.reply(res.errorText);
-          return;
-        }
-
-        await message.channel.send(
-          `✅ **Pokemon Unscramble started!**\n` +
-            `Players: ${players.map(mention).join(", ")}\n` +
-            `Rounds: **${targets.roundsTarget}**\n` +
-            `Time limit: **${timeLimitSec}s**`
-        );
-
-        await startRound(res.state, message.channel);
+        await message.reply("Start Pokemon Unscramble with the slash command: `/pokeunscramble`.");
       },
     }),
     "!pokeunscramble [options] [@players] — start Pokemon Unscramble",
@@ -747,7 +556,6 @@ export function registerPokemonUnscramble(register) {
 export const __testables = {
   normalizeGuess,
   scrambleWord,
-  parseOptions,
   validateTargets,
   parseWordList,
 };
