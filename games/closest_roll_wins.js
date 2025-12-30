@@ -131,6 +131,7 @@ async function endWithWinner(st, reason, channelOverride = null) {
   await sendToGameChannel(
     st,
     `🏁 **ClosestRoll ended** (${reason}).\n` +
+      `Host: ${mention(st.creatorId)}\n` +
       `Target: **${st.target}**\n` +
       `Winner: ${mention(b.userId)} with **${b.roll}** (diff **${b.diff}**)`,
     channelOverride
@@ -143,6 +144,7 @@ async function cancelNoWinner(st, reason, channelOverride = null) {
   await sendToGameChannel(
     st,
     `🛑 **ClosestRoll cancelled** (${reason}).\n` +
+      `Host: ${mention(st.creatorId)}\n` +
       `Target: **${st.target}**\n` +
       `No winner will be announced.`,
     channelOverride
