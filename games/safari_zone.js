@@ -30,6 +30,7 @@ import {
   createGameManager,
   isAdminOrPrivilegedMessage,
   makeGameQoL,
+  requireSameChannel,
   shuffleInPlace,
   withGameSubcommands,
 } from "./framework.js";
@@ -66,6 +67,7 @@ function szHelpText() {
     "",
     "**Play:**",
     "• `!szpick A1` — only the current player can pick",
+    "• Commands must be used in the **start channel**",
     "",
     "**Timers:**",
     "• If you don’t pick in time, you’re skipped (not kicked).",
@@ -90,6 +92,8 @@ function szRulesText() {
     "• If you don’t pick in time, you’re skipped (not eliminated).",
     "",
     "Game ends when all squares are revealed.",
+    "",
+    "Note: this game is **channel-bound** — use commands in the start channel.",
   ].join("\n");
 }
 
@@ -478,6 +482,9 @@ async function startSafariZoneFromIds(message, idSet, parsedOpts) {
     {
       kind: "safari_zone",
       guildId,
+      channelId: message.channelId,
+      creatorId: message.author?.id || null,
+      client: message.client,
       n,
       totalSquares,
       prizeCount: prizes,
@@ -728,6 +735,8 @@ export function registerSafariZone(register) {
         return;
       }
 
+      if (!(await requireSameChannel({ message }, game, manager))) return;
+
       const coord = String(rest ?? "").trim();
       if (!coord) {
         await message.reply("Usage: `!szpick A1`");
@@ -753,6 +762,8 @@ export function registerSafariZone(register) {
         return;
       }
 
+      if (!(await requireSameChannel({ message }, game, manager))) return;
+
       await message.channel.send(
         `🧭 **Safari Zone status**\n` +
           `Mode: **${gameModeLabel(game)}** • Remaining squares: **${remainingCovered(game)}**\n` +
@@ -775,6 +786,8 @@ export function registerSafariZone(register) {
         await message.reply("❌ There is no active Safari Zone game.");
         return;
       }
+
+      if (!(await requireSameChannel({ message }, game, manager))) return;
 
       if (!isAdminOrPrivilegedMessage(message)) {
         await message.reply("Nope — only admins can end the Safari Zone game.");
