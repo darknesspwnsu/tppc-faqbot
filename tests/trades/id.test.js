@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const getSavedId = vi.fn();
-const setSavedId = vi.fn();
-const deleteSavedId = vi.fn();
-
-vi.mock("../../db.js", () => ({
-  getSavedId,
-  setSavedId,
-  deleteSavedId,
+const dbMocks = vi.hoisted(() => ({
+  getSavedId: vi.fn(),
+  setSavedId: vi.fn(),
+  deleteSavedId: vi.fn(),
 }));
+
+vi.mock("../../db.js", () => dbMocks);
 
 import { registerId } from "../../trades/id.js";
 
@@ -28,7 +26,7 @@ function getExposeHandler(register, name) {
 }
 
 function getSlashHandler(register, name) {
-  return register.calls.find((c) => c.name === name && c.handler)?.handler;
+  return register.calls.find((c) => c.name === name && c.handler && c.def)?.handler;
 }
 
 function makeMessage({
@@ -69,9 +67,9 @@ function makeInteraction({
 
 describe("id.js", () => {
   beforeEach(() => {
-    getSavedId.mockReset();
-    setSavedId.mockReset();
-    deleteSavedId.mockReset();
+    dbMocks.getSavedId.mockReset();
+    dbMocks.setSavedId.mockReset();
+    dbMocks.deleteSavedId.mockReset();
   });
 
   it("handles add and del in message handler", async () => {
@@ -82,15 +80,15 @@ describe("id.js", () => {
     const message = makeMessage();
 
     await handler({ message, rest: "add 123" });
-    expect(setSavedId).toHaveBeenCalledWith({
+    expect(dbMocks.setSavedId).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
       savedId: 123,
     });
 
-    getSavedId.mockResolvedValueOnce(123);
+    dbMocks.getSavedId.mockResolvedValueOnce(123);
     await handler({ message, rest: "del" });
-    expect(deleteSavedId).toHaveBeenCalledWith({
+    expect(dbMocks.deleteSavedId).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
     });
@@ -103,7 +101,7 @@ describe("id.js", () => {
     const handler = getExposeHandler(register, "id");
     const message = makeMessage({ mentions: [{ id: "u2" }] });
 
-    getSavedId.mockResolvedValueOnce(null);
+    dbMocks.getSavedId.mockResolvedValueOnce(null);
     await handler({ message, rest: "<@u2>" });
 
     expect(message.channel.send).toHaveBeenCalledWith("<@u2> has not set an ID!");
@@ -116,7 +114,7 @@ describe("id.js", () => {
     const handler = getSlashHandler(register, "id");
     const interaction = makeInteraction();
 
-    getSavedId.mockResolvedValueOnce(456);
+    dbMocks.getSavedId.mockResolvedValueOnce(456);
     await handler({ interaction });
 
     expect(interaction.reply).toHaveBeenCalledWith(
@@ -135,7 +133,7 @@ describe("id.js", () => {
 
     await handler({ interaction });
 
-    expect(setSavedId).toHaveBeenCalledWith({
+    expect(dbMocks.setSavedId).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
       savedId: 789,

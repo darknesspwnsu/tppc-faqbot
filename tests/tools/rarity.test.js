@@ -35,8 +35,8 @@ const httpGet = vi.fn((url, cb) => {
   return { on: vi.fn() };
 });
 
-vi.mock("node:http", () => ({ get: httpGet }));
-vi.mock("node:https", () => ({ get: httpGet }));
+vi.mock("node:http", () => ({ default: { get: httpGet }, get: httpGet }));
+vi.mock("node:https", () => ({ default: { get: httpGet }, get: httpGet }));
 
 vi.mock("discord.js", () => {
   class ActionRowBuilder {

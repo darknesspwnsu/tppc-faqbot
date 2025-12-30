@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const getUserText = vi.fn();
-const setUserText = vi.fn();
-const deleteUserText = vi.fn();
-
-vi.mock("../../db.js", () => ({
-  getUserText,
-  setUserText,
-  deleteUserText,
+const dbMocks = vi.hoisted(() => ({
+  getUserText: vi.fn(),
+  setUserText: vi.fn(),
+  deleteUserText: vi.fn(),
 }));
+
+vi.mock("../../db.js", () => dbMocks);
 
 import { registerTradeCommands } from "../../trades/trade_commands.js";
 
@@ -44,9 +42,9 @@ function makeMessage({
 
 describe("trade_commands.js", () => {
   beforeEach(() => {
-    getUserText.mockReset();
-    setUserText.mockReset();
-    deleteUserText.mockReset();
+    dbMocks.getUserText.mockReset();
+    dbMocks.setUserText.mockReset();
+    dbMocks.deleteUserText.mockReset();
   });
 
   it("handles add for ft", async () => {
@@ -58,7 +56,7 @@ describe("trade_commands.js", () => {
 
     await handler({ message, rest: "add pikachu", cmd: "?ft" });
 
-    expect(setUserText).toHaveBeenCalledWith({
+    expect(dbMocks.setUserText).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
       kind: "ft",
@@ -76,11 +74,11 @@ describe("trade_commands.js", () => {
     const handler = getHandler(register, "lf");
     const message = makeMessage();
 
-    getUserText.mockResolvedValueOnce("old list");
+    dbMocks.getUserText.mockResolvedValueOnce("old list");
 
     await handler({ message, rest: "del", cmd: "?lf" });
 
-    expect(deleteUserText).toHaveBeenCalledWith({
+    expect(dbMocks.deleteUserText).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
       kind: "lf",
@@ -99,8 +97,8 @@ describe("trade_commands.js", () => {
       mentions: [{ id: "u2" }, { id: "u3" }],
     });
 
-    getUserText.mockResolvedValueOnce("a list");
-    getUserText.mockResolvedValueOnce(null);
+    dbMocks.getUserText.mockResolvedValueOnce("a list");
+    dbMocks.getUserText.mockResolvedValueOnce(null);
 
     await handler({ message, rest: "<@u2> <@u3>", cmd: "?ft" });
 

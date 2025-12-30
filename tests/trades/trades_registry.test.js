@@ -1,10 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 
-const registerTradeCommands = vi.fn();
-const registerId = vi.fn();
+const tradeMocks = vi.hoisted(() => ({
+  registerTradeCommands: vi.fn(),
+  registerId: vi.fn(),
+}));
 
-vi.mock("../../trades/trade_commands.js", () => ({ registerTradeCommands }));
-vi.mock("../../trades/id.js", () => ({ registerId }));
+vi.mock("../../trades/trade_commands.js", () => ({
+  registerTradeCommands: tradeMocks.registerTradeCommands,
+}));
+vi.mock("../../trades/id.js", () => ({
+  registerId: tradeMocks.registerId,
+}));
 
 import { registerTrades, listTrades } from "../../trades/trades.js";
 
@@ -17,7 +23,7 @@ describe("trades.js registry", () => {
     const register = vi.fn();
     registerTrades(register);
 
-    expect(registerTradeCommands).toHaveBeenCalledWith(register);
-    expect(registerId).toHaveBeenCalledWith(register);
+    expect(tradeMocks.registerTradeCommands).toHaveBeenCalledWith(register);
+    expect(tradeMocks.registerId).toHaveBeenCalledWith(register);
   });
 });

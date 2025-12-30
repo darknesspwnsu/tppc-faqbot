@@ -11,7 +11,7 @@ async function loadAuthModule({ fileContents, throws = false } = {}) {
     return fileContents ?? "{}";
   });
 
-  vi.doMock("fs", () => ({ readFileSync }));
+  vi.doMock("fs", () => ({ default: { readFileSync }, readFileSync }));
 
   const mod = await import("../../auth.js");
   return { ...mod, readFileSync };
