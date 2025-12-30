@@ -1,192 +1,200 @@
-# TPPC Discord Utility Bot AKA Spectreon
+# TPPC Discord Utility Bot — Spectreon
 
-A modular Discord bot for **TPPC community servers**, focused on **utilities**, **games**, and **contest tooling**.
+**Spectreon** is a modular Discord bot built for **TPPC community servers**, providing
+utilities, contests, and multiplayer games with strict consistency, deterministic rules,
+and per-guild configurability.
 
-Commands are explicit (prefixed with `!`) to avoid spam and false positives.
-Slash commands (`/help`) are used for long-form or UI-heavy output.
+The bot is designed to scale across **multiple servers** without command collisions,
+spam, or ambiguity.
 
 ---
 
-## Key Features
+## ✨ Core Philosophy
+
+- **Explicit commands only** (`!cmd` or `?cmd`)
+- **One active game per guild**
+- **Deterministic behavior**
+- **No silent failures**
+- **Per-guild command exposure control**
+- **Automatically generated help**
+
+---
+
+## 🧩 Key Features
 
 ### 🧰 Utilities
+- Trading (`FT`) and Looking-For (`LF`) lists (DB-backed)
+- TPPC ID storage & lookup
+- Rarity lookups (live GitHub Pages JSON)
+- Level-4 rarity stats
+- Rarity comparison & history charts
+- Wiki lookups (local index, Cloudflare-safe)
+- FAQ system with fuzzy matching
+- Promo tracking (`!promo` / `!setpromo`)
 
-* Trading / Looking For lists
-* ID lookup & storage
-* Wiki lookup using a **local index** (Cloudflare-safe)
-* FAQ system with fuzzy matching
-* Rarity tools & calculators
-* Custom helper utilities for TPPC gameplay
+---
+
+### 🎲 Contests
+- RNG tools: `roll`, `choose`, `elim`, `awesome`, `wheelspin`
+- Reaction-based contests
+- Whispers (hidden phrases + optional prizes)
+- Reading & forum list helpers
+- Contest helpers reused by games where applicable
+
+---
 
 ### 🎮 Games
 
-Turn-based, multiplayer mini-games with:
-
-* Reaction-join **or** tagged players
-* Per-turn timers with skip handling
-* One active game per guild
-* Deterministic turn rules
+All games share a **common framework**:
+- Reaction-join **or** tagged players
+- Per-turn timers with skip handling
+- Host-controlled lifecycle
+- Deterministic resolution
 
 Current games include:
 
-* **Exploding Voltorbs**
-* **Exploding Electrode**
-* **Safari Zone** (grid-based prize hunt)
+- **Exploding Voltorbs**
+- **Exploding Electrode**
+- **Safari Zone**
+- **Bingo**
+- **Blackjack**
+- **Closest Roll Wins**
+- **Higher or Lower**
+- **Rock Paper Scissors**
+- **Hangman**
+- **Deal or No Deal**
+- **Auction**
 
-### 📘 Help System
-
-* `!help` — short preview + redirect
-* `/help` — full command list (no 2000-char limit)
-* Admin-only commands hidden from non-admin users
+Only **primary game commands** appear in help to avoid clutter.
 
 ---
 
-## Project Structure
+## 📘 Help System
+
+- `!help` — public, truncated preview (safe under 2000 chars)
+- `/help` — full interactive help menu (ephemeral)
+- Commands are grouped by category
+- Per-guild exposure is respected automatically
+- Admin-only commands are hidden from non-admins
+
+---
+
+## ⚙️ Command Exposure Model
+
+Each logical command can be exposed as:
+
+- `bang` → `!command`
+- `q` → `?command`
+- `off` → disabled
+
+This is controlled in:
 
 ```
+
+configs/command_exposure.js
+
+```
+
+This prevents collisions with other bots **without breaking muscle memory**.
+
+> **Important:**  
+> A command is *never* exposed as both `!` and `?` at the same time.
+
+---
+
+## 🗂 Project Structure
+
+```
+
 .
-├── bot.js              # Discord client + event handlers
-├── commands.js         # Command registry & dispatch
-├── helpbox.js          # !help and /help logic
+├── bot.js                    # Discord client + lifecycle
+├── commands.js               # Unified command registry
+├── helpbox.js                # !help and /help UI
+├── auth.js                   # Admin / privileged checks
+├── db.js                     # MySQL persistence
+├── tools.js                  # TPPC tools & promo system
+├── trades.js                 # FT / LF / ID commands
+├── rarity.js                 # Rarity, comparisons, history
+├── contests/
+│   ├── contests.js           # Contest module registry
+│   ├── rng.js
+│   ├── reaction_contests.js
+│   ├── whispers.js
+│   └── ...
 ├── games/
-│   ├── games.js        # Game registry
+│   ├── games.js              # Game registry
 │   ├── exploding_voltorbs.js
-│   ├── exploding_electrode.js
-│   └── safari_zone.js
-├── faq.js              # FAQ engine (fuzzy matching)
-├── wiki.js             # Local TPPC wiki lookup
-├── rarity.js           # Rarity utilities & commands
-├── trades.js           # Trading / LF systems
-├── contests.js         # Reaction-join helpers
-├── tools.js            # Shared helpers
+│   ├── blackjack.js
+│   ├── auction.js
+│   └── ...
+├── verification/
+│   ├── verification_module.js
+│   ├── verifyme.js
+│   └── whois.js
+├── configs/
+│   └── command_exposure.js
 ├── data/
 │   ├── wiki_data.json
-│   └── ngs.json
-├── auth.js             # Admin / privilege checks
+│   └── privileged_users.json
 └── .env.example
-```
+
+````
 
 ---
 
-## Requirements
+## 🧪 Requirements
 
-* **Node.js 20+** (21+ fine)
-* A Discord Bot Token (Discord Developer Portal)
-* Permissions:
-
-  * Read Messages
-  * Send Messages
-  * Add Reactions
-  * Manage Messages (recommended for games)
+- **Node.js 20+**
+- **Discord.js v14**
+- **MySQL / MariaDB** (required for most features)
+- Discord bot permissions:
+  - Read Messages
+  - Send Messages
+  - Add Reactions
+  - Manage Messages (recommended for games)
 
 ---
 
-## Setup
+## 🚀 Setup
 
 ```bash
 npm install
 cp .env.example .env
-# edit .env with your values
+# fill in env values
 npm start
-```
+````
 
 ---
 
-## Environment Variables
+## 🌱 Environment Variables
 
-See `.env.example` for the canonical list. Common settings include:
+See `.env.example` for the canonical list.
 
-| Variable                  | Description                                     |
-| ------------------------- | ----------------------------------------------- |
-| `DISCORD_TOKEN`           | **Required** bot token                          |
-| `ALLOWED_CHANNEL_IDS`     | Comma-separated channel allowlist (empty = all) |
-| `EVAL_COOLDOWN_MS`        | Cooldown for eval-style commands                |
-| `TRADING_GUILD_ALLOWLIST` | Guilds allowed to use trading commands          |
-| `RARITY_GUILD_ALLOWLIST`  | Guilds allowed to use rarity commands           |
-| `DEFAULT_THRESHOLD`       | FAQ match confidence (0–1)                      |
-| `NEAR_MISS_MIN/MAX`       | FAQ near-miss logging band                      |
+Common variables:
 
----
-
-## Commands Overview
-
-### General
-
-* `!help` — short preview + prompt to use `/help`
-* `/help` — full command list
-* `!roll NdM`
-* `!choose option1 option2 ...`
-* `!coinflip`
-* `!awesome [@user]`
-
-### TPPC Utilities
-
-* `!wiki <term>` — TPPC wiki lookup
-* `!faq <question>` — canned FAQ responses
-* `!ng` — current New Goldens list
-* `!rarity <pokemon>` — rarity lookup
-* `!rc <pokemon1> <pokemon2>` — rarity comparison
-
-### Trading
-
-* `!ft`, `!lf` — trading / looking-for lists
-* `!id` — save or lookup TPPC IDs
-
-### Games
-
-* `!ev` — Exploding Voltorbs
-* `!ee` — Exploding Electrode
-* `!sz` — Safari Zone
-
-Games support:
-
-* Tagged players **or** reaction-based join
-* Turn timers (default 30s)
-* Skip-on-timeout (players are not eliminated)
-* Deterministic or random turn modes depending on game rules
-
-### Admin
-
-* `!faqreload`
-* `!endsafari`, `!endev`, etc.
-* Hidden from non-admin users in help output
+| Variable                      | Description                         |
+| ----------------------------- | ----------------------------------- |
+| `DISCORD_TOKEN`               | **Required** bot token              |
+| `ALLOWED_CHANNEL_IDS`         | Optional channel allowlist          |
+| `SLASH_GUILD_ID`              | Guild-only slash registration (dev) |
+| `DB_HOST / DB_USER / DB_NAME` | MySQL connection                    |
+| `RARITY_JSON_URL`             | Live rarity JSON source             |
+| `RARITY_DAILY_REFRESH_ET`     | Daily refresh time (ET)             |
 
 ---
 
-## Help Philosophy
+## 🧠 Database Usage
 
-* `!help` is intentionally **short** to avoid Discord’s 2000-char limit
-* `/help` is the authoritative, complete reference
-* Help text is generated automatically from command registrations
+The bot automatically creates required tables:
 
----
+* `user_ids` — TPPC IDs
+* `user_texts` — FT/LF lists, promos, whispers
 
-## Updating Data
-
-### Wiki Index
-
-* Stored locally to avoid Cloudflare blocks
-* Update the source JSON and restart
-
-### NG List
-
-Edit:
-
-```json
-["Glaceon", "Eevee"]
-```
-
-or:
-
-```json
-{ "ngs": ["Glaceon", "Eevee"] }
-```
-
-Then restart the bot.
+If DB is unavailable, some features safely degrade (e.g. promos fall back to memory).
 
 ---
 
-## Deployment (VPS / Production)
+## 📦 Deployment (Production)
 
 ```bash
 git clone <repo>
@@ -197,48 +205,37 @@ nano .env
 npm start
 ```
 
-Recommended: **PM2**
+Recommended process manager:
 
 ```bash
-pm2 start bot.js --name tppc-bot
+pm2 start bot.js --name spectreon
 pm2 save
 pm2 startup
 ```
 
 ---
 
-## Adding New Commands
-
-All commands are registered in `commands.js`:
+## ➕ Adding New Commands
 
 ```js
 register(
-  "!mycmd",
+  "!example",
   async ({ message, rest }) => {
-    await message.reply("You said: " + rest);
+    await message.reply("Hello!");
   },
-  "!mycmd — does a thing"
+  "!example — says hello"
 );
 ```
 
-Help output updates automatically.
+* Help text updates automatically
+* Exposure rules are enforced automatically
+* Categories propagate to help UI
 
 ---
 
-## Design Goals
+## 🎯 Design Goals
 
-* Deterministic behavior
-* Explicit commands
-* No silent failures
-* Scales with TPPC community needs
-* Easy to extend without rewriting core systems
-
----
-
-If you want, next step I can:
-
-* Tighten wording further (more “public repo” tone vs dev tone)
-* Add a **Games section with screenshots/examples**
-* Split README into **User Guide** + **Developer Guide**
-
-Just tell me how polished you want it.
+* Predictable behavior
+* Minimal moderator overhead
+* Clean UX for both casual users and power users
+* Easily extensible without rewriting core systems
