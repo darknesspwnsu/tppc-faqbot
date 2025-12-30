@@ -223,13 +223,22 @@ async function postVerificationReview({ interaction, guildCfg, forumUsername }) 
     false
   );
 
-  const msg = await ch.send({
-    content,
-    components,
-    allowedMentions: { users: [] },
-  });
-
-  return { ok: true, messageId: msg.id };
+  try {
+    const msg = await ch.send({
+      content,
+      components,
+      allowedMentions: { users: [] },
+    });
+    return { ok: true, messageId: msg.id };
+  } catch (e) {
+    console.warn("[verifyme] postVerificationReview failed:", e);
+    return {
+      ok: false,
+      error:
+        "I couldn't post to the staff review channel (missing access). " +
+        "Ask an admin to grant me View Channel + Send Messages in the configured joinlog channel.",
+    };
+  }
 }
 
 async function finalizeReviewMessage(interaction, outcomeLine) {

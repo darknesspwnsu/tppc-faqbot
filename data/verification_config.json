@@ -2,7 +2,7 @@
   "version": 1,
   "guilds": {
     "329934860388925442": {
-      "name": "TPPC (test guild)",
+      "name": "TPPC Official Discord",
       "reviewChannelId": "690179788890964013",
 
       "adminRoleIds": [
@@ -18,6 +18,28 @@
 
       "rejectLabel": "Reject",
 
+      "tokenTtlMinutes": 20,
+      "resendCooldownSeconds": 120
+    },
+   "1332822580708511815": {
+      "name": "Bot Test Server",
+      "reviewChannelId": "1332822581627326588",
+
+      "adminRoleIds": [
+        "1333401501036711976",
+        "1333401096688898069",
+        "1333401580505923636",
+        "1333401624240062474"
+      ],
+
+      "approvalRoles": [
+        {
+          "id": "1455432278548418713",
+          "label": "Verified"
+        }
+      ],
+
+      "rejectLabel": "Reject",
       "tokenTtlMinutes": 20,
       "resendCooldownSeconds": 120
     }
