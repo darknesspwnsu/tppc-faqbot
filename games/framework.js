@@ -2,6 +2,11 @@
 //
 // Lightweight game framework helpers for TPPC Discord Bot games.
 // Composition-first: games opt into pieces instead of inheriting a base class.
+//
+// Core ideas:
+// - Game state is kept in memory via createGameManager (guild/global scope).
+// - Timers should be owned by TimerBag so manager.stop() is always safe.
+// - Helpers keep command UX consistent (help/rules/status, permission checks, etc.).
 
 import { PermissionsBitField } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
@@ -107,6 +112,9 @@ export function formatDurationSeconds(sec) {
  * Options allow matching existing game behavior:
  * - trackRemovals: when true, removes users on unreact (requires dispose:true)
  * - dispose: pass through to collector (needed if you want "remove" events)
+ *
+ * Returns { entrants:Set<string>, joinMsg, reason }.
+ * Best-effort: edits the join message when the window closes.
  */
 export async function collectEntrantsByReactionsWithMax({
   channel,
@@ -209,8 +217,8 @@ export function isAdminish(member) {
  * Canonical "can manage this game" for any ctx.
  *
  * - owner always allowed
- * - message ctx: uses isAdminOrPrivileged(message) (preserves privileged_users.json behavior)
- * - interaction ctx: falls back to Admin/ManageGuild permissions (no privileged list available)
+ * - message ctx: uses isAdminOrPrivileged(message)
+ * - interaction ctx: uses isAdminOrPrivileged(message-like), else Admin/ManageGuild
  */
 export function canManageCtx(ctx, state, ownerField = "creatorId") {
   if (!state) return false;
@@ -295,6 +303,12 @@ export async function safeEditById(channel, messageId, payload) {
 
 /* ------------------------------ board helpers ------------------------------ */
 
+/**
+ * Board helper for "single message" games.
+ *
+ * Requires state.client + state.channelId to resolve the channel.
+ * Uses state[messageIdField] to track the board message id.
+ */
 export function createBoard(state, { messageIdField = "messageId" } = {}) {
   async function getChannel() {
     const client = state?.client;
@@ -406,6 +420,16 @@ export async function guardBoardInteraction(
 
 /* ------------------------------ game manager ------------------------------ */
 
+/**
+ * In-memory game state manager.
+ *
+ * Scope:
+ * - "guild" (default): one active state per guild
+ * - "global": single shared state
+ *
+ * Expect state to include: guildId, channelId, creatorId, client (when needed),
+ * and timers (TimerBag) for safe cleanup.
+ */
 export function createGameManager({ id, prettyName, scope = "guild" } = {}) {
   const label = prettyName || id || "game";
 
