@@ -311,6 +311,12 @@ export function registerReactionContests(register) {
 
       if (!canManageContest(message)) return;
 
+      const existing = findCollectorForChannel(message.guildId, message.channelId);
+      if (existing) {
+        await message.reply("⚠️ A reaction contest is already running in this channel.");
+        return;
+      }
+
       const tokens = rest.trim().split(/\s+/).filter(Boolean);
 
       let mode = "list";
