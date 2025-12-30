@@ -124,6 +124,20 @@ function levelForSellerGets(budget) {
   return maxLevelForBudget(budget, (L) => sellerGetsAtLevel(L));
 }
 
+export const __testables = {
+  parseNum,
+  formatInt,
+  levelToExp,
+  expToLevel,
+  marketPriceAtLevel,
+  buyerPaysAtLevel,
+  sellerGetsAtLevel,
+  minLevelForTarget,
+  maxLevelForBudget,
+  levelForBuyerPays,
+  levelForSellerGets,
+};
+
 const AFFORDABILITY_NOTE =
   "> Note: Prices are based on actual EXP, not just the displayed level. A Pokémon with higher EXP may cost more even if it shows the same level.";
 
