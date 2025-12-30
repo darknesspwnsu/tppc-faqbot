@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "guilds": {
+    "329934860388925442": {
+      "name": "TPPC (test guild)",
+      "reviewChannelId": "690179788890964013",
+
+      "adminRoleIds": [
+        "329935200983318528",
+        "333985393764466714",
+        "330152688488546312"
+      ],
+
+      "approvalRoles": [
+        { "id": "331095682335375361", "label": "Verified" },
+        { "id": "551238956679954432", "label": "Verified/No Images" }
+      ],
+
+      "rejectLabel": "Reject",
+
+      "tokenTtlMinutes": 20,
+      "resendCooldownSeconds": 120
+    }
+  }
+}
