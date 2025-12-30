@@ -28,6 +28,7 @@ import { buildCommandRegistry } from "../../commands.js";
 import { isAdminOrPrivileged } from "../../auth.js";
 import { registerInfo } from "../../info/info.js";
 import { registerTrades } from "../../trades/trades.js";
+import { handleRarityInteraction } from "../../tools/rarity.js";
 
 function makeMessage({ guildId = "g1", channelId = "c1", content = "" } = {}) {
   return {
@@ -181,6 +182,37 @@ describe("commands registry", () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(errSpy).toHaveBeenCalledTimes(1);
+
+    errSpy.mockRestore();
+  });
+
+  it("falls back to component handler when rarity retry throws", async () => {
+    handleRarityInteraction.mockImplementationOnce(async () => {
+      throw new Error("rarity boom");
+    });
+
+    const componentHandler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.component("rarity_retry:", componentHandler);
+    });
+
+    const reg = buildCommandRegistry({});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const interaction = {
+      customId: "rarity_retry:abc",
+      isChatInputCommand: () => false,
+      isModalSubmit: () => false,
+      guildId: "g1",
+      guild: { id: "g1" },
+      channel: { id: "c1" },
+      user: { id: "u1" },
+      member: {},
+    };
+
+    await reg.dispatchInteraction(interaction);
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    expect(componentHandler).toHaveBeenCalledTimes(1);
 
     errSpy.mockRestore();
   });

@@ -544,10 +544,10 @@ export function buildCommandRegistry({ client } = {}) {
               });
             }
           }
+          return;
         } catch (err) {
           console.error("[COMMANDS] rarity retry handler error:", err);
         }
-        return;
       }
 
       const match = components.find((c) => customId.startsWith(c.prefix));
