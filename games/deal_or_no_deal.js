@@ -738,3 +738,12 @@ export function registerDealOrNoDeal(register) {
     { hideFromHelp: true }
   );
 }
+
+export const __testables = {
+  normalizePrizeLine,
+  parsePrizesFromLines,
+  unopenedIndices,
+  otherUnopenedIndex,
+  snapshotGame,
+  revealAllText,
+};

@@ -421,6 +421,15 @@ export function passVoltorb(message) {
   );
 }
 
+export const __testables = {
+  parseMentionToken,
+  parseRangeToken,
+  parseModeToken,
+  parseJoinWindowToken,
+  parseFlagToken,
+  formatRemainingList,
+};
+
 export function endVoltorbGame(message, { reason = "ended" } = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;

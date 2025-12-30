@@ -273,6 +273,13 @@ async function resolveIfReady(st, board) {
   });
 }
 
+export const __testables = {
+  outcome,
+  clampWins,
+  pretty,
+  fmtSeconds,
+};
+
 export function registerRPS(register) {
   makeGameQoL(register, {
     manager,

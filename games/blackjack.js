@@ -561,3 +561,12 @@ export function registerBlackjack(register) {
     { hideFromHelp: true }
   );
 }
+
+export const __testables = {
+  cardValueRank,
+  handValue,
+  handTotals,
+  bestTotal,
+  fmtTotals,
+  isBlackjack,
+};

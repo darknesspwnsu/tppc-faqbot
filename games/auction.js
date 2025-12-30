@@ -484,3 +484,9 @@ export function registerAuction(register) {
     });
   });
 }
+
+export const __testables = {
+  renderStatus,
+  buildBidRow,
+  buildBidModal,
+};

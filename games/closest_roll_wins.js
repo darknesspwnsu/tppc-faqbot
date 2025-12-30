@@ -87,6 +87,13 @@ function helpText() {
   );
 }
 
+export const __testables = {
+  clampInt,
+  parseDurationMs,
+  randIntInclusive,
+  formatTimeLeftMs,
+};
+
 function rulesText() {
   return (
     "**ClosestRoll — Rules (layman)**\n" +

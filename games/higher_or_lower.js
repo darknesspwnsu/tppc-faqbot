@@ -266,3 +266,8 @@ export function registerHigherOrLower(register) {
     });
   });
 }
+
+export const __testables = {
+  parseRangeToken,
+  rollNotEqual,
+};

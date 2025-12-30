@@ -674,3 +674,19 @@ export function registerExplodingElectrode(register) {
     { admin: true, aliases: ["!stopelectrode"] }
   );
 }
+
+export const __testables = {
+  parseJoinToken,
+  parseMaxToken,
+  parseBallsToken,
+  parseElectrodesToken,
+  parseTurnToken,
+  parseModeToken,
+  parseEeOptions,
+  validateJoinOptionsForMode,
+  computeConsumedTokens,
+  nextAliveIndex,
+  computeDefaultBalls,
+  validateAndBuildGameConfig,
+  buildBag,
+};

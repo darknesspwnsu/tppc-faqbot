@@ -794,3 +794,19 @@ export function registerSafariZone(register) {
     { admin: true }
   );
 }
+
+export const __testables = {
+  parseMentionToken,
+  parseKVInt,
+  parseJoinToken,
+  parseMaxToken,
+  parseNToken,
+  parsePrizesToken,
+  parseTurnToken,
+  parseWarnToken,
+  idxFromRC,
+  parseCoord,
+  coordLabel,
+  pickRandomUniqueIndices,
+  buildGridText,
+};

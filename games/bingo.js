@@ -91,6 +91,13 @@ function helpText(id) {
   );
 }
 
+export const __testables = {
+  parseRangeToken,
+  parseDrawList,
+  fmtList,
+  buildRemainingArray,
+};
+
 function rulesText(id) {
   return (
     `**Bingo rules (simple)**\n` +

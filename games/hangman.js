@@ -505,3 +505,11 @@ export function registerHangman(register) {
     await handleWordGuess(st, message.channel, uid, raw);
   });
 }
+
+export const __testables = {
+  normalizeWord,
+  isLetterGuess,
+  uniqueLettersNeeded,
+  prettyMask,
+  hangmanStage,
+};
