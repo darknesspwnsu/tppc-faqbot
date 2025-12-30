@@ -1,23 +1,23 @@
-// contests/forum_list.js
+// contests/get_forum_list.js
 //
-// Admin utility: Scrape forums.tppc.info thread posters and DM a list of
+// Admin utility (SLASH ONLY): Scrape forums.tppc.info thread posters and DM a list of
 // "username - rpgId" (one per line), based on contest_help_main.py logic,
 // with additional rules:
 //
-// - Optional flag BEFORE the URL: [sorted|nosorted]
+// - Optional mode: sorted | nosorted
 //   - Default: nosorted (preserve first-seen scan order)
 // - Determine thread starter (OP) username from the first post on page 1
 // - Skip ALL posts by the starter on any page (starter may reply multiple times)
 // - DM header: "TPPC Forums thread list for <link> (Started by: <username>)"
 //
-// Usage:
-//   !getforumlist <threadUrl>
-//   !getforumlist sorted <threadUrl>
-//   !getforumlist nosorted <threadUrl>
+// Slash usage:
+//   /getforumlist url:<threadUrl> mode:[sorted|nosorted]
 //
-// Example:
-//   !getforumlist https://forums.tppc.info/showthread.php?t=641916
+// Notes:
+// - All replies are EPHEMERAL (private to the person invoking the command).
+// - Results are sent via DM to the invoker.
 
+import { MessageFlags } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const FETCH_TIMEOUT_MS = 30_000;
@@ -34,32 +34,8 @@ function sleep(ms) {
 
 function ensureFetch() {
   if (typeof fetch !== "function") {
-    throw new Error(
-      "Global fetch() is not available. Use Node 18+ or add a fetch polyfill."
-    );
+    throw new Error("Global fetch() is not available. Use Node 18+ or add a fetch polyfill.");
   }
-}
-
-function parseArgs(restRaw) {
-  const tokens = String(restRaw || "").trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return { ok: false };
-
-  let sorted = false; // default UNSORTED per your request
-  let urlTokenStart = 0;
-
-  const first = tokens[0]?.toLowerCase();
-  if (first === "sorted") {
-    sorted = true;
-    urlTokenStart = 1;
-  } else if (first === "nosorted") {
-    sorted = false;
-    urlTokenStart = 1;
-  }
-
-  const url = tokens.slice(urlTokenStart).join(" ").trim();
-  if (!url) return { ok: false };
-
-  return { ok: true, sorted, url };
 }
 
 function normalizeThreadUrl(raw) {
@@ -112,8 +88,7 @@ async function fetchWithTimeout(url) {
       method: "GET",
       signal: controller.signal,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
+        "User-Agent": "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
       },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -149,9 +124,7 @@ function extractPostTables(html) {
 }
 
 function extractUsernameFromPostTable(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(
-    postHtml
-  );
+  const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
   if (!m) return null;
 
   const txt = htmlToText(m[1]);
@@ -160,9 +133,7 @@ function extractUsernameFromPostTable(postHtml) {
 }
 
 function extractAlt2CellText(postHtml) {
-  const m = /<td[^>]*\bclass\s*=\s*["']alt2[^"']*["'][^>]*>([\s\S]*?)<\/td>/i.exec(
-    postHtml
-  );
+  const m = /<td[^>]*\bclass\s*=\s*["']alt2[^"']*["'][^>]*>([\s\S]*?)<\/td>/i.exec(postHtml);
   if (!m) return "";
   return htmlToText(m[1]);
 }
@@ -175,16 +146,12 @@ function extractLinkedIdsFromSidebarText(sidebarText) {
   const ids = [];
   const re = /#(\d+)/g;
   let mm;
-  while ((mm = re.exec(segment))) {
-    ids.push(mm[1]);
-  }
+  while ((mm = re.exec(segment))) ids.push(mm[1]);
   return ids;
 }
 
 function extractPostMessageText(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(
-    postHtml
-  );
+  const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
   if (!m) return "";
   return htmlToText(m[1]);
 }
@@ -280,55 +247,89 @@ async function dmChunked(user, header, lines) {
   if (cur) await dm.send(cur);
 }
 
+// Build a message-like object so auth.js can reuse the same logic for privileged users.
+function interactionAsMessageLike(interaction) {
+  return {
+    guildId: interaction.guildId,
+    member: interaction.member,
+    author: interaction.user,
+  };
+}
+
 export function registerForumList(register) {
-  register(
-    "!getforumlist",
-    async ({ message, rest }) => {
-      if (!message.guildId) return;
-      if (!isAdminOrPrivileged(message)) return;
+  register.slash(
+    {
+      name: "getforumlist",
+      description: "Scrape a TPPC forum thread and DM a username - rpg id list (admin only)",
+      options: [
+        {
+          type: 3, // STRING
+          name: "url",
+          description: "forums.tppc.info/showthread.php?... thread URL",
+          required: true,
+        },
+        {
+          type: 3, // STRING
+          name: "mode",
+          description: "Sort output by username (default: nosorted)",
+          required: false,
+          choices: [
+            { name: "nosorted (scan order)", value: "nosorted" },
+            { name: "sorted (A→Z)", value: "sorted" },
+          ],
+        },
+      ],
+    },
+    async ({ interaction }) => {
+      if (!interaction.guildId) return;
 
-      const gid = message.guildId;
-      if (!gid) return;
+      // Admin/privileged only
+      if (!isAdminOrPrivileged(interactionAsMessageLike(interaction))) {
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "You don’t have permission to use this command."
+        });
+        return;
+      }
 
+      const gid = String(interaction.guildId);
       if (scrapeLocksByGuild.get(gid)) {
-        await message.reply(
-          "⏳ A forum scrape is already running for this server. Try again in a moment."
-        );
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "⏳ A forum scrape is already running for this server. Try again in a moment.",
+        });
+        return;
+      }
+
+      const urlRaw = interaction.options?.getString?.("url") ?? "";
+      const mode = (interaction.options?.getString?.("mode") ?? "nosorted").toLowerCase();
+      const sorted = mode === "sorted";
+
+      const threadUrl = normalizeThreadUrl(urlRaw);
+      if (!threadUrl) {
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "❌ Invalid URL. Please provide a `forums.tppc.info/showthread.php?...` thread link.",
+        });
         return;
       }
 
       scrapeLocksByGuild.set(gid, true);
 
       try {
-        const parsed = parseArgs(rest);
-        if (!parsed.ok) {
-          await message.reply(
-            "Usage:\n" +
-              "• `!getforumlist <forums.tppc.info thread url>`\n" +
-              "• `!getforumlist sorted <thread url>`\n" +
-              "• `!getforumlist nosorted <thread url>`\n" +
-              "\nExample:\n" +
-              "• `!getforumlist https://forums.tppc.info/showthread.php?t=641916`"
-          );
-          return;
-        }
+        // Private status updates only
+        await interaction.deferReply({
+          flags: MessageFlags.Ephemeral,
+        });
 
-        const threadUrl = normalizeThreadUrl(parsed.url);
-        if (!threadUrl) {
-          await message.reply(
-            "❌ Invalid URL. Please provide a `forums.tppc.info/showthread.php?...` thread link."
-          );
-          return;
-        }
-
-        await message.reply("🔎 Scraping the forum thread… I’ll DM you the results.");
+        await interaction.editReply("🔎 Scraping the forum thread… I’ll DM you the results.");
 
         let result;
         try {
           result = await scrapeThreadUserIdPairs(threadUrl);
         } catch (e) {
           console.warn("[getforumlist] scrape failed:", e);
-          await message.reply(
+          await interaction.editReply(
             "❌ Failed to scrape that thread (network/HTML issue). Try again later."
           );
           return;
@@ -342,10 +343,8 @@ export function registerForumList(register) {
           rows.push({ username, rpgId: rpgId || "NO GOOD REFERENCE" });
         }
 
-        if (parsed.sorted) {
-          rows.sort((a, b) =>
-            a.username.toLowerCase().localeCompare(b.username.toLowerCase())
-          );
+        if (sorted) {
+          rows.sort((a, b) => a.username.toLowerCase().localeCompare(b.username.toLowerCase()));
         }
 
         const lines = rows.map((r) => `${r.username} - ${r.rpgId}`);
@@ -354,25 +353,22 @@ export function registerForumList(register) {
           `TPPC Forums thread list for ${threadUrl} (Started by: ${starterName})\n` +
           `Pages scanned: ${pageCount}\n` +
           `Unique users (excluding starter): ${rows.length}\n` +
-          `Mode: ${parsed.sorted ? "sorted" : "nosorted"}\n` +
+          `Mode: ${sorted ? "sorted" : "nosorted"}\n` +
           (warnings.length ? `⚠️ ${warnings.join(" ")}\n` : "") +
           `\nusername - rpg id\n----------------`;
 
         try {
-          await dmChunked(message.author, header, lines);
-          await message.reply(`✅ Done — DM’d you ${rows.length} entries.`);
+          await dmChunked(interaction.user, header, lines);
+          await interaction.editReply(`✅ Done — DM’d you ${rows.length} entries.`);
         } catch (e) {
           console.warn("[getforumlist] DM failed:", e);
-          await message.reply(
+          await interaction.editReply(
             "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
           );
-          return;
         }
       } finally {
         scrapeLocksByGuild.delete(gid);
       }
-    },
-    "!getforumlist [sorted|nosorted] <threadUrl> — (admin) DM a list of forum posters as `username - rpg id`",
-    { admin: true }
+    }
   );
 }
