@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { chooseOne, runElimFromItems, parseSecondsToMs } from "../contests/rng.js";
+import { chooseOne, runElimFromItems, parseSecondsToMs } from "../../contests/rng.js";
 
 function mockMessage() {
   return {

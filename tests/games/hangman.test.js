@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/hangman.js";
+import { __testables } from "../../games/hangman.js";
 
 const { normalizeWord, isLetterGuess, uniqueLettersNeeded, prettyMask, hangmanStage } = __testables;
 

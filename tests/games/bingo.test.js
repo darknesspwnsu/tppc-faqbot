@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/bingo.js";
+import { __testables } from "../../games/bingo.js";
 
 const { parseRangeToken, parseDrawList, fmtList, buildRemainingArray } = __testables;
 

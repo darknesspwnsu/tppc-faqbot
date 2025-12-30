@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { __testables } from "../games/closest_roll_wins.js";
+import { __testables } from "../../games/closest_roll_wins.js";
 
 const { clampInt, parseDurationMs, randIntInclusive, formatTimeLeftMs } = __testables;
 

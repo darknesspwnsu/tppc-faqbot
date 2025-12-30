@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { __testables } from "../games/higher_or_lower.js";
+import { __testables } from "../../games/higher_or_lower.js";
 
 const { parseRangeToken, rollNotEqual } = __testables;
 

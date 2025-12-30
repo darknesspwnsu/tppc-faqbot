@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../auth.js", () => ({
+vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => false),
 }));
 
-vi.mock("../configs/command_exposure.js", () => ({
+vi.mock("../../configs/command_exposure.js", () => ({
   DEFAULT_EXPOSURE: "bang",
   COMMAND_EXPOSURE_BY_GUILD: {
     g1: { ping: "q" },
@@ -15,20 +15,20 @@ vi.mock("../configs/command_exposure.js", () => ({
   },
 }));
 
-vi.mock("../trades.js", () => ({ registerTrades: vi.fn() }));
-vi.mock("../tools.js", () => ({ registerTools: vi.fn() }));
-vi.mock("../faq.js", () => ({ registerInfoCommands: vi.fn() }));
-vi.mock("../verification/verification_module.js", () => ({ registerVerification: vi.fn() }));
-vi.mock("../contests/contests.js", () => ({ registerContests: vi.fn() }));
-vi.mock("../games/games.js", () => ({ registerGames: vi.fn() }));
-vi.mock("../toybox.js", () => ({ registerToybox: vi.fn() }));
-vi.mock("../helpbox.js", () => ({ registerHelpbox: vi.fn() }));
-vi.mock("../rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
+vi.mock("../../trades.js", () => ({ registerTrades: vi.fn() }));
+vi.mock("../../tools.js", () => ({ registerTools: vi.fn() }));
+vi.mock("../../faq.js", () => ({ registerInfoCommands: vi.fn() }));
+vi.mock("../../verification/verification_module.js", () => ({ registerVerification: vi.fn() }));
+vi.mock("../../contests/contests.js", () => ({ registerContests: vi.fn() }));
+vi.mock("../../games/games.js", () => ({ registerGames: vi.fn() }));
+vi.mock("../../toybox.js", () => ({ registerToybox: vi.fn() }));
+vi.mock("../../helpbox.js", () => ({ registerHelpbox: vi.fn() }));
+vi.mock("../../rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
 
-import { buildCommandRegistry } from "../commands.js";
-import { isAdminOrPrivileged } from "../auth.js";
-import { registerHelpbox } from "../helpbox.js";
-import { registerTrades } from "../trades.js";
+import { buildCommandRegistry } from "../../commands.js";
+import { isAdminOrPrivileged } from "../../auth.js";
+import { registerHelpbox } from "../../helpbox.js";
+import { registerTrades } from "../../trades.js";
 
 function makeMessage({ guildId = "g1", channelId = "c1", content = "" } = {}) {
   return {

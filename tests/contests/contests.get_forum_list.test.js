@@ -6,7 +6,7 @@ import {
   extractUsernameFromPostTable,
   extractLinkedIdsFromSidebarText,
   extractPostMessageText,
-} from "../contests/get_forum_list.js";
+} from "../../contests/get_forum_list.js";
 
 describe("get_forum_list parsing", () => {
   test("normalizeThreadUrl accepts forum thread urls", () => {

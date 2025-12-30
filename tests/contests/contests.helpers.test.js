@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { normalizeForMatch, includesWholePhrase } from "../contests/helpers.js";
+import { normalizeForMatch, includesWholePhrase } from "../../contests/helpers.js";
 
 describe("contests helpers text normalization", () => {
   test("normalizeForMatch pads words and strips punctuation", () => {

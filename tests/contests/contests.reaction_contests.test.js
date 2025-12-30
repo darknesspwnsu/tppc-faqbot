@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
+import { collectEntrantsByReactions } from "../../contests/reaction_contests.js";
 
 function mockClient() {
   const handlers = new Map();

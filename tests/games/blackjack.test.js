@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/blackjack.js";
+import { __testables } from "../../games/blackjack.js";
 
 const { cardValueRank, handValue, handTotals, bestTotal, fmtTotals, isBlackjack } = __testables;
 

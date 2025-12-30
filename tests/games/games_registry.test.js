@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { listGames } from "../games/games.js";
+import { listGames } from "../../games/games.js";
 
 describe("games registry", () => {
   it("lists known game ids without duplicates", () => {

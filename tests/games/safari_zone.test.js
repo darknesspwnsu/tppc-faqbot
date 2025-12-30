@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { __testables } from "../games/safari_zone.js";
+import { __testables } from "../../games/safari_zone.js";
 
 const {
   parseMentionToken,

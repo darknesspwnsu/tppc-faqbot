@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/rps.js";
+import { __testables } from "../../games/rps.js";
 
 const { outcome, clampWins, pretty, fmtSeconds } = __testables;
 

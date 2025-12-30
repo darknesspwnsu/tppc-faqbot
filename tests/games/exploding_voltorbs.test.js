@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/exploding_voltorbs.js";
+import { __testables } from "../../games/exploding_voltorbs.js";
 
 const {
   parseMentionToken,

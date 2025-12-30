@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/deal_or_no_deal.js";
+import { __testables } from "../../games/deal_or_no_deal.js";
 
 const { normalizePrizeLine, parsePrizesFromLines, unopenedIndices, otherUnopenedIndex, snapshotGame, revealAllText } =
   __testables;

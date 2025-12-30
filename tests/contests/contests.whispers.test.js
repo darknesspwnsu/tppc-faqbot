@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { serializeItems, deserializeItems } from "../contests/whispers.js";
+import { serializeItems, deserializeItems } from "../../contests/whispers.js";
 
 describe("whispers serialization", () => {
   test("serialize/deserialize round trip", () => {

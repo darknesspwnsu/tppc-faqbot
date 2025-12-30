@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { __testables } from "../games/auction.js";
+import { __testables } from "../../games/auction.js";
 
 const { renderStatus, buildBidRow, buildBidModal } = __testables;
 

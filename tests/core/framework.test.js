@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock auth BEFORE importing framework.js
-vi.mock("../auth.js", () => ({
+vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => false),
 }));
 
 // Now import framework after mock is set up
-import * as fw from "../games/framework.js";
-import { isAdminOrPrivileged } from "../auth.js";
+import * as fw from "../../games/framework.js";
+import { isAdminOrPrivileged } from "../../auth.js";
 
 function makeMember({ admin = false, manageGuild = false } = {}) {
   return {
