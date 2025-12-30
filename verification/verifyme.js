@@ -26,12 +26,10 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  PermissionsBitField,
 } from "discord.js";
 
 import { ForumClient } from "./forum_client.js";
 import { getUserText, setUserText, deleteUserText } from "../db.js";
-import { isAdminOrPrivileged } from "../auth.js";
 
 const K_VERIFIED = "fuser"; // <= 8 chars (db schema)
 const K_PENDING = "fpending";
@@ -102,33 +100,12 @@ function memberHasAnyRole(member, roleIds) {
 }
 
 function canAdminAct(interaction, guildCfg) {
-  // Allow either:
-  // - has any configured admin role
-  // - has Discord Administrator permission
-  // - passes your existing isAdminOrPrivileged() (extra safety / backwards compatible)
-  try {
-    const perms = interaction.memberPermissions;
-    if (perms?.has?.(PermissionsBitField.Flags.Administrator)) return true;
-  } catch {
-    // ignore
-  }
-
+  // Allow only configured admin roles (no privileged override).
   const member = interaction.member;
   if (guildCfg?.adminRoleIds?.length && member?.roles?.cache) {
     if (memberHasAnyRole(member, guildCfg.adminRoleIds)) return true;
   }
-
-  // fallback to your existing helper (message-like shape)
-  const msgLike = {
-    guildId: interaction.guildId,
-    member: interaction.member,
-    author: interaction.user,
-  };
-  try {
-    return isAdminOrPrivileged(msgLike);
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 async function fetchGuildMember(guild, userId) {
