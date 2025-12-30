@@ -155,7 +155,7 @@ export function buildCommandRegistry({ client } = {}) {
    *
    * Requirements:
    * - Wrong prefix should be SILENT.
-   * - "off" should reply "disabled" (kept noisy by design).
+   * - "off" does not respond with anything.
    * - Aliases MUST mirror the canonical prefix (so we create !alias and ?alias too).
    *
    * Aliases should be supplied as bare names:
@@ -185,14 +185,10 @@ export function buildCommandRegistry({ client } = {}) {
         const exp = exposureFor(ctx.message?.guildId, logicalId);
         if (exp === "bang") {
           const gate = allowedInChannel(ctx.message, logicalId);
-          if (!gate.ok) {
-            if (!gate.silent) await ctx.message.reply("This command isn’t enabled in this channel.");
-            return;
-          }
+          if (!gate.ok) return;
           return handler(ctx);
         }
-        if (exp === "q") return; // silent wrong prefix
-        await ctx.message.reply("This command is disabled in this server.");
+        return; // silent for q + off
       },
       help,
       { ...opts, aliases: bangAliases, _exposeMeta: exposeMeta }
@@ -205,14 +201,10 @@ export function buildCommandRegistry({ client } = {}) {
         const exp = exposureFor(ctx.message?.guildId, logicalId);
         if (exp === "q") {
           const gate = allowedInChannel(ctx.message, logicalId);
-          if (!gate.ok) {
-            if (!gate.silent) await ctx.message.reply("This command isn’t enabled in this channel.");
-            return;
-          }
+          if (!gate.ok) return;
           return handler(ctx);
         }
-        if (exp === "bang") return; // silent wrong prefix
-        await ctx.message.reply("This command is disabled in this server.");
+        return; // silent for bang + off
       },
       "",
       { ...opts, aliases: qAliases, hideFromHelp: true, _exposeMeta: exposeMeta }
