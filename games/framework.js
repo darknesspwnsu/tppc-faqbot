@@ -224,6 +224,11 @@ export function canManageCtx(ctx, state, ownerField = "creatorId") {
 
   if (message) return Boolean(isAdminOrPrivileged(message));
 
+  const messageLike = interaction
+    ? { guildId: interaction.guildId, member: interaction.member, author: interaction.user }
+    : null;
+  if (messageLike && isAdminOrPrivileged(messageLike)) return true;
+
   const member = interaction?.member;
   return isAdminish(member);
 }
