@@ -14,7 +14,7 @@ spam, or ambiguity.
 - **Explicit commands only** (`!cmd` or `?cmd`)
 - **One active game per guild**
 - **Deterministic behavior**
-- **No silent failures**
+- **Low-noise UX (silent ignores where configured)**
 - **Per-guild command exposure control**
 - **Automatically generated help**
 
@@ -35,7 +35,7 @@ spam, or ambiguity.
 ---
 
 ### 🎲 Contests
-- RNG tools: `roll`, `choose`, `elim`, `awesome`, `wheelspin`
+- RNG tools: `roll`, `choose`, `elim`, `awesome`
 - Reaction-based contests
 - Whispers (hidden phrases + optional prizes)
 - Reading & forum list helpers
@@ -74,7 +74,7 @@ Only **primary game commands** appear in help to avoid clutter.
 - `!help` — public, truncated preview (safe under 2000 chars)
 - `/help` — full interactive help menu (ephemeral)
 - Commands are grouped by category
-- Per-guild exposure is respected automatically
+- Per-guild exposure is respected automatically (wrong prefix is silent)
 - Admin-only commands are hidden from non-admins
 
 ---
@@ -87,13 +87,7 @@ Each logical command can be exposed as:
 - `q` → `?command`
 - `off` → disabled
 
-This is controlled in:
-
-```
-
-configs/command_exposure.js
-
-```
+Wrong-prefix usage is silently ignored by design. This is controlled in `configs/command_exposure.js`.
 
 This prevents collisions with other bots **without breaking muscle memory**.
 
@@ -120,6 +114,7 @@ This prevents collisions with other bots **without breaking muscle memory**.
 │   ├── rng.js
 │   ├── reaction_contests.js
 │   ├── whispers.js
+│   ├── helpers.js
 │   └── ...
 ├── games/
 │   ├── games.js              # Game registry
@@ -133,6 +128,8 @@ This prevents collisions with other bots **without breaking muscle memory**.
 │   └── whois.js
 ├── configs/
 │   └── command_exposure.js
+├── shared/
+│   └── time_utils.js
 ├── data/
 │   ├── wiki_data.json
 │   └── privileged_users.json
