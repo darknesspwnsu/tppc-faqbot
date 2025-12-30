@@ -443,10 +443,18 @@ export function registerAuction(register) {
     const amount = Number(interaction.fields.getTextInputValue("amount"));
     const player = auction.players.get(interaction.user.id);
 
-    if (!player || amount < 1 || amount > player.balance) {
+    if (!player || !Number.isFinite(amount) || !Number.isInteger(amount) || amount < 1) {
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
         content: "Invalid bid.",
+      });
+      return;
+    }
+
+    if (amount > player.balance) {
+      await interaction.reply({
+        flags: MessageFlags.Ephemeral,
+        content: "Insufficient balance for that bid.",
       });
       return;
     }
