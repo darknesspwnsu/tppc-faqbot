@@ -1,4 +1,4 @@
-// verification/verification_module.js
+// verification/verification.js
 //
 // Central registry for all verification-related modules.
 // Add new verification commands by importing + appending to VERIFICATION_MODULES.

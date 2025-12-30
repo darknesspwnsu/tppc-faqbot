@@ -34,7 +34,7 @@ import { registerInfo } from "./info/info.js";
 import { registerTools } from "./tools/tools.js";
 import { registerToybox } from "./toybox.js";
 
-import { registerVerification } from "./verification/verification_module.js";
+import { registerVerification } from "./verification/verification.js";
 
 import { handleRarityInteraction } from "./tools/rarity.js";
 import { isAdminOrPrivileged } from "./auth.js";

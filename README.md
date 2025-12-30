@@ -125,7 +125,7 @@ This prevents collisions with other bots **without breaking muscle memory**.
 │   ├── auction.js
 │   └── ...
 ├── verification/
-│   ├── verification_module.js
+│   ├── verification.js
 │   ├── verifyme.js
 │   └── whois.js
 ├── configs/
