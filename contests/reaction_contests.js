@@ -129,10 +129,33 @@ export function installReactionHooks(client) {
   if (reactionHooksInstalled) return;
   reactionHooksInstalled = true;
 
+  async function resolveReaction(reaction) {
+    if (!reaction) return null;
+    if (reaction.partial) {
+      try {
+        reaction = await reaction.fetch();
+      } catch {
+        return null;
+      }
+    }
+    const msg = reaction.message;
+    if (msg?.partial) {
+      try {
+        await msg.fetch();
+      } catch {
+        return null;
+      }
+    }
+    return reaction;
+  }
+
   client.on("messageReactionAdd", async (reaction, user) => {
     if (user.bot) return;
 
-    const msg = reaction.message;
+    const full = await resolveReaction(reaction);
+    if (!full) return;
+
+    const msg = full.message;
     if (!msg?.guildId) return;
 
     const collector = activeCollectorsByMessage.get(msg.id);
@@ -152,7 +175,10 @@ export function installReactionHooks(client) {
   client.on("messageReactionRemove", async (reaction, user) => {
     if (user.bot) return;
 
-    const msg = reaction.message;
+    const full = await resolveReaction(reaction);
+    if (!full) return;
+
+    const msg = full.message;
     if (!msg?.guildId) return;
 
     const collector = activeCollectorsByMessage.get(msg.id);
