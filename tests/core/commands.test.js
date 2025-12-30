@@ -135,4 +135,53 @@ describe("commands registry", () => {
     const call = lastCall(registerInfo);
     expect(call[1]?.helpModel).toBe(reg.helpModel);
   });
+
+  it("dispatchMessage logs errors from handlers without throwing", async () => {
+    const handler = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "boom",
+        name: "boom",
+        handler,
+        help: "!boom - test",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await reg.dispatchMessage(makeMessage({ guildId: "g0", content: "!boom" }));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(errSpy).toHaveBeenCalledTimes(1);
+
+    errSpy.mockRestore();
+  });
+
+  it("dispatchInteraction logs errors from slash handlers without throwing", async () => {
+    const handler = vi.fn(async () => {
+      throw new Error("slash boom");
+    });
+    registerTrades.mockImplementation((register) => {
+      register.slash({ name: "boom", description: "test" }, handler);
+    });
+
+    const reg = buildCommandRegistry({});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const interaction = {
+      commandName: "boom",
+      isChatInputCommand: () => true,
+    };
+
+    await reg.dispatchInteraction(interaction);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(errSpy).toHaveBeenCalledTimes(1);
+
+    errSpy.mockRestore();
+  });
 });
