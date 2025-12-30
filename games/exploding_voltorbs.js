@@ -381,6 +381,11 @@ export function passVoltorb(message) {
     return;
   }
 
+  if (game.channelId && message.channelId !== game.channelId) {
+    message.reply(`❌ This game is running in <#${game.channelId}>. Please use commands there.`);
+    return;
+  }
+
   // Only participants can interact with the game
   if (game.allowedIds && !game.allowedIds.has(message.author?.id)) {
     message.reply("❌ You are not in this Voltorb game.");
@@ -455,6 +460,11 @@ export function endVoltorbGame(message, { reason = "ended" } = {}) {
   const game = manager.getState({ guildId });
   if (!game) {
     message.reply("❌ No active Voltorb game.");
+    return;
+  }
+
+  if (game.channelId && message.channelId !== game.channelId) {
+    message.reply(`❌ This game is running in <#${game.channelId}>. Please use commands there.`);
     return;
   }
 

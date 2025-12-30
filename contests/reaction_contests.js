@@ -235,8 +235,8 @@ export async function collectEntrantsByReactions({
 }
 
 function canManageContest(message) {
-  // reaction contests are ephemeral to the command itself, but keep admin gate for future-proofing
-  return isAdminOrPrivileged(message) || !!message.author?.id;
+  // Admin/privileged only to prevent spammy/misuse
+  return isAdminOrPrivileged(message);
 }
 
 /**
