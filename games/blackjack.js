@@ -11,7 +11,7 @@
 //
 // Dealer rules: S17 (stand on all 17s, including soft 17)
 
-import { createGameManager, makeGameQoL, parseMentionIdsInOrder, shuffleInPlace, withGameSubcommands } from "./framework.js";
+import { createGameManager, makeGameQoL, parseMentionIdsInOrder, requireSameChannel, shuffleInPlace, withGameSubcommands } from "./framework.js";
 
 const manager = createGameManager({ id: "blackjack", prettyName: "Blackjack", scope: "guild" });
 
@@ -137,13 +137,6 @@ function isBlackjack(hand) {
 
 function gameLocationLine(st) {
   return `Started by <@${st.creatorId}> in <#${st.channelId}>`;
-}
-
-function inSamePlace(message, st) {
-  if (!message.guildId) return false;
-  if (message.guildId !== st.guildId) return false;
-  // Keep it simple and avoid cross-channel confusion:
-  return message.channelId === st.channelId;
 }
 
 function currentPlayer(st) {
@@ -445,10 +438,7 @@ export function registerBlackjack(register) {
       const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
-      if (message.channelId !== st.channelId) {
-        await message.reply(`Blackjack is running in <#${st.channelId}>. ${gameLocationLine(st)}`);
-        return;
-      }
+      if (!(await requireSameChannel({ message }, st, manager))) return;
 
       await message.reply(statusText(st, false));
     },
@@ -463,10 +453,7 @@ export function registerBlackjack(register) {
       const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
-      if (!inSamePlace(message, st)) {
-        await message.reply(`Blackjack is running in <#${st.channelId}>. ${gameLocationLine(st)}`);
-        return;
-      }
+      if (!(await requireSameChannel({ message }, st, manager))) return;
 
       const cp = currentPlayer(st);
       if (!cp) {
@@ -526,10 +513,7 @@ export function registerBlackjack(register) {
       const st = manager.getState({ guildId: message.guildId });
       if (!st) return void (await message.reply("No active blackjack game in this server."));
 
-      if (!inSamePlace(message, st)) {
-        await message.reply(`Blackjack is running in <#${st.channelId}>. ${gameLocationLine(st)}`);
-        return;
-      }
+      if (!(await requireSameChannel({ message }, st, manager))) return;
 
       const cp = currentPlayer(st);
       if (!cp) {
