@@ -508,7 +508,9 @@ export function buildCommandRegistry({ client } = {}) {
           if (entry?.handler) {
             const messageLike = {
               guild: interaction.guild,
+              guildId: interaction.guildId,
               channel: interaction.channel,
+              channelId: interaction.channelId,
               author: interaction.user,
               member: interaction.member,
               reply: (payload) => interaction.followUp(payload),
