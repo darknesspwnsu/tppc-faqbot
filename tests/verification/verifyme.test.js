@@ -67,6 +67,7 @@ describe("verifyme forum ID lookup", () => {
 
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await handler({ interaction });
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(errSpy).toHaveBeenCalledTimes(1);
     expect(dm).toHaveBeenCalledTimes(1);
