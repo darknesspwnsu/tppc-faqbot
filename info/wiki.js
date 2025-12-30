@@ -21,9 +21,7 @@ function titleToWikiUrl(title) {
 export function createWikiService(opts = {}) {
   const maxResults = Number(opts.maxResults ?? process.env.WIKI_MAX_RESULTS ?? 8);
   const titlesPath =
-    opts.titlesPath ??
-    process.env.WIKI_TITLES_PATH ??
-    path.join(process.cwd(), "data", "wiki_titles.json");
+    opts.titlesPath ?? path.join(process.cwd(), "data", "wiki_titles.json");
 
   // Load once
   const raw = fs.readFileSync(titlesPath, "utf8");

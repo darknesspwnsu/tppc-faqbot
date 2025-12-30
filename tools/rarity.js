@@ -28,10 +28,10 @@ let meta4 = null;
 const DEFAULT_URL = "https://darknesspwnsu.github.io/tppc-data/data/rarity.json";
 const DEFAULT_L4_URL = "https://darknesspwnsu.github.io/tppc-data/data/l4_rarity.json";
 
-const FILE = process.env.RARITY_JSON_FILE || "data/rarity.json";
+const FILE = "data/rarity.json";
 const URL = process.env.RARITY_JSON_URL || DEFAULT_URL;
 
-const L4_FILE = process.env.RARITY4_JSON_FILE || "data/l4_rarity.json";
+const L4_FILE = "data/l4_rarity.json";
 const L4_URL = process.env.RARITY4_JSON_URL || DEFAULT_L4_URL;
 
 const DAILY_REFRESH_ET = process.env.RARITY_DAILY_REFRESH_ET || "07:10";
