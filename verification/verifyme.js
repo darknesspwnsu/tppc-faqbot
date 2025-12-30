@@ -29,7 +29,7 @@ import {
 } from "discord.js";
 
 import { ForumClient } from "./forum_client.js";
-import { getUserText, setUserText, deleteUserText } from "../db.js";
+import { getSavedId, getUserText, setUserText, deleteUserText } from "../db.js";
 
 const K_VERIFIED = "fuser"; // <= 8 chars (db schema)
 const K_PENDING = "fpending";
@@ -64,6 +64,30 @@ function escapeDiscordMarkdown(text) {
     .replace(/`/g, "\\`")
     .replace(/~/g, "\\~")
     .replace(/\|/g, "\\|");
+}
+
+function decodeHtmlEntities(text) {
+  const s = String(text ?? "");
+  const map = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": "\"",
+    "&#039;": "'",
+    "&apos;": "'",
+  };
+  return s.replace(/&(#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);/g, (m) => {
+    if (map[m]) return map[m];
+    if (m.startsWith("&#x")) {
+      const n = parseInt(m.slice(3, -1), 16);
+      return Number.isFinite(n) ? String.fromCharCode(n) : m;
+    }
+    if (m.startsWith("&#")) {
+      const n = parseInt(m.slice(2, -1), 10);
+      return Number.isFinite(n) ? String.fromCharCode(n) : m;
+    }
+    return m;
+  });
 }
 
 function nowMs() {
@@ -127,6 +151,126 @@ function getCooldownMsFromCfg(guildCfg) {
   const s = Number(guildCfg?.resendCooldownSeconds);
   if (Number.isFinite(s) && s >= 0 && s < 60 * 60) return Math.round(s * 1000);
   return 2 * 60_000; // default 2 min
+}
+
+async function fetchForumPage(url, timeoutMs = 15_000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
+      },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function memberListLetterFor(username) {
+  const first = String(username || "").charAt(0);
+  if (!first) return "#";
+  const upper = first.toUpperCase();
+  return upper >= "A" && upper <= "Z" ? upper : "#";
+}
+
+function parseMemberListTotal(html) {
+  const m = /Showing results\s+\d+\s+to\s+\d+\s+of\s+([\d,]+)/i.exec(String(html || ""));
+  if (!m) return null;
+  const total = Number(String(m[1]).replace(/,/g, ""));
+  return Number.isFinite(total) ? total : null;
+}
+
+function findUserIdInMemberListHtml(html, targetUsername) {
+  const re = /member\.php\?[^"']*u=(\d+)[^"']*">([^<]+)<\/a>/gi;
+  let m;
+  while ((m = re.exec(String(html || ""))) !== null) {
+    const userId = m[1];
+    const name = decodeHtmlEntities(m[2]);
+    if (name === targetUsername) return userId;
+  }
+  return null;
+}
+
+async function findForumUserIdByUsername(baseUrl, forumUsername) {
+  const ltr = memberListLetterFor(forumUsername);
+  const perPage = 100;
+  let page = 1;
+  let maxPage = 1;
+
+  while (page <= maxPage) {
+    const url = `${baseUrl}/memberlist.php?ltr=${encodeURIComponent(ltr)}&pp=${perPage}&sort=username&order=asc&page=${page}`;
+    const html = await fetchForumPage(url);
+    if (!html) return null;
+
+    if (page === 1) {
+      const total = parseMemberListTotal(html);
+      if (total) maxPage = Math.max(1, Math.ceil(total / perPage));
+    }
+
+    const userId = findUserIdInMemberListHtml(html, forumUsername);
+    if (userId) return userId;
+
+    page++;
+  }
+
+  return null;
+}
+
+function extractTrainerIdsFromProfile(html) {
+  const m = /TPPC Trainer ID<\/dt>\s*<dd>([\s\S]*?)<\/dd>/i.exec(String(html || ""));
+  if (!m) return [];
+  const text = decodeHtmlEntities(m[1].replace(/<[^>]+>/g, " "));
+  const ids = text.match(/\d+/g) || [];
+  return Array.from(new Set(ids));
+}
+
+async function lookupForumTrainerIds(baseUrl, forumUsername) {
+  const userId = await findForumUserIdByUsername(baseUrl, forumUsername);
+  if (!userId) return { userId: null, ids: [] };
+
+  const profileUrl = `${baseUrl}/member.php?u=${encodeURIComponent(userId)}`;
+  const html = await fetchForumPage(profileUrl);
+  if (!html) return { userId, ids: [] };
+
+  return { userId, ids: extractTrainerIdsFromProfile(html) };
+}
+
+async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
+  if (!guildId || !member || !forumUsername) return;
+
+  const saved = await getSavedId({ guildId, userId: member.id }).catch(() => null);
+  if (saved != null) return;
+
+  const { ids } = await lookupForumTrainerIds(baseUrl, forumUsername);
+
+  let content =
+    "✅ You have successfully been verified on the TPPC Discord.\n";
+
+  if (ids.length) {
+    const idList = ids.map((id) => `#${id}`).join(", ");
+    const cmdList = ids.map((id) => `!id ${id}`).join("\n");
+    content +=
+      `Possible TPPC Trainer ID${ids.length > 1 ? "s" : ""}: ${idList}\n` +
+      "To link one, use this command in the #botspam channel on the TPPC server:\n" +
+      `${cmdList}`;
+  } else {
+    content +=
+      "I couldn't find a TPPC Trainer ID linked on your forum profile.\n" +
+      "If you add one in the forums, you can link it with `!id <id>` in the #botspam channel on the TPPC server.";
+  }
+
+  try {
+    await member.user.send({ content });
+  } catch {
+    // ignore DM failures
+  }
 }
 
 // ---- Staff review message + buttons ----
@@ -563,6 +707,10 @@ export function registerVerifyMe(register) {
         (guildCfg.approvalRoles || []).find((r) => String(r?.id || "").trim() === rid)?.label || "Approved";
 
       outcomeLine = `✅ **${escapeDiscordMarkdown(label)}** by ${interaction.user} — role granted.`;
+
+      const forumUsername = await getUserText({ guildId, userId: targetUserId, kind: K_VERIFIED }).catch(() => null);
+      const baseUrl = process.env.FORUM_BASE_URL || "https://forums.tppc.info";
+      void dmIdSuggestion({ guildId, member: targetMember, forumUsername, baseUrl });
     } else if (action === "reject") {
       outcomeLine = `❌ **Rejected** by ${interaction.user}.`;
     } else {
