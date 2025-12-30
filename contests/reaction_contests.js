@@ -1,9 +1,9 @@
 // contests/reaction_contests.js
 //
-// Reaction-based contest helper:
+// Reaction contest utility:
 // - Command: !conteststart [mode] <time> [quota]
 // - Modes: list | choose | elim
-// - Guild + channel scoped to the start message
+// - Scope: guild + channel (bound to the start message)
 import { isAdminOrPrivileged } from "../auth.js";
 import { stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
@@ -115,7 +115,6 @@ async function finalizeCollector(messageId, reason = "timer", finalText = "Entri
   }
 }
 
-// stripEmojisAndSymbols is shared in contests/helpers.js
 
 function contestStartHelpText() {
   return [

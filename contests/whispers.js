@@ -20,7 +20,6 @@ function norm(s) {
   return String(s ?? "").trim();
 }
 
-// normalizeForMatch/includesWholePhrase are provided by contests/helpers.js
 
 /* ------------------------------ whisper storage ----------------------------- */
 

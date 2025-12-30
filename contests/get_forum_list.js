@@ -1,6 +1,6 @@
 // contests/get_forum_list.js
 //
-// Admin/privileged utility (SLASH ONLY): Scrape forums.tppc.info thread posters and DM a list of
+// Admin/privileged utility (slash only): scrape forums.tppc.info thread posters and DM a list of
 // "username - rpgId" (one per line), based on contest_help_main.py logic,
 // with additional rules:
 //
@@ -254,7 +254,6 @@ async function scrapeThreadUserIdPairs(threadUrl, { phrase = null } = {}) {
   };
 }
 
-// dmChunked is shared in contests/helpers.js
 
 // Build a message-like object so auth.js can reuse the same logic for privileged users.
 function interactionAsMessageLike(interaction) {
