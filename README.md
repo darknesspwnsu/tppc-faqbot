@@ -103,11 +103,13 @@ This prevents collisions with other bots **without breaking muscle memory**.
 .
 ├── bot.js                    # Discord client + lifecycle
 ├── commands.js               # Unified command registry
-├── helpbox.js                # !help and /help UI
+├── info/helpbox.js           # !help and /help UI
+├── info/faq.js               # FAQ + wiki commands
+├── info/wiki.js              # Wiki index/search
 ├── auth.js                   # Admin / privileged checks
 ├── db.js                     # MySQL persistence
 ├── tools/                    # TPPC tools & promo system
-├── trades.js                 # FT / LF / ID commands
+├── trades/                   # FT / LF / ID commands
 ├── tools/rarity.js           # Rarity, comparisons, history
 ├── contests/
 │   ├── contests.js           # Contest module registry
@@ -128,6 +130,8 @@ This prevents collisions with other bots **without breaking muscle memory**.
 │   └── whois.js
 ├── configs/
 │   └── command_exposure.js
+├── shared/
+│   └── time_utils.js
 ├── shared/
 │   └── time_utils.js
 ├── data/

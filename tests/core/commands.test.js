@@ -15,20 +15,20 @@ vi.mock("../../configs/command_exposure.js", () => ({
   },
 }));
 
-vi.mock("../../trades.js", () => ({ registerTrades: vi.fn() }));
+vi.mock("../../trades/trades.js", () => ({ registerTrades: vi.fn() }));
 vi.mock("../../tools/tools.js", () => ({ registerTools: vi.fn() }));
-vi.mock("../../faq.js", () => ({ registerInfoCommands: vi.fn() }));
+vi.mock("../../info/info.js", () => ({ registerInfo: vi.fn() }));
 vi.mock("../../verification/verification_module.js", () => ({ registerVerification: vi.fn() }));
 vi.mock("../../contests/contests.js", () => ({ registerContests: vi.fn() }));
 vi.mock("../../games/games.js", () => ({ registerGames: vi.fn() }));
 vi.mock("../../toybox.js", () => ({ registerToybox: vi.fn() }));
-vi.mock("../../helpbox.js", () => ({ registerHelpbox: vi.fn() }));
+vi.mock("../../info/helpbox.js", () => ({ registerHelpbox: vi.fn() }));
 vi.mock("../../tools/rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
 
 import { buildCommandRegistry } from "../../commands.js";
 import { isAdminOrPrivileged } from "../../auth.js";
-import { registerHelpbox } from "../../helpbox.js";
-import { registerTrades } from "../../trades.js";
+import { registerInfo } from "../../info/info.js";
+import { registerTrades } from "../../trades/trades.js";
 
 function makeMessage({ guildId = "g1", channelId = "c1", content = "" } = {}) {
   return {
@@ -131,9 +131,9 @@ describe("commands registry", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("registerHelpbox receives helpModel", () => {
+  it("registerInfo receives helpModel", () => {
     const reg = buildCommandRegistry({});
-    const call = lastCall(registerHelpbox);
+    const call = lastCall(registerInfo);
     expect(call[1]?.helpModel).toBe(reg.helpModel);
   });
 });
