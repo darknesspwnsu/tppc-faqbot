@@ -7,6 +7,7 @@
 // Scope:
 // - Guild + channel scoped; tracks unique responders in that channel only.
 import { isAdminOrPrivileged } from "../auth.js";
+import { sendChunked } from "./helpers.js";
 
 // Keyed by "guildId:channelId"
 const activeReadingSessions = new Map();
@@ -121,22 +122,11 @@ export function registerReading(register) {
       const header = `📖 Reading ended. Participants (${deduped.length}):`;
       const body = deduped.join("\n");
 
-      const out = `${header}\n\n${body}`;
-      if (out.length <= 1900) {
-        await message.channel.send(out);
-      } else {
-        await message.channel.send(header);
-        let chunk = "";
-        for (const line of deduped) {
-          if ((chunk + "\n" + line).length > 1900) {
-            await message.channel.send(chunk);
-            chunk = line;
-          } else {
-            chunk = chunk ? `${chunk}\n${line}` : line;
-          }
-        }
-        if (chunk) await message.channel.send(chunk);
-      }
+      await sendChunked({
+        send: (content) => message.channel.send(content),
+        header,
+        lines: deduped,
+      });
     },
     "!endReading — stop tracking and print the unique responder list"
   );

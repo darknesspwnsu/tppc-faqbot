@@ -20,6 +20,7 @@
 
 import { MessageFlags } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { dmChunked } from "./helpers.js";
 
 const FETCH_TIMEOUT_MS = 30_000;
 const PAGE_DELAY_MS = 500;
@@ -253,21 +254,7 @@ async function scrapeThreadUserIdPairs(threadUrl, { phrase = null } = {}) {
   };
 }
 
-async function dmChunked(user, header, lines) {
-  const dm = await user.createDM();
-
-  let cur = header.trim();
-  for (const line of lines) {
-    const add = (cur ? "\n" : "") + line;
-    if ((cur + add).length > DM_CHUNK_LIMIT) {
-      await dm.send(cur);
-      cur = line;
-    } else {
-      cur += add;
-    }
-  }
-  if (cur) await dm.send(cur);
-}
+// dmChunked is shared in contests/helpers.js
 
 // Build a message-like object so auth.js can reuse the same logic for privileged users.
 function interactionAsMessageLike(interaction) {
@@ -388,7 +375,7 @@ export function registerForumList(register) {
           `\nusername - rpg id\n----------------`;
 
         try {
-          await dmChunked(interaction.user, header, lines);
+          await dmChunked(interaction.user, header, lines, DM_CHUNK_LIMIT);
           await interaction.editReply(`✅ Done — DM’d you ${rows.length} entries.`);
         } catch (e) {
           console.warn("[getforumlist] DM failed:", e);

@@ -8,6 +8,7 @@
 // - Phrases are matched as whole words/phrases in public chat.
 // - When found, the phrase is announced and removed.
 import { getUserText, setUserText } from "../db.js";
+import { includesWholePhrase, normalizeForMatch } from "./helpers.js";
 
 /* ------------------------------- small helpers ------------------------------ */
 
@@ -19,44 +20,7 @@ function norm(s) {
   return String(s ?? "").trim();
 }
 
-function lc(s) {
-  return String(s ?? "").toLowerCase();
-}
-
-/**
- * Normalize text for matching:
- * - lowercase
- * - treat punctuation/symbols as spaces
- * - collapse whitespace
- * - pad with spaces so we can do whole-word/phrase boundary checks
- *
- * Example:
- *  "Hello, WORLD!!" -> " hello world "
- */
-export function normalizeForMatch(s) {
-  const t = lc(norm(s));
-
-  // Replace anything that's not a-z/0-9 with spaces.
-  // (This intentionally ignores accents/non-latin; fine for Discord + your use case)
-  const cleaned = t.replace(/[^a-z0-9]+/g, " ");
-
-  // Collapse whitespace and pad with spaces to enforce word boundaries
-  const collapsed = cleaned.replace(/\s+/g, " ").trim();
-  return collapsed ? ` ${collapsed} ` : " ";
-}
-
-/**
- * Whole-word / whole-phrase match.
- * Works because normalizeForMatch pads with spaces.
- *
- * phrase: "old" => " old "
- * message: " gold " does NOT include " old "
- */
-export function includesWholePhrase(normalizedMessage, phrase) {
-  const p = normalizeForMatch(phrase);
-  if (!p || p === " ") return false;
-  return normalizedMessage.includes(p);
-}
+// normalizeForMatch/includesWholePhrase are provided by contests/helpers.js
 
 /* ------------------------------ whisper storage ----------------------------- */
 

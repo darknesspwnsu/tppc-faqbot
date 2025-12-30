@@ -5,6 +5,8 @@
 // - Modes: list | choose | elim
 // - Guild + channel scoped to the start message
 import { isAdminOrPrivileged } from "../auth.js";
+import { stripEmojisAndSymbols } from "./helpers.js";
+import { parseDurationSeconds } from "../shared/time_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
 
 // messageId -> { guildId, channelId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone? }
@@ -13,18 +15,15 @@ const activeCollectorsByMessage = new Map();
 let reactionHooksInstalled = false;
 
 function parseDurationToMs(raw) {
-  const s = (raw ?? "").trim().toLowerCase();
-  const m =
-    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours)$/.exec(s);
-  if (!m) return null;
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
 
-  const n = Number(m[1]);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  // Preserve prior behavior: require explicit unit (e.g. 30sec, 5min).
+  if (/^\d+$/.test(s)) return null;
 
-  const unit = m[2];
-  if (unit.startsWith("s")) return n * 1000;
-  if (unit.startsWith("m")) return n * 60_000;
-  return n * 3_600_000;
+  const sec = parseDurationSeconds(s, null);
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  return sec * 1000;
 }
 
 function camelizeIfNeeded(name) {
@@ -103,13 +102,7 @@ async function finalizeCollector(messageId, reason = "timer") {
   }
 }
 
-function stripEmojisAndSymbols(name) {
-  if (!name) return "";
-  // Remove emojis & symbols, keep letters/numbers/spaces
-  return name
-    .replace(/[^\p{L}\p{N}\s]/gu, "")
-    .trim();
-}
+// stripEmojisAndSymbols is shared in contests/helpers.js
 
 function contestStartHelpText() {
   return [
