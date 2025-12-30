@@ -178,10 +178,11 @@ export function registerRng(register) {
   });
 
   // ------------------------------ ?choose / !choose (exposed per guild) ------------------------------
-  const handleChoose = async ({ message, rest }) => {
+  const handleChoose = async ({ message, rest, cmd }) => {
     const options = rest.trim().split(/\s+/).filter(Boolean);
     if (options.length < 1) {
-      await message.channel.send("Usage: `?choose option1 option2 ...`");
+      const baseCmd = String(cmd || "?choose").trim() || "?choose";
+      await message.channel.send(`Usage: \`${baseCmd} option1 option2 ...\``);
       return;
     }
     const pick = chooseOne(options);
@@ -196,12 +197,13 @@ export function registerRng(register) {
   });
 
   // ------------------------------ ?elim / !elim (exposed per guild) ------------------------------
-  const handleElim = async ({ message, rest }) => {
+  const handleElim = async ({ message, rest, cmd }) => {
     if (!message.guild) return;
 
     const parts = rest.trim().split(/\s+/).filter(Boolean);
     if (parts.length < 3) {
-      await message.reply("Usage: `?elim <seconds> <item1> <item2> [...]`");
+      const baseCmd = String(cmd || "?elim").trim() || "?elim";
+      await message.reply(`Usage: \`${baseCmd} <seconds> <item1> <item2> [...]\``);
       return;
     }
 
