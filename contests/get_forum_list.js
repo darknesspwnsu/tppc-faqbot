@@ -39,7 +39,7 @@ function ensureFetch() {
   }
 }
 
-function normalizeThreadUrl(raw) {
+export function normalizeThreadUrl(raw) {
   const s = String(raw || "").trim();
   if (!s) return null;
 
@@ -99,7 +99,7 @@ async function fetchWithTimeout(url) {
   }
 }
 
-function computePageCountFromHtml(html) {
+export function computePageCountFromHtml(html) {
   const m = /Show results\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)/i.exec(html);
   if (!m) return 1;
 
@@ -124,7 +124,7 @@ function extractPostTables(html) {
   return html.match(re) || [];
 }
 
-function extractUsernameFromPostTable(postHtml) {
+export function extractUsernameFromPostTable(postHtml) {
   const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
   if (!m) return null;
 
@@ -142,7 +142,7 @@ function extractAlt2CellText(postHtml) {
   return htmlToText(m[1]);
 }
 
-function extractLinkedIdsFromSidebarText(sidebarText) {
+export function extractLinkedIdsFromSidebarText(sidebarText) {
   const txt = String(sidebarText || "");
   const lineMatch = /TPPC:\s*#([^\n]+)/i.exec(txt);
   const segment = lineMatch ? lineMatch[0] : "";
@@ -154,7 +154,7 @@ function extractLinkedIdsFromSidebarText(sidebarText) {
   return ids;
 }
 
-function extractPostMessageText(postHtml) {
+export function extractPostMessageText(postHtml) {
   const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
   if (!m) return "";
   return htmlToText(m[1]);

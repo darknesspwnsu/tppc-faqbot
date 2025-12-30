@@ -25,7 +25,7 @@ function mention(id) {
   return `<@${id}>`;
 }
 
-function parseSecondsToMs(raw) {
+export function parseSecondsToMs(raw) {
   const s = (raw ?? "").trim().toLowerCase();
   const m = /^(\d+)\s*s$/.exec(s);
   if (!m) return { error: "Delay must be specified in seconds, e.g. `2s` (1s–30s)." };

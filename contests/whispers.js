@@ -33,7 +33,7 @@ function lc(s) {
  * Example:
  *  "Hello, WORLD!!" -> " hello world "
  */
-function normalizeForMatch(s) {
+export function normalizeForMatch(s) {
   const t = lc(norm(s));
 
   // Replace anything that's not a-z/0-9 with spaces.
@@ -52,7 +52,7 @@ function normalizeForMatch(s) {
  * phrase: "old" => " old "
  * message: " gold " does NOT include " old "
  */
-function includesWholePhrase(normalizedMessage, phrase) {
+export function includesWholePhrase(normalizedMessage, phrase) {
   const p = normalizeForMatch(phrase);
   if (!p || p === " ") return false;
   return normalizedMessage.includes(p);
@@ -75,7 +75,7 @@ function getGuildState(guildId) {
   return guildWhispers.get(guildId);
 }
 
-function serializeItems(items) {
+export function serializeItems(items) {
   return JSON.stringify(
     (items || []).map((x) => ({
       phrase: String(x.phrase || ""),
@@ -85,7 +85,7 @@ function serializeItems(items) {
   );
 }
 
-function deserializeItems(text) {
+export function deserializeItems(text) {
   try {
     const arr = JSON.parse(String(text || "[]"));
     if (!Array.isArray(arr)) return [];
