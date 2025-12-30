@@ -30,11 +30,13 @@ const WHISPER_KIND = "whisper";
 const WHISPER_USER_ID = "__guild__"; // sentinel
 
 // In-memory fallback cache (also used as the live index)
-const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, ownerId, prize? }], dbOk?: boolean }
+const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, ownerId, prize? }], dbOk?: boolean, lastDbFailMs?: number }
+
+const DB_RETRY_COOLDOWN_MS = 60_000;
 
 function getGuildState(guildId) {
   if (!guildWhispers.has(guildId)) {
-    guildWhispers.set(guildId, { loaded: false, items: [], dbOk: undefined });
+    guildWhispers.set(guildId, { loaded: false, items: [], dbOk: undefined, lastDbFailMs: null });
   }
   return guildWhispers.get(guildId);
 }
@@ -72,23 +74,31 @@ export function deserializeItems(text) {
 
 async function tryLoadGuildFromDb(guildId) {
   const state = getGuildState(guildId);
-  if (state.dbOk === false) return false;
+  if (state.dbOk === false) {
+    const lastFail = state.lastDbFailMs || 0;
+    if (Date.now() - lastFail < DB_RETRY_COOLDOWN_MS) return false;
+  }
 
   try {
     const t = await getUserText({ guildId, userId: WHISPER_USER_ID, kind: WHISPER_KIND });
     state.items = deserializeItems(t);
     state.loaded = true;
     state.dbOk = true;
+    state.lastDbFailMs = null;
     return true;
   } catch {
     state.dbOk = false;
+    state.lastDbFailMs = Date.now();
     return false;
   }
 }
 
 async function trySaveGuildToDb(guildId) {
   const state = getGuildState(guildId);
-  if (state.dbOk === false) return false;
+  if (state.dbOk === false) {
+    const lastFail = state.lastDbFailMs || 0;
+    if (Date.now() - lastFail < DB_RETRY_COOLDOWN_MS) return false;
+  }
 
   try {
     await setUserText({
@@ -98,9 +108,11 @@ async function trySaveGuildToDb(guildId) {
       text: serializeItems(state.items),
     });
     state.dbOk = true;
+    state.lastDbFailMs = null;
     return true;
   } catch {
     state.dbOk = false;
+    state.lastDbFailMs = Date.now();
     return false;
   }
 }
