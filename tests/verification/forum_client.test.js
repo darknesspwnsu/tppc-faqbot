@@ -81,4 +81,58 @@ describe("ForumClient", () => {
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/could not be found/i);
   });
+
+  it("returns error when login fails", async () => {
+    const fetchMock = vi.fn()
+      // login GET
+      .mockResolvedValueOnce(makeResponse({ status: 200, body: '<input name="securitytoken" value="guest">' }))
+      // login POST (fail)
+      .mockResolvedValueOnce(makeResponse({ status: 500, body: "" }));
+
+    global.fetch = fetchMock;
+
+    const client = new ForumClient({
+      baseUrl: "https://forums.tppc.info",
+      username: "bot",
+      password: "pass",
+      bcc: "",
+    });
+
+    const res = await client.sendVerificationPm({
+      forumUsername: "User",
+      discordTag: "Tag#0001",
+      token: "abc123",
+    });
+
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/login failed/i);
+  });
+
+  it("returns error when PM request throws", async () => {
+    const fetchMock = vi.fn()
+      // login GET
+      .mockResolvedValueOnce(makeResponse({ status: 200, body: '<input name="securitytoken" value="guest">' }))
+      // login POST
+      .mockResolvedValueOnce(makeResponse({ status: 302 }))
+      // newpm GET throws
+      .mockRejectedValueOnce(new Error("network down"));
+
+    global.fetch = fetchMock;
+
+    const client = new ForumClient({
+      baseUrl: "https://forums.tppc.info",
+      username: "bot",
+      password: "pass",
+      bcc: "",
+    });
+
+    const res = await client.sendVerificationPm({
+      forumUsername: "User",
+      discordTag: "Tag#0001",
+      token: "abc123",
+    });
+
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/network down/i);
+  });
 });

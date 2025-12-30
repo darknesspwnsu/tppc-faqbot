@@ -213,13 +213,22 @@ export class ForumClient {
     if (!forumUsername) throw new Error("sendVerificationPm missing forumUsername");
     if (!token) throw new Error("sendVerificationPm missing token");
 
-    await this.login();
+    try {
+      await this.login();
+    } catch (err) {
+      return { ok: false, error: err?.message || "Forum login failed." };
+    }
 
-    // GET new PM page
-    const newPm = await this._fetch("/private.php?do=newpm", { method: "GET" });
-    const html = await newPm.text();
-    const securitytoken = parseSecurityToken(html);
-    if (!securitytoken) throw new Error("Could not extract securitytoken for PM form.");
+    let securitytoken = null;
+    try {
+      // GET new PM page
+      const newPm = await this._fetch("/private.php?do=newpm", { method: "GET" });
+      const html = await newPm.text();
+      securitytoken = parseSecurityToken(html);
+    } catch (err) {
+      return { ok: false, error: err?.message || "Forum PM fetch failed." };
+    }
+    if (!securitytoken) return { ok: false, error: "Could not extract securitytoken for PM form." };
 
     // POST insert PM
     const payload = new URLSearchParams();
@@ -243,11 +252,16 @@ export class ForumClient {
     payload.set("savecopy", "0");
     payload.set("parseurl", "1");
 
-    const res = await this._fetch("/private.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: payload.toString(),
-    });
+    let res;
+    try {
+      res = await this._fetch("/private.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: payload.toString(),
+      });
+    } catch (err) {
+      return { ok: false, error: err?.message || "Forum PM send failed." };
+    }
 
     if (res.status === 302) return { ok: true };
 
