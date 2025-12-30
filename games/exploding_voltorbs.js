@@ -15,7 +15,8 @@
 // - Add spacing between successive bot messages by bundling round output into fewer sends
 // - FIX: do not “tick” for next holder before "Next up" message (suppress scares during cooloff)
 
-import { collectEntrantsByReactionsWithMax, createGameManager } from "./framework.js";
+import { collectEntrantsByReactionsWithMax, createGameManager, withGameSubcommands } from "./framework.js";
+import { registerHelpAndRules } from "./helpers.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const manager = createGameManager({
@@ -60,6 +61,26 @@ function evHelpText() {
     ""
   ].join("\n");
 }
+
+function evRulesText() {
+  return [
+    "**Exploding Voltorbs — Rules (layman)**",
+    "",
+    "A Voltorb is passed between players.",
+    "After a random delay, it **explodes** on the current holder.",
+    "",
+    "**Modes:**",
+    "• `suddendeath` — first explosion ends the game.",
+    "• `elim` — exploded player is out; keep going until one remains.",
+    "",
+    "**Passing:**",
+    "• Only the current holder can use `!pass @user`.",
+    "• `nopingpong` prevents immediate pass-back while 3+ players remain.",
+  ].join("\n");
+}
+
+const EV_HELP = evHelpText();
+const EV_RULES = evRulesText();
 
 function parseMentionToken(token) {
   const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
@@ -448,110 +469,116 @@ export function endVoltorbGame(message, { reason = "ended" } = {}) {
  * Command wiring for this game
  */
 export function registerExplodingVoltorbs(register) {
+  registerHelpAndRules(register, {
+    id: "ev",
+    label: "Exploding Voltorbs",
+    helpText: EV_HELP,
+    rulesText: EV_RULES,
+  });
+
   register(
     "!ev",
-    async ({ message, rest }) => {
-      if (!message.guild) return;
+    withGameSubcommands({
+      helpText: EV_HELP,
+      rulesText: EV_RULES,
+      onStart: async ({ message, rest }) => {
+        if (!message.guild) return;
 
-      const tokens = rest.trim().split(/\s+/).filter(Boolean);
+        const tokens = rest.trim().split(/\s+/).filter(Boolean);
 
-      if (tokens.length === 0) {
-        await message.reply(
-          "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
-        );
-        return;
-      }
-
-      if (tokens.length === 1 && ["help", "h", "?"].includes(tokens[0].toLowerCase())) {
-        await message.reply(evHelpText());
-        return;
-      }
-
-      let rangeArg = null;
-      let modeArg = null;
-      let joinSeconds = null;
-      let noPingPong = false;
-
-      for (let i = 0; i < Math.min(tokens.length, 6); i++) {
-        if (!rangeArg && parseRangeToken(tokens[i])) rangeArg = tokens[i];
-        if (!modeArg && parseModeToken(tokens[i])) modeArg = parseModeToken(tokens[i]);
-
-        const js = parseJoinWindowToken(tokens[i]);
-        if (joinSeconds == null && js != null) joinSeconds = js;
-
-        const fl = parseFlagToken(tokens[i]);
-        if (fl === "nopingpong") noPingPong = true;
-      }
-
-      const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
-      if (hasMentions && joinSeconds != null) {
-        await message.reply("❌ Join window only works with reaction-join (no @mention list).");
-        return;
-      }
-
-      if (joinSeconds != null) {
-        if (!Number.isFinite(joinSeconds) || joinSeconds < 10 || joinSeconds > 120) {
-          await message.reply("❌ Join window must be between 10 and 120 seconds.");
-          return;
-        }
-      }
-
-      // Validate tokens: apart from range/mode/flags/mentions/joinSeconds, no extras
-      const consumed = new Set();
-      for (const t of tokens) {
-        if (rangeArg && t === rangeArg) consumed.add(t);
-
-        const m = parseModeToken(t);
-        if (m && modeArg === m) consumed.add(t);
-
-        const fl = parseFlagToken(t);
-        if (fl) consumed.add(t);
-
-        const js = parseJoinWindowToken(t);
-        if (js != null && joinSeconds === js) consumed.add(t);
-
-        if (parseMentionToken(t)) consumed.add(t);
-      }
-      const extras = tokens.filter((t) => !consumed.has(t));
-      if (extras.length > 0) {
-        await message.reply(
-          "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
-        );
-        return;
-      }
-
-      const flags = { noPingPong };
-
-      // Reaction-join path if no mentions
-      if (!hasMentions) {
-        const modeLabel = modeArg || "suddendeath";
-        const modeLabelCapitalized = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
-        const rangeLabel = rangeArg ? ` • Range: **${rangeArg}**` : "";
-        const flagLabel = noPingPong ? ` • Ping-pong: **OFF**` : "";
-        const durationMs = (joinSeconds ?? 15) * 1000;
-
-        const { entrants } = await collectEntrantsByReactionsWithMax({
-          channel: message.channel,
-          promptText:
-            `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
-            `Mode: **${modeLabelCapitalized}**${rangeLabel}${flagLabel}`,
-          durationMs,
-          dispose: true,
-          trackRemovals: true,
-        });
-
-        if (entrants.size < 2) {
-          await message.channel.send("❌ Not enough players joined (need at least 2).");
+        if (tokens.length === 0) {
+          await message.reply(
+            "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
+          );
           return;
         }
 
-        startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg, flags);
-        return;
-      }
+        let rangeArg = null;
+        let modeArg = null;
+        let joinSeconds = null;
+        let noPingPong = false;
 
-      // Mention-based start path
-      startExplodingVoltorbs(message, rangeArg, modeArg, flags);
-    },
+        for (let i = 0; i < Math.min(tokens.length, 6); i++) {
+          if (!rangeArg && parseRangeToken(tokens[i])) rangeArg = tokens[i];
+          if (!modeArg && parseModeToken(tokens[i])) modeArg = parseModeToken(tokens[i]);
+
+          const js = parseJoinWindowToken(tokens[i]);
+          if (joinSeconds == null && js != null) joinSeconds = js;
+
+          const fl = parseFlagToken(tokens[i]);
+          if (fl === "nopingpong") noPingPong = true;
+        }
+
+        const hasMentions = (message.mentions?.users?.size ?? 0) > 0;
+        if (hasMentions && joinSeconds != null) {
+          await message.reply("❌ Join window only works with reaction-join (no @mention list).");
+          return;
+        }
+
+        if (joinSeconds != null) {
+          if (!Number.isFinite(joinSeconds) || joinSeconds < 10 || joinSeconds > 120) {
+            await message.reply("❌ Join window must be between 10 and 120 seconds.");
+            return;
+          }
+        }
+
+        // Validate tokens: apart from range/mode/flags/mentions/joinSeconds, no extras
+        const consumed = new Set();
+        for (const t of tokens) {
+          if (rangeArg && t === rangeArg) consumed.add(t);
+
+          const m = parseModeToken(t);
+          if (m && modeArg === m) consumed.add(t);
+
+          const fl = parseFlagToken(t);
+          if (fl) consumed.add(t);
+
+          const js = parseJoinWindowToken(t);
+          if (js != null && joinSeconds === js) consumed.add(t);
+
+          if (parseMentionToken(t)) consumed.add(t);
+        }
+        const extras = tokens.filter((t) => !consumed.has(t));
+        if (extras.length > 0) {
+          await message.reply(
+            "❌ Use: `!ev [min-max] [mode] [nopingpong] [@player list]/[join_window]`.\nType `!ev help` for more info."
+          );
+          return;
+        }
+
+        const flags = { noPingPong };
+
+        // Reaction-join path if no mentions
+        if (!hasMentions) {
+          const modeLabel = modeArg || "suddendeath";
+          const modeLabelCapitalized = modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1);
+          const rangeLabel = rangeArg ? ` • Range: **${rangeArg}**` : "";
+          const flagLabel = noPingPong ? ` • Ping-pong: **OFF**` : "";
+          const durationMs = (joinSeconds ?? 15) * 1000;
+
+          const { entrants } = await collectEntrantsByReactionsWithMax({
+            channel: message.channel,
+            promptText:
+              `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
+              `Mode: **${modeLabelCapitalized}**${rangeLabel}${flagLabel}`,
+            durationMs,
+            dispose: true,
+            trackRemovals: true,
+          });
+
+          if (entrants.size < 2) {
+            await message.channel.send("❌ Not enough players joined (need at least 2).");
+            return;
+          }
+
+          startExplodingVoltorbsFromIds(message, entrants, rangeArg, modeArg, flags);
+          return;
+        }
+
+        // Mention-based start path
+        startExplodingVoltorbs(message, rangeArg, modeArg, flags);
+      },
+    }),
     "!ev [min-max[s|sec|seconds]] [elim|suddendeath] [nopingpong] @players — start Exploding Voltorbs (default 30-90s, default mode suddendeath). If no @players, uses reaction join.",
     { helpTier: "primary", aliases: ["!explodingvoltorbs", "!voltorb"] }
   );
