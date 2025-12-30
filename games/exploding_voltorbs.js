@@ -1,4 +1,4 @@
-// games/explodingVoltorbs.js
+// games/exploding_voltorbs.js
 //
 // Exploding Voltorbs:
 // - One game active per guild
@@ -15,10 +15,14 @@
 // - Add spacing between successive bot messages by bundling round output into fewer sends
 // - FIX: do not “tick” for next holder before "Next up" message (suppress scares during cooloff)
 
-import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
+import { collectEntrantsByReactionsWithMax, createGameManager } from "./framework.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
-const activeGames = new Map(); // guildId -> game
+const manager = createGameManager({
+  id: "exploding_voltorbs",
+  prettyName: "Exploding Voltorbs",
+  scope: "guild",
+});
 
 const scareMessages = [
   "⚡ The Voltorb crackles ominously...",
@@ -103,18 +107,22 @@ function randChoiceFromSet(set) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function clearGameTimers(game) {
-  if (!game) return;
-  try { if (game.explosionTimeout) clearTimeout(game.explosionTimeout); } catch {}
-  try { if (game.scareInterval) clearInterval(game.scareInterval); } catch {}
+async function getStartChannel(game) {
+  if (!game?.client || !game?.channelId) return null;
+  const cached = game.client.channels?.cache?.get?.(game.channelId);
+  if (cached) return cached;
+  return await game.client.channels.fetch(game.channelId).catch(() => null);
+}
+
+async function sendToStartChannel(game, content) {
+  const channel = await getStartChannel(game);
+  if (!channel?.send) return false;
+  await channel.send(content);
+  return true;
 }
 
 function endGame(guildId) {
-  const game = activeGames.get(guildId);
-  if (!game) return null;
-  clearGameTimers(game);
-  activeGames.delete(guildId);
-  return game;
+  return manager.stop({ guildId });
 }
 
 function formatRemainingList(aliveIds) {
@@ -129,81 +137,81 @@ function randCooloffMs() {
   return sec * 1000;
 }
 
-function scheduleExplosion(message, guildId) {
-  const game = activeGames.get(guildId);
-  if (!game) return;
+function scheduleExplosion(game) {
+  const g = manager.getState({ guildId: game.guildId });
+  if (!g) return;
 
-  try {
-    if (game.explosionTimeout) clearTimeout(game.explosionTimeout);
-  } catch {}
-
-  const { minSeconds, maxSeconds } = game;
   const explodeDelayMs =
-    (Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds) * 1000;
+    (Math.floor(Math.random() * (g.maxSeconds - g.minSeconds + 1)) + g.minSeconds) * 1000;
 
-  game.explosionTimeout = setTimeout(async () => {
-    const g = activeGames.get(guildId);
-    if (!g) return;
+  g.timers.setTimeout(async () => {
+    const live = manager.getState({ guildId: g.guildId });
+    if (!live) return;
 
-    const blownId = g.holderId;
+    const blownId = live.holderId;
 
-    if (g.mode === "suddendeath") {
-      // End immediately after first boom — kill timers first to prevent extra messages
-      endGame(guildId);
+    if (live.mode === "suddendeath") {
+      const ended = endGame(live.guildId);
+      if (!ended) return;
 
-      await message.channel.send(
+      await sendToStartChannel(
+        ended,
         `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
-        `🏁 **Game over!** (suddendeath)`
+          `🏁 **Game over!** (suddendeath)`
       );
       return;
     }
 
     // elim mode
-    g.aliveIds.delete(blownId);
+    live.aliveIds.delete(blownId);
 
     // If game is now won, end cleanly BEFORE sending final
-    if (g.aliveIds.size <= 1) {
-      const winnerId = randChoiceFromSet(g.aliveIds);
-      endGame(guildId);
+    if (live.aliveIds.size <= 1) {
+      const winnerId = randChoiceFromSet(live.aliveIds);
+      const ended = endGame(live.guildId);
+      if (!ended) return;
 
       if (winnerId) {
-        await message.channel.send(
+        await sendToStartChannel(
+          ended,
           `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
-          `Remaining: ${formatRemainingList(new Set([winnerId]))}\n\n` +
-          `🏆 <@${winnerId}> wins **Exploding Voltorbs**!`
+            `Remaining: ${formatRemainingList(new Set([winnerId]))}\n\n` +
+            `🏆 <@${winnerId}> wins **Exploding Voltorbs**!`
         );
       } else {
-        await message.channel.send(
+        await sendToStartChannel(
+          ended,
           `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
-          `🏁 Game ended — no winner (everyone exploded?).`
+            `🏁 Game ended — no winner (everyone exploded?).`
         );
       }
       return;
     }
 
     // Round cooloff + next holder (FIX: do not set holderId until round begins)
-    const remainingLine = `Remaining: ${formatRemainingList(g.aliveIds)}`;
+    const remainingLine = `Remaining: ${formatRemainingList(live.aliveIds)}`;
     const cooloffMs = randCooloffMs();
     const cooloffSec = Math.round(cooloffMs / 1000);
 
-    const nextHolderId = randChoiceFromSet(g.aliveIds);
+    const nextHolderId = randChoiceFromSet(live.aliveIds);
 
     // Enter cooloff state; suppress scare ticks; hold next holder pending
-    g.pendingHolderId = nextHolderId;
-    g.coolingOff = true;
+    live.pendingHolderId = nextHolderId;
+    live.coolingOff = true;
 
     // Reset pingpong memory each explosion (new "round" baseline)
     // This prevents weird edge cases where lastHolderId points to someone already eliminated.
-    g.lastHolderId = null;
+    live.lastHolderId = null;
 
-    await message.channel.send(
+    await sendToStartChannel(
+      live,
       `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
-      `${remainingLine}\n\n` +
-      `⏳ Next round in **${cooloffSec}s**...`
+        `${remainingLine}\n\n` +
+        `⏳ Next round in **${cooloffSec}s**...`
     );
 
-    setTimeout(async () => {
-      const still = activeGames.get(guildId);
+    live.timers.setTimeout(async () => {
+      const still = manager.getState({ guildId: live.guildId });
       if (!still) return;
 
       // Round begins now
@@ -216,17 +224,33 @@ function scheduleExplosion(message, guildId) {
       still.pendingHolderId = null;
       still.coolingOff = false;
 
-      await message.channel.send(`🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
-      scheduleExplosion(message, guildId);
+      await sendToStartChannel(still, `🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
+      scheduleExplosion(still);
     }, cooloffMs);
   }, explodeDelayMs);
 }
 
-export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
+function scheduleScares(game) {
+  game.timers.setInterval(async () => {
+    const g = manager.getState({ guildId: game.guildId });
+    if (!g) return;
+
+    // FIX: don't “tick” during the between-round cooloff
+    if (g.coolingOff) return;
+
+    if (Math.random() < 0.30) {
+      const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
+      await sendToStartChannel(g, `${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
+    }
+  }, 8000);
+}
+
+function startGameFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
-  if (activeGames.has(guildId)) {
+  const existing = manager.getState({ guildId });
+  if (existing) {
     message.reply("⚠️ Exploding Voltorbs is already running!");
     return;
   }
@@ -275,33 +299,30 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg,
     return;
   }
 
-  const scareInterval = setInterval(() => {
-    const g = activeGames.get(guildId);
-    if (!g) return;
-
-    // FIX: don't “tick” during the between-round cooloff
-    if (g.coolingOff) return;
-
-    if (Math.random() < 0.30) {
-      const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
-      message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
+  const res = manager.tryStart(
+    { guildId },
+    {
+      guildId,
+      channelId: message.channelId,
+      creatorId: message.author?.id || null,
+      client: message.client,
+      holderId,
+      lastHolderId: null,
+      allowedIds,
+      aliveIds,
+      mode,
+      minSeconds,
+      maxSeconds,
+      noPingPong: !!flags.noPingPong,
+      coolingOff: false,
+      pendingHolderId: null,
     }
-  }, 8000);
+  );
 
-  activeGames.set(guildId, {
-    holderId,
-    lastHolderId: null, // needed for nopingpong
-    allowedIds,
-    aliveIds,
-    mode,
-    minSeconds,
-    maxSeconds,
-    explosionTimeout: null,
-    scareInterval,
-    noPingPong: !!flags.noPingPong,
-    coolingOff: false,
-    pendingHolderId: null
-  });
+  if (!res.ok) {
+    message.reply("⚠️ Exploding Voltorbs is already running!");
+    return;
+  }
 
   const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
 
@@ -313,18 +334,15 @@ export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg,
       `💣 <@${holderId}> is holding the Voltorb!`
   );
 
-  scheduleExplosion(message, guildId);
+  scheduleScares(res.state);
+  scheduleExplosion(res.state);
+}
+
+export function startExplodingVoltorbsFromIds(message, idSet, rangeArg, modeArg, flags = {}) {
+  startGameFromIds(message, idSet, rangeArg, modeArg, flags);
 }
 
 export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
-  const guildId = message.guild?.id;
-  if (!guildId) return;
-
-  if (activeGames.has(guildId)) {
-    message.reply("⚠️ Exploding Voltorbs is already running!");
-    return;
-  }
-
   const mentioned = getMentionedUsers(message);
   const allowedIds = new Set();
   for (const u of mentioned) {
@@ -338,87 +356,14 @@ export function startExplodingVoltorbs(message, rangeArg, modeArg, flags = {}) {
     return;
   }
 
-  const DEFAULT_MIN = 30;
-  const DEFAULT_MAX = 90;
-  const MAX_ALLOWED = 600;
-
-  let minSeconds = DEFAULT_MIN;
-  let maxSeconds = DEFAULT_MAX;
-
-  if (rangeArg) {
-    const parsed = parseRangeToken(rangeArg);
-    if (!parsed) {
-      message.reply("❌ Use `min-max` seconds (example: `30-90` or `30-90s`)");
-      return;
-    }
-
-    minSeconds = parsed.min;
-    maxSeconds = parsed.max;
-
-    if (
-      !Number.isFinite(minSeconds) ||
-      !Number.isFinite(maxSeconds) ||
-      minSeconds < 5 ||
-      maxSeconds > MAX_ALLOWED ||
-      minSeconds >= maxSeconds
-    ) {
-      message.reply(`❌ Range must be 5–${MAX_ALLOWED} seconds, min < max.`);
-      return;
-    }
-  }
-
-  const mode = modeArg || "suddendeath";
-  const aliveIds = new Set(allowedIds);
-
-  const holderId = randChoiceFromSet(aliveIds);
-  if (!holderId) return;
-
-  const scareInterval = setInterval(() => {
-    const g = activeGames.get(guildId);
-    if (!g) return;
-
-    // FIX: don't “tick” during the between-round cooloff
-    if (g.coolingOff) return;
-
-    if (Math.random() < 0.30) {
-      const scare = scareMessages[Math.floor(Math.random() * scareMessages.length)];
-      message.channel.send(`${scare}\n\n👀 <@${g.holderId}> is holding the Voltorb.`);
-    }
-  }, 8000);
-
-  activeGames.set(guildId, {
-    holderId,
-    lastHolderId: null, // needed for nopingpong
-    allowedIds,
-    aliveIds,
-    mode,
-    minSeconds,
-    maxSeconds,
-    explosionTimeout: null,
-    scareInterval,
-    noPingPong: !!flags.noPingPong,
-    coolingOff: false,
-    pendingHolderId: null
-  });
-
-  const flagLine = flags.noPingPong ? "\n🚫 Ping-pong: **disabled** (3+ alive)" : "";
-
-  message.channel.send(
-    `⚡ **Exploding Voltorbs started!**\n` +
-      `🎮 Mode: **${mode}**${flagLine}\n` +
-      `⏱️ Explosion time: **${minSeconds}–${maxSeconds} seconds**\n` +
-      `👥 Players: ${Array.from(aliveIds).map((id) => `<@${id}>`).join(", ")}\n\n` +
-      `💣 <@${holderId}> is holding the Voltorb!`
-  );
-
-  scheduleExplosion(message, guildId);
+  startGameFromIds(message, allowedIds, rangeArg, modeArg, flags);
 }
 
 export function passVoltorb(message) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
-  const game = activeGames.get(guildId);
+  const game = manager.getState({ guildId });
   if (!game) {
     message.reply("❌ No active Voltorb game.");
     return;
@@ -480,7 +425,7 @@ export function endVoltorbGame(message, { reason = "ended" } = {}) {
   const guildId = message.guild?.id;
   if (!guildId) return;
 
-  const game = activeGames.get(guildId);
+  const game = manager.getState({ guildId });
   if (!game) {
     message.reply("❌ No active Voltorb game.");
     return;
@@ -576,12 +521,14 @@ export function registerExplodingVoltorbs(register) {
         const flagLabel = noPingPong ? ` • Ping-pong: **OFF**` : "";
         const durationMs = (joinSeconds ?? 15) * 1000;
 
-        const entrants = await collectEntrantsByReactions({
-          message,
+        const { entrants } = await collectEntrantsByReactionsWithMax({
+          channel: message.channel,
           promptText:
             `React to join **Exploding Voltorbs**! (join window: ${joinSeconds ?? 15}s)\n` +
             `Mode: **${modeLabelCapitalized}**${rangeLabel}${flagLabel}`,
-          durationMs
+          durationMs,
+          dispose: true,
+          trackRemovals: true,
         });
 
         if (entrants.size < 2) {
