@@ -214,7 +214,7 @@ contests/            → contest utilities
 verification/        → verification workflows
 configs/             → exposure & policy config
 db.js                → database access
-helpbox.js           → help UI
+info/helpbox.js      → help UI
 ```
 
 Avoid monolithic files and cross-cutting logic outside the registry.
@@ -373,4 +373,3 @@ When changing behavior:
 * avoid “small” wording changes that accidentally break community expectations or moderation workflows
 
 ---
-

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Fuse from "fuse.js";
 import { createWikiService } from "./wiki.js";
-import { isAdminOrPrivileged } from "./auth.js";
+import { isAdminOrPrivileged } from "../auth.js";
 
 /**
  * Read numeric env var from the first key that exists and parses as a number.

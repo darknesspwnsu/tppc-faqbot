@@ -22,7 +22,6 @@ vi.mock("../../verification/verification_module.js", () => ({ registerVerificati
 vi.mock("../../contests/contests.js", () => ({ registerContests: vi.fn() }));
 vi.mock("../../games/games.js", () => ({ registerGames: vi.fn() }));
 vi.mock("../../toybox.js", () => ({ registerToybox: vi.fn() }));
-vi.mock("../../info/helpbox.js", () => ({ registerHelpbox: vi.fn() }));
 vi.mock("../../tools/rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
 
 import { buildCommandRegistry } from "../../commands.js";

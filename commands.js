@@ -30,11 +30,10 @@ import { registerContests } from "./contests/contests.js";
 import { registerTrades } from "./trades/trades.js";
 import { registerGames } from "./games/games.js";
 
-import { registerInfoCommands } from "./faq.js";
+import { registerInfo } from "./info/info.js";
 import { registerTools } from "./tools/tools.js";
 import { registerToybox } from "./toybox.js";
 
-import { registerHelpbox } from "./helpbox.js";
 import { registerVerification } from "./verification/verification_module.js";
 
 import { handleRarityInteraction } from "./tools/rarity.js";
@@ -447,14 +446,12 @@ export function buildCommandRegistry({ client } = {}) {
   registerTrades(withCategory(register, "Trading"));
 
   registerTools(withCategory(register, "Tools"));
-  registerInfoCommands(withCategory(register, "Info"));
+  // Info registry must call helpModel(guildId) per-request (see info/helpbox.js).
+  registerInfo(withCategory(register, "Info"), { helpModel });
   registerVerification(withCategory(register, "Info"));
   registerContests(withCategory(register, "Contests"));
   registerGames(withCategory(register, "Games"));
   registerToybox(withCategory(register, "Fun"));
-
-  // Helpbox must call helpModel(guildId) per-request (see helpbox.js patch below)
-  registerHelpbox(withCategory(register, "Info"), { helpModel });
 
   /* ------------------------------- dispatchers ------------------------------ */
 
