@@ -21,6 +21,22 @@ export function parseMinMaxRangeToken(token) {
 }
 
 /**
+ * Parses a Discord mention token like "<@123>" or "<@!123>".
+ * Returns the user id string or null.
+ */
+export function parseMentionToken(token) {
+  const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
+  return m ? m[1] : null;
+}
+
+/**
+ * Returns an array of mentioned users from a message object.
+ */
+export function getMentionedUsers(message) {
+  return message?.mentions?.users ? Array.from(message.mentions.users.values()) : [];
+}
+
+/**
  * Registers "!<id>help" and "!<id>rules" commands with consistent behavior.
  */
 export function registerHelpAndRules(register, { id, label, helpText, rulesText } = {}) {

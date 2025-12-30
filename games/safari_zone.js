@@ -33,7 +33,7 @@ import {
   shuffleInPlace,
   withGameSubcommands,
 } from "./framework.js";
-import { validateJoinAndMaxForMode } from "./helpers.js";
+import { getMentionedUsers, parseMentionToken, validateJoinAndMaxForMode } from "./helpers.js";
 
 const manager = createGameManager({ id: "safarizone", prettyName: "Safari Zone", scope: "guild" });
 
@@ -96,15 +96,6 @@ function szRulesText() {
 const SZ_HELP = szHelpText();
 const SZ_RULES = szRulesText();
 
-
-function parseMentionToken(token) {
-  const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
-  return m ? m[1] : null;
-}
-
-function getMentionedUsers(message) {
-  return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
-}
 
 function parseKVInt(token, key) {
   const re = new RegExp(`^${key}=(\\d+)$`, "i");

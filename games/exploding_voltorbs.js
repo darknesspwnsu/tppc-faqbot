@@ -16,7 +16,7 @@
 // - FIX: do not “tick” for next holder before "Next up" message (suppress scares during cooloff)
 
 import { collectEntrantsByReactionsWithMax, createGameManager, withGameSubcommands } from "./framework.js";
-import { registerHelpAndRules } from "./helpers.js";
+import { getMentionedUsers, parseMentionToken, registerHelpAndRules } from "./helpers.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const manager = createGameManager({
@@ -81,15 +81,6 @@ function evRulesText() {
 
 const EV_HELP = evHelpText();
 const EV_RULES = evRulesText();
-
-function parseMentionToken(token) {
-  const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
-  return m ? m[1] : null;
-}
-
-function getMentionedUsers(message) {
-  return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
-}
 
 function parseRangeToken(token) {
   if (!token) return null;
