@@ -24,9 +24,9 @@
 // - turn=SS     skip timer seconds (10..300), default 30
 // - warn=SS     warn timer seconds (5..(turn-1)), default: floor(turn/2)
 
-import { collectEntrantsByReactions } from "../contests/reaction_contests.js";
 import {
   clampInt,
+  collectEntrantsByReactionsWithMax,
   createGameManager,
   isAdminOrPrivilegedMessage,
   makeGameQoL,
@@ -411,35 +411,6 @@ async function resolvePick(channel, game, pickerId, coordRaw) {
   await promptTurn(channel, game);
 }
 
-/* ----------------------------- join collection ----------------------------- */
-/**
- * Optional max-cap join collector (like your electrode one, but simpler)
- */
-async function collectEntrantsByReactionsWithMax({ message, promptText, durationMs, maxEntrants }) {
-  const joinMsg = await message.channel.send(promptText);
-  const emoji = "✅";
-
-  try {
-    await joinMsg.react(emoji);
-  } catch {
-    return new Set();
-  }
-
-  const entrants = new Set();
-  const filter = (reaction, user) => !user.bot && reaction.emoji?.name === emoji;
-
-  return new Promise((resolve) => {
-    const collector = joinMsg.createReactionCollector({ filter, time: durationMs });
-
-    collector.on("collect", (_reaction, user) => {
-      entrants.add(user.id);
-      if (maxEntrants && entrants.size >= maxEntrants) collector.stop("max");
-    });
-
-    collector.on("end", () => resolve(entrants));
-  });
-}
-
 /* ------------------------------- start helpers ------------------------------ */
 
 function validateAndBuildConfig(playersCount, opts) {
@@ -730,21 +701,15 @@ export function registerSafariZone(register) {
           `)\n` +
           `📌 When it’s your turn, pick a square with \`!szpick A1\`.\n`;
 
-        let entrants;
-        if (maxPlayers) {
-          entrants = await collectEntrantsByReactionsWithMax({
-            message,
-            promptText: prompt,
-            durationMs: joinSeconds * 1000,
-            maxEntrants: maxPlayers,
-          });
-        } else {
-          entrants = await collectEntrantsByReactions({
-            message,
-            promptText: prompt,
-            durationMs: joinSeconds * 1000,
-          });
-        }
+        const trackRemovals = !maxPlayers;
+        const { entrants } = await collectEntrantsByReactionsWithMax({
+          channel: message.channel,
+          promptText: prompt,
+          durationMs: joinSeconds * 1000,
+          maxEntrants: maxPlayers ?? null,
+          dispose: trackRemovals,
+          trackRemovals,
+        });
 
         if (!entrants || entrants.size < 2) {
           await message.channel.send("❌ Not enough players joined (need at least 2).");
