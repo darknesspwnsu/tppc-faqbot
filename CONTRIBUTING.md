@@ -1,4 +1,4 @@
-# CLAUDE.md
+# CONTRIBUTING.md
 
 ## Project Overview
 
@@ -30,9 +30,9 @@ All functionality is built on a **custom command framework** that allows fine-gr
 
 ---
 
-## How Claude Should Assist on This Project
+## How Contributors Should Assist on This Project
 
-Claude is being used as an **additional set of architectural eyes**, not just an implementation tool.
+Contributors are expected to act as an **additional set of architectural eyes**, not just implementation tools.
 
 ### High-Priority Areas to Focus On
 
@@ -74,7 +74,7 @@ When reviewing or proposing changes, prioritize help in these areas:
    * Focus on high-risk logic (parsers, state machines, DB interactions)
    * Avoid heavy test frameworks unless clearly justified
 
-Claude should **not default to rewriting everything**. Incremental improvement and safety are preferred over large rewrites.
+Contributors should **not default to rewriting everything**. Incremental improvement and safety are preferred over large rewrites.
 
 ---
 
@@ -374,9 +374,3 @@ When changing behavior:
 
 ---
 
-
-## Final Note to Claude
-
-> You are an extra set of eyes on a mature, growing codebase.
-> Prioritize safety, consistency, and integration over novelty.
-> When unsure, ask before implementing.
