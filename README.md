@@ -165,6 +165,10 @@ cp .env.example .env
 npm start
 ````
 
+Optional Docker helpers (macOS):
+- `npm run start:dev:docker` — starts Docker Desktop, ensures `tppc-mysql` is running, then runs `start:dev`.
+- `npm run stop:dev:docker` — stops the dev bot, stops `tppc-mysql`, and quits Docker Desktop.
+
 ---
 
 ## 🌱 Environment Variables

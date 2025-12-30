@@ -7,8 +7,10 @@
   "scripts": {
     "start": "node bot.js",
     "start:dev": "DOTENV_CONFIG_PATH=.env.development.local node bot.js",
+    "start:dev:docker": "./scripts/start-dev.sh",
     "pause:dev": "pkill -f 'node bot.js' && docker pause tppc-mysql",
     "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js",
+    "stop:dev:docker": "./scripts/stop-dev.sh",
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest",
