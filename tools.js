@@ -114,7 +114,7 @@ export function registerTools(register) {
       const promo = await getPromoForGuild(guildId);
       await message.reply(`Promo updated to: ${promo}`);
     },
-    "!setpromo <text> — sets the last promo (admin or privileged users only)"
+    "!setpromo <text> — sets the last promo (admin or privileged users only)", { admin: true }
   );
 
   registerCalculator(register);

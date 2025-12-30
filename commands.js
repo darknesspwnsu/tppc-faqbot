@@ -211,13 +211,23 @@ export function buildCommandRegistry({ client } = {}) {
     );
   }
 
-  function registerSlash(def, handler) {
+  function registerSlash(def, handler, opts = {}) {
     if (!def || !def.name) throw new Error("register.slash requires a { name, description } def");
     const key = String(def.name).toLowerCase();
     if (slash.has(key)) {
       throw new Error(`[COMMANDS] Duplicate slash command registered: "/${key}"`);
     }
-    slash.set(key, { def, handler });
+
+    slash.set(key, {
+      def,
+      handler,
+      meta: {
+        admin: Boolean(opts.admin),
+        category: opts.category || "Other",
+        hideFromHelp: Boolean(opts.hideFromHelp),
+        helpTier: opts.helpTier || "normal", // "primary" | "normal"
+      },
+    });
   }
 
   function registerComponent(prefix, handler) {
@@ -249,7 +259,11 @@ export function buildCommandRegistry({ client } = {}) {
       return baseRegister(name, handler, help, merged);
     };
 
-    wrapped.slash = baseRegister.slash;
+    wrapped.slash = (def, handler, opts = {}) => {
+      const merged = { ...(opts || {}) };
+      if (!merged.category) merged.category = category;
+      return baseRegister.slash(def, handler, merged);
+    };
     wrapped.component = baseRegister.component;
     wrapped.onMessage = baseRegister.onMessage;
     wrapped.listener = baseRegister.listener;
@@ -277,29 +291,51 @@ export function buildCommandRegistry({ client } = {}) {
    *
    * If guildId is null (e.g. DMs), we treat it as DEFAULT_EXPOSURE.
    */
-  function helpModel(guildId = null) {
+  function helpModel(guildId = null, viewerMessageLike = null) {
     const gid = guildId ? String(guildId) : null;
+    const includeAdmin = viewerMessageLike ? isAdminOrPrivileged(viewerMessageLike) : false;
 
+    // cat -> { userLines: [], adminLines: [] }
     const byCat = new Map();
     const catOrder = [];
 
+    function ensureCat(cat) {
+      if (!byCat.has(cat)) {
+        byCat.set(cat, { userLines: [], adminLines: [] });
+        catOrder.push(cat);
+      }
+      return byCat.get(cat);
+    }
+
+    function pushLine(cat, line, isAdminLine) {
+      const bucket = ensureCat(cat);
+      if (isAdminLine) bucket.adminLines.push(line);
+      else bucket.userLines.push(line);
+    }
+
+    // -------------------------
+    // Bang/Q commands
+    // -------------------------
     for (const entry of bang.values()) {
       const { help, admin, canonical, category, hideFromHelp, helpTier } = entry;
 
       if (!canonical) continue;
       if (!help) continue;
-      if (admin) continue;
       if (hideFromHelp) continue;
 
-      // Games category shows only primary commands
+      // Hide admin commands unless viewer can see them
+      if (admin && !includeAdmin) continue;
+
       const cat = category || "Other";
+
+      // Games category shows only primary commands
       if (String(cat).toLowerCase() === "games") {
         if (helpTier !== "primary") continue;
       }
 
-      // If this is an exposable command, rewrite based on guild policy and possibly hide if off.
       let line = String(help);
 
+      // If exposable, rewrite based on guild policy (and hide if off)
       if (entry.exposeMeta) {
         const { logicalId, baseName } = entry.exposeMeta;
         const exp = exposureFor(gid, logicalId);
@@ -307,24 +343,56 @@ export function buildCommandRegistry({ client } = {}) {
         if (exp === "off") continue;
 
         const displayCmd = exp === "q" ? `?${baseName}` : `!${baseName}`;
-
-        // Replace every occurrence of !<baseName> or ?<baseName> in the help text
-        // so composite help like "?ft add | ?ft del | ?ft ..." becomes consistent.
         const re = new RegExp(`[!?]${escapeRegex(baseName)}\\b`, "g");
         line = line.replace(re, displayCmd);
       }
 
-      if (!byCat.has(cat)) {
-        byCat.set(cat, []);
-        catOrder.push(cat);
-      }
-      byCat.get(cat).push(line);
+      pushLine(cat, line, Boolean(admin));
     }
 
-    return catOrder.map((cat) => ({
-      category: cat,
-      lines: (byCat.get(cat) || []).sort()
-    }));
+    // -------------------------
+    // Slash commands
+    // -------------------------
+    for (const { def, meta } of slash.values()) {
+      const name = String(def?.name || "").trim();
+      const desc = String(def?.description || "").trim();
+      if (!name || !desc) continue;
+
+      const admin = Boolean(meta?.admin);
+      const hideFromHelp = Boolean(meta?.hideFromHelp);
+      const cat = (meta?.category || "Other");
+      const helpTier = meta?.helpTier || "normal";
+
+      if (hideFromHelp) continue;
+      if (admin && !includeAdmin) continue;
+
+      // Same rule: Games category shows only primary commands
+      if (String(cat).toLowerCase() === "games") {
+        if (helpTier !== "primary") continue;
+      }
+
+      const line = `/${name} — ${desc}`;
+      pushLine(cat, line, admin);
+    }
+
+    // -------------------------
+    // Finalize per-category lines:
+    // - sort user lines
+    // - then "Admin:" + sorted admin lines (only if includeAdmin)
+    // -------------------------
+    return catOrder.map((cat) => {
+      const bucket = byCat.get(cat) || { userLines: [], adminLines: [] };
+      const userLines = (bucket.userLines || []).slice().sort();
+      const adminLines = (bucket.adminLines || []).slice().sort();
+
+      const lines = [...userLines];
+      if (includeAdmin && adminLines.length) {
+        lines.push("Admin:");
+        lines.push(...adminLines);
+      }
+
+      return { category: cat, lines };
+    });
   }
 
   /* ------------------------------ Module wiring ------------------------------ */

@@ -638,6 +638,7 @@ export function registerUnverify(register) {
       await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
 
       await interaction.reply({ ephemeral: true, content: `✅ Removed verification linkage for ${target}.` });
-    }
+    },
+    { admin: true }
   );
 }

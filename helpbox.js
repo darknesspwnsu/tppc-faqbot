@@ -2,20 +2,18 @@
  * helpbox.js
  *
  * Registers:
- *  - /help (ephemeral, category navigation)
+ *  - /help (ephemeral, category navigation; permission-aware)
  *  - help category interactions:
  *      - buttons: helpcat:<index>
  *      - select menus: helpmenu:<chunkIndex> (value is page index)
- *  - !help (public message reply, same content as before)
+ *  - !help (public redirect)
+ *  - !help <category> (public: show only that category)
  *
  * Notes:
- *  - helpModel MUST be called with guildId at runtime so different guilds see different help.
- *  - Slash option choices must be static at registration time; we build them from helpModel(null).
- *  - Components always re-render with helpModel(interaction.guildId).
- *
- * Enhancements:
- *  - If categories > 25, automatically uses select menus (supports >25 via multiple menus)
- *  - Remembers last-opened category per user in a session map
+ *  - helpModel MUST be called with (guildId, viewerMessageLike) at runtime
+ *    so output reflects both guild exposure + viewer permissions.
+ *  - Slash option choices must be static at registration time; we build them from helpModel(null, null).
+ *  - Components always re-render with helpModel(interaction.guildId, viewerLike).
  */
 
 import { MessageFlags } from "discord.js";
@@ -47,7 +45,13 @@ function rememberIndex(userId, idx) {
 
 function embedForPage(pages, idx) {
   const p = pages[idx];
-  const desc = (p.lines || []).map((l) => `• ${l}`).join("\n") || "_No commands in this category._";
+  const desc =
+    (p.lines || [])
+      .map((l) => {
+        if (l === "Admin:") return "**Admin:**";
+        return `• ${l}`;
+      })
+      .join("\n") || "_No commands in this category._";
 
   return {
     title: p.category,
@@ -138,49 +142,99 @@ function buildComponents(pages, activeIdx) {
   return buildSelectMenus(pages, activeIdx);
 }
 
-/**
- * Render a truncated public preview for !help
- */
-function renderPublicPreview(pages) {
-  const sections = pages.map(
-    (p) => `**${p.category}**\n` + (p.lines || []).map((l) => `• ${l}`).join("\n")
-  );
+function messageLikeFromInteraction(interaction) {
+  return {
+    guildId: interaction.guildId,
+    member: interaction.member,
+    author: interaction.user,
+  };
+}
 
-  const full = sections.join("\n\n");
+function normalizeCategoryArg(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  return s;
+}
 
-  const prefix =
-    "Type `/help` for a full list of available commands.\n" +
-    "_(Showing a truncated preview below)_\n\n";
+function renderCategoryPublic(categoryPage) {
+  const header = `**${categoryPage.category}**`;
+  const body =
+    (categoryPage.lines || [])
+      .map((l) => {
+        if (l === "Admin:") return "**Admin:**";
+        if (!String(l || "").trim()) return ""; // drop empty spacer lines safely
+        return `• ${l}`;
+      })
+      .filter(Boolean)
+      .join("\n") || "_No commands in this category._";
 
-  const hardLimit = 2000;
-  const previewLimit = Math.min(1000, hardLimit - prefix.length - 40); // 40 buffer for suffix
-
-  let preview = full;
-  let suffix = "";
-
-  if (full.length > previewLimit) {
-    preview = full.slice(0, previewLimit);
-    suffix = `\n\n… _(truncated: ${full.length - previewLimit} more chars)_`;
-  }
-
-  return prefix + preview + suffix;
+  const out = `${header}\n${body}`;
+  return out.length <= 1990 ? out : out.slice(0, 1980) + "\n…";
 }
 
 export function registerHelpbox(register, { helpModel }) {
   // Precompute static choices for the slash option (must be static at registration time).
-  // This is only to let users jump to a category quickly; actual pages are computed per guild at runtime.
-  const DEFAULT_CHOICES = buildCategoryChoices(helpModel(null));
+  // Actual pages are computed per guild AND per viewer at runtime.
+  const DEFAULT_CHOICES = buildCategoryChoices(helpModel(null, null));
 
   // Bang !help (public)
+  // - No args: redirect only
+  // - With args: show that category publicly (permission-aware)
   register(
     "!help",
-    async ({ message }) => {
-      const pages = helpModel(message.guildId);
-      if (!pages.length) return;
+    async ({ message, rest }) => {
+      const arg = normalizeCategoryArg(rest);
+      // QoL: list categories (permission-aware)
+      const argKey = String(arg || "").trim().toLowerCase();
+      if (argKey === "allcategories" || argKey === "categories") {
+        const pages = helpModel(message.guildId, message);
+        if (!pages.length) {
+          await message.reply("No help categories available. Use `/help` (private).");
+          return;
+        }
 
-      await message.reply(renderPublicPreview(pages));
+        const cats = pages.map((p) => `• ${p.category}`);
+
+        const header = `**Help categories (${cats.length}):**\n`;
+        const footer = `\nUse \`!help <category>\` or \`/help\`.`;
+
+        // Chunk to avoid 2000 char limit
+        let chunk = header;
+        for (const line of cats) {
+          if ((chunk + line + "\n").length > 1900) {
+            await message.reply(chunk + footer);
+            chunk = header;
+          }
+          chunk += line + "\n";
+        }
+        await message.reply(chunk + footer);
+        return;
+      }
+
+      // No args -> ONLY redirect to /help
+      if (!arg) {
+        await message.reply("Use `/help` for the full command list (private).");
+        return;
+      }
+
+      // With args -> show the category page publicly
+      const pages = helpModel(message.guildId, message);
+      if (!pages.length) {
+        await message.reply("Use `/help` for the full command list (private).");
+        return;
+      }
+
+      const idx = indexForCategory(pages, arg);
+      if (idx == null) {
+        await message.reply(
+          `Unknown help category: **${arg}**.\nUse \`/help\` (private) to browse categories.`
+        );
+        return;
+      }
+
+      await message.reply(renderCategoryPublic(pages[idx]));
     },
-    "!help — shows this help message",
+    "!help — redirects to /help, or `!help <category>` to show one category",
     { aliases: ["!helpme", "!h"], category: "Info" }
   );
 
@@ -200,7 +254,7 @@ export function registerHelpbox(register, { helpModel }) {
       ],
     },
     async ({ interaction }) => {
-      const pages = helpModel(interaction.guildId);
+      const pages = helpModel(interaction.guildId, messageLikeFromInteraction(interaction));
       if (!pages.length) {
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
@@ -230,7 +284,7 @@ export function registerHelpbox(register, { helpModel }) {
 
   // Button category switch: helpcat:<index>
   register.component("helpcat:", async ({ interaction }) => {
-    const pages = helpModel(interaction.guildId);
+    const pages = helpModel(interaction.guildId, messageLikeFromInteraction(interaction));
     if (!pages.length) {
       await interaction.update({ content: "No commands available.", embeds: [], components: [] });
       return;
@@ -252,7 +306,7 @@ export function registerHelpbox(register, { helpModel }) {
 
   // Select menu category switch: helpmenu:<chunk>, value is page index
   register.component("helpmenu:", async ({ interaction }) => {
-    const pages = helpModel(interaction.guildId);
+    const pages = helpModel(interaction.guildId, messageLikeFromInteraction(interaction));
     if (!pages.length) {
       await interaction.update({ content: "No commands available.", embeds: [], components: [] });
       return;
