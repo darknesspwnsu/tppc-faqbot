@@ -31,13 +31,13 @@ import { registerTrades } from "./trades.js";
 import { registerGames } from "./games/games.js";
 
 import { registerInfoCommands } from "./faq.js";
-import { registerTools } from "./tools.js";
+import { registerTools } from "./tools/tools.js";
 import { registerToybox } from "./toybox.js";
 
 import { registerHelpbox } from "./helpbox.js";
 import { registerVerification } from "./verification/verification_module.js";
 
-import { handleRarityInteraction } from "./rarity.js";
+import { handleRarityInteraction } from "./tools/rarity.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import {
   DEFAULT_EXPOSURE,

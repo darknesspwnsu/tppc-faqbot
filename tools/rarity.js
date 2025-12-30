@@ -10,7 +10,7 @@ import path from "node:path";
 import https from "node:https";
 import http from "node:http";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { isAdminOrPrivileged } from "./auth.js";
+import { isAdminOrPrivileged } from "../auth.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
 let rarity = null; // { lowerName: entry }

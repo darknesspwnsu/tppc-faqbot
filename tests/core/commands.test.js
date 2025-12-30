@@ -16,14 +16,14 @@ vi.mock("../../configs/command_exposure.js", () => ({
 }));
 
 vi.mock("../../trades.js", () => ({ registerTrades: vi.fn() }));
-vi.mock("../../tools.js", () => ({ registerTools: vi.fn() }));
+vi.mock("../../tools/tools.js", () => ({ registerTools: vi.fn() }));
 vi.mock("../../faq.js", () => ({ registerInfoCommands: vi.fn() }));
 vi.mock("../../verification/verification_module.js", () => ({ registerVerification: vi.fn() }));
 vi.mock("../../contests/contests.js", () => ({ registerContests: vi.fn() }));
 vi.mock("../../games/games.js", () => ({ registerGames: vi.fn() }));
 vi.mock("../../toybox.js", () => ({ registerToybox: vi.fn() }));
 vi.mock("../../helpbox.js", () => ({ registerHelpbox: vi.fn() }));
-vi.mock("../../rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
+vi.mock("../../tools/rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
 
 import { buildCommandRegistry } from "../../commands.js";
 import { isAdminOrPrivileged } from "../../auth.js";

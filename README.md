@@ -106,9 +106,9 @@ This prevents collisions with other bots **without breaking muscle memory**.
 ├── helpbox.js                # !help and /help UI
 ├── auth.js                   # Admin / privileged checks
 ├── db.js                     # MySQL persistence
-├── tools.js                  # TPPC tools & promo system
+├── tools/                    # TPPC tools & promo system
 ├── trades.js                 # FT / LF / ID commands
-├── rarity.js                 # Rarity, comparisons, history
+├── tools/rarity.js           # Rarity, comparisons, history
 ├── contests/
 │   ├── contests.js           # Contest module registry
 │   ├── rng.js

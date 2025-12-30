@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registerCalculator, __testables } from "../../calculator.js";
+import { registerCalculator, __testables } from "../../tools/calculator.js";
 
 const {
   parseNum,
