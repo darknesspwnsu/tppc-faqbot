@@ -8,10 +8,16 @@
  *      - select menus: helpmenu:<chunkIndex> (value is page index)
  *  - !help (public message reply, same content as before)
  *
+ * Notes:
+ *  - helpModel MUST be called with guildId at runtime so different guilds see different help.
+ *  - Slash option choices must be static at registration time; we build them from helpModel(null).
+ *  - Components always re-render with helpModel(interaction.guildId).
+ *
  * Enhancements:
  *  - If categories > 25, automatically uses select menus (supports >25 via multiple menus)
  *  - Remembers last-opened category per user in a session map
  */
+
 import { MessageFlags } from "discord.js";
 
 const lastHelpCategoryByUser = new Map(); // userId -> pageIdx
@@ -46,7 +52,7 @@ function embedForPage(pages, idx) {
   return {
     title: p.category,
     description: desc,
-    footer: { text: `Category ${idx + 1} / ${pages.length}` }
+    footer: { text: `Category ${idx + 1} / ${pages.length}` },
   };
 }
 
@@ -57,7 +63,7 @@ function buildButtons(pages, activeIdx) {
     style: i === activeIdx ? 1 : 2, // Primary for active
     label: p.category,
     custom_id: `helpcat:${i}`,
-    disabled: i === activeIdx
+    disabled: i === activeIdx,
   }));
 
   for (let i = 0; i < buttons.length; i += 5) {
@@ -103,7 +109,7 @@ function buildSelectMenus(pages, activeIdx) {
       options.push({
         label,
         value: String(i),
-        default: i === activeIdx
+        default: i === activeIdx,
       });
     }
 
@@ -116,9 +122,9 @@ function buildSelectMenus(pages, activeIdx) {
           placeholder: `Pick a category (${start + 1}-${end} of ${pages.length})`,
           min_values: 1,
           max_values: 1,
-          options
-        }
-      ]
+          options,
+        },
+      ],
     });
   }
 
@@ -132,39 +138,47 @@ function buildComponents(pages, activeIdx) {
   return buildSelectMenus(pages, activeIdx);
 }
 
+/**
+ * Render a truncated public preview for !help
+ */
+function renderPublicPreview(pages) {
+  const sections = pages.map(
+    (p) => `**${p.category}**\n` + (p.lines || []).map((l) => `• ${l}`).join("\n")
+  );
+
+  const full = sections.join("\n\n");
+
+  const prefix =
+    "Type `/help` for a full list of available commands.\n" +
+    "_(Showing a truncated preview below)_\n\n";
+
+  const hardLimit = 2000;
+  const previewLimit = Math.min(1000, hardLimit - prefix.length - 40); // 40 buffer for suffix
+
+  let preview = full;
+  let suffix = "";
+
+  if (full.length > previewLimit) {
+    preview = full.slice(0, previewLimit);
+    suffix = `\n\n… _(truncated: ${full.length - previewLimit} more chars)_`;
+  }
+
+  return prefix + preview + suffix;
+}
+
 export function registerHelpbox(register, { helpModel }) {
-  const HELP_PAGES = helpModel();
+  // Precompute static choices for the slash option (must be static at registration time).
+  // This is only to let users jump to a category quickly; actual pages are computed per guild at runtime.
+  const DEFAULT_CHOICES = buildCategoryChoices(helpModel(null));
 
   // Bang !help (public)
   register(
     "!help",
     async ({ message }) => {
-      const pages = helpModel();
+      const pages = helpModel(message.guildId);
       if (!pages.length) return;
 
-      const sections = pages.map(
-        (p) => `**${p.category}**\n` + (p.lines || []).map((l) => `• ${l}`).join("\n")
-      );
-
-      const full = sections.join("\n\n");
-
-      const prefix =
-        "Type `/help` for a full list of available commands.\n" +
-        "_(Showing a truncated preview below)_\n\n";
-
-      // user asked “maybe 1000” — but also keep us under 2000 total
-      const hardLimit = 2000;
-      const previewLimit = Math.min(1000, hardLimit - prefix.length - 40); // 40 buffer for suffix
-
-      let preview = full;
-      let suffix = "";
-
-      if (full.length > previewLimit) {
-        preview = full.slice(0, previewLimit);
-        suffix = `\n\n… _(truncated: ${full.length - previewLimit} more chars)_`;
-      }
-
-      await message.reply(prefix + preview + suffix);
+      await message.reply(renderPublicPreview(pages));
     },
     "!help — shows this help message",
     { aliases: ["!helpme", "!h"], category: "Info" }
@@ -181,14 +195,17 @@ export function registerHelpbox(register, { helpModel }) {
           name: "category",
           description: "Open directly to a category (optional)",
           required: false,
-          choices: buildCategoryChoices(HELP_PAGES),
-        }
-      ]
+          choices: DEFAULT_CHOICES,
+        },
+      ],
     },
     async ({ interaction }) => {
-      const pages = HELP_PAGES;
+      const pages = helpModel(interaction.guildId);
       if (!pages.length) {
-        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "No commands available." });
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "No commands available.",
+        });
         return;
       }
 
@@ -200,19 +217,20 @@ export function registerHelpbox(register, { helpModel }) {
       if (chosenCat) idx = indexForCategory(pages, chosenCat);
       if (idx == null) idx = getDefaultIndex(pages, userId);
 
+      idx = clamp(idx, 0, pages.length - 1);
       rememberIndex(userId, idx);
 
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
         embeds: [embedForPage(pages, idx)],
-        components: buildComponents(pages, idx)
+        components: buildComponents(pages, idx),
       });
     }
   );
 
   // Button category switch: helpcat:<index>
   register.component("helpcat:", async ({ interaction }) => {
-    const pages = helpModel();
+    const pages = helpModel(interaction.guildId);
     if (!pages.length) {
       await interaction.update({ content: "No commands available.", embeds: [], components: [] });
       return;
@@ -228,13 +246,13 @@ export function registerHelpbox(register, { helpModel }) {
 
     await interaction.update({
       embeds: [embedForPage(pages, idx)],
-      components: buildComponents(pages, idx)
+      components: buildComponents(pages, idx),
     });
   });
 
   // Select menu category switch: helpmenu:<chunk>, value is page index
   register.component("helpmenu:", async ({ interaction }) => {
-    const pages = helpModel();
+    const pages = helpModel(interaction.guildId);
     if (!pages.length) {
       await interaction.update({ content: "No commands available.", embeds: [], components: [] });
       return;
@@ -251,7 +269,7 @@ export function registerHelpbox(register, { helpModel }) {
 
     await interaction.update({
       embeds: [embedForPage(pages, idx)],
-      components: buildComponents(pages, idx)
+      components: buildComponents(pages, idx),
     });
   });
 }

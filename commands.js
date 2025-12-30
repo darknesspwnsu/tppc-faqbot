@@ -3,21 +3,22 @@
  *
  * Unified registry for:
  *  - Bang commands: "!cmd ..."
+ *  - Q commands: "?cmd ..." (legacy / collision-avoidance)
  *  - Slash commands: "/cmd ..."
  *  - Component interactions (buttons/select menus) via customId prefix routing
- *  - Slash syncing (global or guild-scoped)
+ *  - Passive message hooks
  *
- * Modules should register commands via the provided `register` function,
- * which is ALSO a "namespace" for slash + components + message listeners:
+ * Modules should register commands via the provided `register` function:
  *
  *   register("!foo", handler, help, opts)
  *   register.slash({ name, description, options? }, handler)
  *   register.component("prefix:", handler)
- *   register.onMessage(handler)   // passive listener for all messages
- *   register.listener(handler)    // alias of onMessage (more explicit name)
+ *   register.onMessage(handler)   // passive listener
+ *   register.listener(handler)    // alias of onMessage
+ *   register.expose({ logicalId, name, handler, help?, opts? }) // !/? exposure per guild
  *
  * Handlers:
- *  - Bang: handler({ message, cmd, rest })
+ *  - Bang/Q: handler({ message, cmd, rest })
  *  - Slash: handler({ interaction })
  *  - Component: handler({ interaction })
  *  - onMessage/listener: handler({ message })
@@ -37,28 +38,27 @@ import { registerHelpbox } from "./helpbox.js";
 import { registerVerification } from "./verification/verification_module.js";
 
 import { handleRarityInteraction } from "./rarity.js";
+import { isAdminOrPrivileged } from "./auth.js";
+import {
+  DEFAULT_EXPOSURE,
+  COMMAND_EXPOSURE_BY_GUILD,
+  COMMAND_CHANNEL_POLICY_BY_GUILD,
+} from "./configs/command_exposure.js";
+
 
 /* --------------------------------- config -------------------------------- */
 
-// Used only to decide whether to register trading commands at all.
-// Enforcement should still happen inside trading module too.
-const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
-
-const ENABLE_FLAREON_COMMANDS = process.env.ENABLE_FLAREON_COMMANDS === "true";
-
-console.log(
-  `[COMMANDS] Experimental (? commands): ${ENABLE_FLAREON_COMMANDS ? "ENABLED" : "DISABLED"}`
-);
+const VALID_EXPOSURES = new Set(["bang", "q", "off"]);
+if (!VALID_EXPOSURES.has(DEFAULT_EXPOSURE)) {
+  console.warn(
+    `[COMMANDS] Invalid DEFAULT_EXPOSURE="${DEFAULT_EXPOSURE}" (expected bang|q|off). Using "bang".`
+  );
+}
 
 /* ------------------------------- registry core ------------------------------ */
 
 export function buildCommandRegistry({ client } = {}) {
-  // Bang commands
+  // Bang commands (includes ? commands too; they’re both routed by dispatchMessage)
   const bang = new Map(); // nameLower -> entry
 
   // Slash commands
@@ -77,7 +77,6 @@ export function buildCommandRegistry({ client } = {}) {
     messageHooks.push(handler);
   }
 
-  // Alias for clarity: "listener" reads better than "onMessage" for passive triggers
   function registerListener(handler) {
     return registerOnMessage(handler);
   }
@@ -96,6 +95,7 @@ export function buildCommandRegistry({ client } = {}) {
       category: opts.category || "Other",
       hideFromHelp: Boolean(opts.hideFromHelp),
       helpTier: opts.helpTier || "normal", // "primary" | "normal"
+      exposeMeta: opts._exposeMeta || null, // { logicalId, baseName } when registered via register.expose
     };
 
     bang.set(key, entry);
@@ -108,9 +108,115 @@ export function buildCommandRegistry({ client } = {}) {
             `[COMMANDS] Duplicate bang alias registered: "${akey}" (alias of "${key}")`
           );
         }
+        // Copy the entry but mark canonical=false so we don't duplicate in help
         bang.set(akey, { ...entry, canonical: false });
       }
     }
+  }
+
+  function exposureFor(guildId, logicalId) {
+    const g = COMMAND_EXPOSURE_BY_GUILD[String(guildId)];
+    const exp = g?.[logicalId] ?? DEFAULT_EXPOSURE;
+    return VALID_EXPOSURES.has(exp) ? exp : "bang";
+  }
+
+  function channelPolicyFor(guildId, logicalId) {
+    const g = COMMAND_CHANNEL_POLICY_BY_GUILD?.[String(guildId)];
+    const p = g?.[logicalId];
+    if (!p) return null;
+
+    const allow = Array.isArray(p.allow) ? p.allow.map(String) : null;
+    const deny = Array.isArray(p.deny) ? p.deny.map(String) : null;
+
+    return {
+      allow: allow && allow.length ? allow : null,
+      deny: deny && deny.length ? deny : null,
+      silent: Boolean(p.silent),
+    };
+  }
+
+  function allowedInChannel(message, logicalId) {
+    const gid = message?.guildId;
+    const cid = message?.channelId;
+    if (!gid || !cid) return { ok: true, silent: false };
+
+    const p = channelPolicyFor(gid, logicalId);
+    if (!p) return { ok: true, silent: false };
+
+    if (p.deny && p.deny.includes(String(cid))) return { ok: false, silent: p.silent };
+    if (p.allow && !p.allow.includes(String(cid))) return { ok: false, silent: p.silent };
+
+    return { ok: true, silent: p.silent };
+  }
+
+  /**
+   * Register a logical command that may be exposed as !cmd or ?cmd or disabled,
+   * depending on guild policy.
+   *
+   * Requirements:
+   * - Wrong prefix should be SILENT.
+   * - "off" should reply "disabled" (kept noisy by design).
+   * - Aliases MUST mirror the canonical prefix (so we create !alias and ?alias too).
+   *
+   * Aliases should be supplied as bare names:
+   *   opts.aliases: ["a", "aw"]
+   * We also accept "!a"/"?a" and strip the prefix for backward compatibility.
+   */
+  function registerExposable({ logicalId, name, handler, help = "", opts = {} }) {
+    const bangName = `!${name}`;
+    const qName = `?${name}`;
+
+    const rawAliases = Array.isArray(opts.aliases) ? opts.aliases : [];
+    const aliasesBare = rawAliases
+      .map((s) => String(s || "").trim())
+      .filter(Boolean)
+      .map((s) => (s.startsWith("!") || s.startsWith("?") ? s.slice(1) : s))
+      .filter(Boolean);
+
+    const bangAliases = aliasesBare.map((a) => `!${a}`);
+    const qAliases = aliasesBare.map((a) => `?${a}`);
+
+    const exposeMeta = { logicalId, baseName: name };
+
+    // Register bang side with the help string (help is rewritten per-guild at render time)
+    registerBang(
+      bangName,
+      async (ctx) => {
+        const exp = exposureFor(ctx.message?.guildId, logicalId);
+        if (exp === "bang") {
+          const gate = allowedInChannel(ctx.message, logicalId);
+          if (!gate.ok) {
+            if (!gate.silent) await ctx.message.reply("This command isn’t enabled in this channel.");
+            return;
+          }
+          return handler(ctx);
+        }
+        if (exp === "q") return; // silent wrong prefix
+        await ctx.message.reply("This command is disabled in this server.");
+      },
+      help,
+      { ...opts, aliases: bangAliases, _exposeMeta: exposeMeta }
+    );
+
+    // Register q side hidden from help; help renderer will rewrite the bang-side line per guild.
+    registerBang(
+      qName,
+      async (ctx) => {
+        const exp = exposureFor(ctx.message?.guildId, logicalId);
+        if (exp === "q") {
+          const gate = allowedInChannel(ctx.message, logicalId);
+          if (!gate.ok) {
+            if (!gate.silent) await ctx.message.reply("This command isn’t enabled in this channel.");
+            return;
+          }
+          return handler(ctx);
+        }
+        if (exp === "bang") return; // silent wrong prefix
+        await ctx.message.reply("This command is disabled in this server.");
+      },
+      "",
+      { ...opts, aliases: qAliases, hideFromHelp: true, _exposeMeta: exposeMeta }
+    );
   }
 
   function registerSlash(def, handler) {
@@ -131,11 +237,10 @@ export function buildCommandRegistry({ client } = {}) {
     }
 
     components.push({ prefix: p, handler });
-    // Ensure most specific prefixes win if someone registers overlapping ones.
     components.sort((a, b) => b.prefix.length - a.prefix.length);
   }
 
-  // The public `register` function modules already expect:
+  // Public `register` function (modules expect this)
   function register(name, handler, help = "", opts = {}) {
     return registerBang(name, handler, help, opts);
   }
@@ -143,6 +248,7 @@ export function buildCommandRegistry({ client } = {}) {
   register.component = registerComponent;
   register.onMessage = registerOnMessage;
   register.listener = registerListener;
+  register.expose = registerExposable;
 
   function withCategory(baseRegister, category) {
     const wrapped = (name, handler, help = "", opts = {}) => {
@@ -151,34 +257,76 @@ export function buildCommandRegistry({ client } = {}) {
       return baseRegister(name, handler, help, merged);
     };
 
-    // Preserve slash/component/message methods.
     wrapped.slash = baseRegister.slash;
     wrapped.component = baseRegister.component;
     wrapped.onMessage = baseRegister.onMessage;
     wrapped.listener = baseRegister.listener;
 
+    // Crucial: apply category default to expose() too
+    wrapped.expose = (payload) => {
+      const next = { ...(payload || {}) };
+      const o = { ...(next.opts || {}) };
+      if (!o.category) o.category = category;
+      next.opts = o;
+      return baseRegister.expose(next);
+    };
+
     return wrapped;
   }
 
-  function helpModel() {
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /**
+   * Build categorized help for a specific guild.
+   * - Exposed commands are rewritten to show the correct prefix for that guild.
+   * - "off" commands are hidden for that guild.
+   *
+   * If guildId is null (e.g. DMs), we treat it as DEFAULT_EXPOSURE.
+   */
+  function helpModel(guildId = null) {
+    const gid = guildId ? String(guildId) : null;
+
     const byCat = new Map();
     const catOrder = [];
 
-    for (const { help, admin, canonical, category, hideFromHelp, helpTier } of bang.values()) {
+    for (const entry of bang.values()) {
+      const { help, admin, canonical, category, hideFromHelp, helpTier } = entry;
+
       if (!canonical) continue;
       if (!help) continue;
       if (admin) continue;
       if (hideFromHelp) continue;
 
+      // Games category shows only primary commands
       const cat = category || "Other";
       if (String(cat).toLowerCase() === "games") {
         if (helpTier !== "primary") continue;
       }
+
+      // If this is an exposable command, rewrite based on guild policy and possibly hide if off.
+      let line = String(help);
+
+      if (entry.exposeMeta) {
+        const { logicalId, baseName } = entry.exposeMeta;
+        const exp = exposureFor(gid, logicalId);
+
+        if (exp === "off") continue;
+
+        const displayCmd = exp === "q" ? `?${baseName}` : `!${baseName}`;
+
+        // Replace every occurrence of !<baseName> or ?<baseName> in the help text
+        // so composite help like "?ft add | ?ft del | ?ft ..." becomes consistent.
+        const re = new RegExp(`[!?]${escapeRegex(baseName)}\\b`, "g");
+        line = line.replace(re, displayCmd);
+      }
+
       if (!byCat.has(cat)) {
         byCat.set(cat, []);
         catOrder.push(cat);
       }
-      byCat.get(cat).push(help);
+      byCat.get(cat).push(line);
     }
 
     return catOrder.map((cat) => ({
@@ -189,32 +337,53 @@ export function buildCommandRegistry({ client } = {}) {
 
   /* ------------------------------ Module wiring ------------------------------ */
 
-  // Trading lists + IDs (?ft/?lf/?id etc.) behind allowlist
-  if (TRADING_ENABLED_ANYWHERE) {
-    registerTrades(withCategory(register, "Trading"));
-  }
+  // Admin/privileged: show command collision policy for THIS guild
+  register(
+    "!cmdpolicy",
+    async ({ message }) => {
+      if (!message.guildId) return;
+      if (!isAdminOrPrivileged(message)) return;
 
-  // Tools hub + organizer link + calculator (!calc) (collated in tools.js)
+      const gid = String(message.guildId);
+      const policy = COMMAND_EXPOSURE_BY_GUILD[gid];
+
+      if (!policy || Object.keys(policy).length === 0) {
+        await message.reply(
+          `**Command Policy**\n` +
+            `Guild: ${gid}\n` +
+            `No overrides set.\n` +
+            `Default exposure: **${DEFAULT_EXPOSURE}**`
+        );
+        return;
+      }
+
+      const lines = Object.entries(policy)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([logicalId, exp]) => `• \`${logicalId}\` → **${exp}**`);
+
+      await message.reply(
+        `**Command Policy**\n` +
+          `Guild: ${gid}\n` +
+          `Default: **${DEFAULT_EXPOSURE}**\n\n` +
+          lines.join("\n")
+      );
+    },
+    "!cmdpolicy — show per-guild command exposure overrides (admin/privileged)",
+    { admin: true, hideFromHelp: true, category: "Info" }
+  );
+
+  // Trading now registers everywhere; policy controls off/q/bang per guild.
+  registerTrades(withCategory(register, "Trading"));
+
   registerTools(withCategory(register, "Tools"));
-
-  // FAQ / Wiki / NG / Rules / Glossary (moved into faq.js)
   registerInfoCommands(withCategory(register, "Info"));
-  
-  // Verification
   registerVerification(withCategory(register, "Info"));
-
-  // Core / fun / contests
   registerContests(withCategory(register, "Contests"));
-
-  // Games registry (exploding voltorbs etc.)
   registerGames(withCategory(register, "Games"));
-
-  // Toybox fun commands
   registerToybox(withCategory(register, "Fun"));
 
-  // Helpbox (registers /help + help buttons + !help)
+  // Helpbox must call helpModel(guildId) per-request (see helpbox.js patch below)
   registerHelpbox(withCategory(register, "Info"), { helpModel });
-
 
   /* ------------------------------- dispatchers ------------------------------ */
 
@@ -228,22 +397,20 @@ export function buildCommandRegistry({ client } = {}) {
       for (const h of messageHooks) {
         try {
           await h({ message });
-        } catch (e) {
-          // Keep failures isolated; do not block command dispatch
+        } catch {
+          // isolate failures
         }
       }
     }
 
     if (!isBang && !isQ) return;
-    if (isQ && !ENABLE_FLAREON_COMMANDS) return;
 
-    // Parse: "!cmd rest..."
     const spaceIdx = content.indexOf(" ");
     const cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
     const rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);
 
     const entry = bang.get(cmd);
-    if (!entry?.handler) return; // ignore unknown commands
+    if (!entry?.handler) return;
 
     await entry.handler({ message, cmd, rest });
   }
@@ -258,7 +425,7 @@ export function buildCommandRegistry({ client } = {}) {
       return;
     }
 
-    // Modal submits route by customId prefix (same as buttons/selects)
+    // Modal submits route by customId prefix
     if (interaction.isModalSubmit?.()) {
       const customId = interaction.customId ? String(interaction.customId) : "";
       if (!customId) return;
@@ -270,7 +437,7 @@ export function buildCommandRegistry({ client } = {}) {
       return;
     }
 
-    // Components: buttons, selects, etc.
+    // Components
     const customId = interaction.customId ? String(interaction.customId) : "";
     if (customId) {
       // Special-case rarity "did you mean" buttons.
@@ -279,13 +446,11 @@ export function buildCommandRegistry({ client } = {}) {
         if (rerun && rerun.cmd) {
           const entry = bang.get(String(rerun.cmd).toLowerCase());
           if (entry?.handler) {
-            // Build a lightweight "message-like" object for existing bang handlers.
             const messageLike = {
               guild: interaction.guild,
               channel: interaction.channel,
               author: interaction.user,
               member: interaction.member,
-              // reply() should create a normal follow-up message
               reply: (payload) => interaction.followUp(payload),
             };
 
@@ -309,7 +474,6 @@ export function buildCommandRegistry({ client } = {}) {
   /* ------------------------------ slash syncing ------------------------------ */
 
   function slashDefs() {
-    // Return raw defs in a stable order
     return [...slash.values()]
       .map((x) => x.def)
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -326,14 +490,10 @@ export function buildCommandRegistry({ client } = {}) {
     }
   }
 
-  /* ------------------------------ Public API ------------------------------ */
-
   return {
-    // Dispatch
     dispatchMessage,
     dispatchInteraction,
 
-    // Lists
     listBang: () =>
       [...bang.entries()]
         .filter(([, v]) => v?.canonical)
@@ -341,10 +501,8 @@ export function buildCommandRegistry({ client } = {}) {
         .sort(),
     listSlash: () => [...slash.keys()].sort(),
 
-    // Help model
     helpModel,
 
-    // Slash sync
     slashDefs,
     syncSlashCommands
   };

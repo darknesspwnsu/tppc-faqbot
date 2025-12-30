@@ -32,21 +32,8 @@ const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// Trading / DB-backed profile commands are enabled only for guilds in this allowlist.
-// If empty, trading features are disabled everywhere and we skip DB init entirely.
-const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const TRADING_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
-
-if (TRADING_ENABLED_ANYWHERE) {
-  await initDbWithRetry();
-  console.log(`DB ready ✅ (trading enabled for guilds: ${TRADING_GUILD_ALLOWLIST.join(", ")})`);
-} else {
-  console.log("DB disabled — TRADING_GUILD_ALLOWLIST empty (trading commands disabled everywhere).");
-}
+await initDbWithRetry();
+console.log("DB ready ✅");
 
 // If set, slash commands are registered ONLY to this guild (recommended for dev).
 // If empty, slash commands are registered globally.

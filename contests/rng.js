@@ -5,18 +5,6 @@ import { onAwesomeRoll } from "../games/closest_roll_wins.js";
 // guildId -> { timeout, channelId, creatorId }
 const activeElimByGuild = new Map();
 
-// Channel allowlist for specific commands
-// guildId -> array of allowed channelIds
-const AWESOME_CHANNELS = {
-  "329934860388925442": ["331114564966154240", "551243336187510784"],
-};
-
-function isAllowedChannel(message, allowedIds) {
-  if (!Array.isArray(allowedIds) || allowedIds.length === 0) return true;
-  const cid = message?.channelId;
-  return !!cid && allowedIds.includes(cid);
-}
-
 function randIntInclusive(min, max) {
   const lo = Math.ceil(min);
   const hi = Math.floor(max);
@@ -119,114 +107,127 @@ export async function runElimFromItems({ message, delayMs, delaySec, items }) {
 }
 
 export function registerRng(register) {
-  register(
-    "?roll",
-    async ({ message, rest }) => {
-      const arg = rest.trim();
-      const m = /^(\d+)d(\d+)(?:\s+(norepeat|nr))?$/i.exec(arg);
+  // ------------------------------ ?roll / !roll (exposed per guild) ------------------------------
+  const handleRoll = async ({ message, rest }) => {
+    const arg = rest.trim();
+    const m = /^(\d+)d(\d+)(?:\s+(norepeat|nr))?$/i.exec(arg);
 
-      if (!m) {
-        await message.channel.send("Invalid format. Please use a format like `1d100`");
-        return;
-      }
+    if (!m) {
+      await message.channel.send("Invalid format. Please use a format like `1d100`");
+      return;
+    }
 
-      const noRepeat = !!m[3];
-      const n = Number(m[1]);
-      const sides = Number(m[2]);
+    const noRepeat = !!m[3];
+    const n = Number(m[1]);
+    const sides = Number(m[2]);
 
-      if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
-        await message.channel.send("Invalid format. Please use a format like `1d100`");
-        return;
-      }
+    if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
+      await message.channel.send("Invalid format. Please use a format like `1d100`");
+      return;
+    }
 
-      if (noRepeat && n > (sides + 1)) {
-        await message.channel.send(
-          `Impossible with norepeat: you asked for ${n} unique rolls but range is only 0..${sides} (${sides + 1} unique values).`
-        );
-        return;
-      }
+    if (noRepeat && n > (sides + 1)) {
+      await message.channel.send(
+        `Impossible with norepeat: you asked for ${n} unique rolls but range is only 0..${sides} (${sides + 1} unique values).`
+      );
+      return;
+    }
 
-      const uid = targetUserId(message);
-      let rolls;
+    const uid = targetUserId(message);
+    let rolls;
 
-      if (!noRepeat) {
-        rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
-      } else {
-        const rangeSize = sides + 1;
+    if (!noRepeat) {
+      rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
+    } else {
+      const rangeSize = sides + 1;
 
-        if (n > rangeSize * 0.6) {
-          const arr = Array.from({ length: rangeSize }, (_, i) => i);
-          for (let i = 0; i < n; i++) {
-            const j = randIntInclusive(i, rangeSize - 1);
-            const tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
-          }
-          rolls = arr.slice(0, n);
-        } else {
-          const seen = new Set();
-          while (seen.size < n) seen.add(randIntInclusive(0, sides));
-          rolls = Array.from(seen);
+      if (n > rangeSize * 0.6) {
+        const arr = Array.from({ length: rangeSize }, (_, i) => i);
+        for (let i = 0; i < n; i++) {
+          const j = randIntInclusive(i, rangeSize - 1);
+          const tmp = arr[i];
+          arr[i] = arr[j];
+          arr[j] = tmp;
         }
+        rolls = arr.slice(0, n);
+      } else {
+        const seen = new Set();
+        while (seen.size < n) seen.add(randIntInclusive(0, sides));
+        rolls = Array.from(seen);
       }
+    }
 
-      const suffix = noRepeat ? " (norepeat mode: ON)" : "";
-      const out = `${mention(uid)} ${rolls.join(", ")}${suffix}`;
+    const suffix = noRepeat ? " (norepeat mode: ON)" : "";
+    const out = `${mention(uid)} ${rolls.join(", ")}${suffix}`;
 
-      if (out.length > 1900) {
-        await message.channel.send(
-          `${mention(uid)} Rolled ${n}d${sides}${noRepeat ? " norepeat" : ""}. Output too long to display (${out.length} chars). Try a smaller N.`
-        );
-        return;
-      }
+    if (out.length > 1900) {
+      await message.channel.send(
+        `${mention(uid)} Rolled ${n}d${sides}${noRepeat ? " norepeat" : ""}. Output too long to display (${out.length} chars). Try a smaller N.`
+      );
+      return;
+    }
 
-      await message.channel.send(out);
-    },
-    "?roll NdM — rolls N numbers from 0..M (example: ?roll 1d100)"
-  );
+    await message.channel.send(out);
+  };
 
-  register(
-    "?choose",
-    async ({ message, rest }) => {
-      const options = rest.trim().split(/\s+/).filter(Boolean);
-      if (options.length < 1) {
-        await message.channel.send("Usage: `?choose option1 option2 ...`");
-        return;
-      }
-      const pick = chooseOne(options);
-      await message.channel.send(pick);
-    },
-    "?choose a b c — randomly chooses one option"
-  );
+  register.expose({
+    logicalId: "rng.roll",
+    name: "roll",
+    handler: handleRoll,
+    help: "?roll NdM — rolls N numbers from 0..M (example: ?roll 1d100)",
+  });
 
-  register(
-    "?elim",
-    async ({ message, rest }) => {
-      if (!message.guild) return;
+  // ------------------------------ ?choose / !choose (exposed per guild) ------------------------------
+  const handleChoose = async ({ message, rest }) => {
+    const options = rest.trim().split(/\s+/).filter(Boolean);
+    if (options.length < 1) {
+      await message.channel.send("Usage: `?choose option1 option2 ...`");
+      return;
+    }
+    const pick = chooseOne(options);
+    await message.channel.send(pick);
+  };
 
-      const parts = rest.trim().split(/\s+/).filter(Boolean);
-      if (parts.length < 3) {
-        await message.reply("Usage: `?elim <seconds> <item1> <item2> [...]`");
-        return;
-      }
+  register.expose({
+    logicalId: "rng.choose",
+    name: "choose",
+    handler: handleChoose,
+    help: "?choose a b c — randomly chooses one option",
+  });
 
-      const delayRaw = parts[0];
-      const parsed = parseSecondsToMs(delayRaw);
-      if (parsed.error) {
-        await message.reply(parsed.error);
-        return;
-      }
+  // ------------------------------ ?elim / !elim (exposed per guild) ------------------------------
+  const handleElim = async ({ message, rest }) => {
+    if (!message.guild) return;
 
-      const delayMs = parsed.ms;
-      const delaySec = parsed.seconds;
+    const parts = rest.trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 3) {
+      await message.reply("Usage: `?elim <seconds> <item1> <item2> [...]`");
+      return;
+    }
 
-      const remaining = parts.slice(1);
-      const res = await runElimFromItems({ message, delayMs, delaySec, items: remaining });
-      if (!res.ok) await message.reply(res.error);
-    },
-    "?elim <1–30s> <items...> — randomly eliminates one item per round"
-  );
+    const delayRaw = parts[0];
+    const parsed = parseSecondsToMs(delayRaw);
+    if (parsed.error) {
+      await message.reply(parsed.error);
+      return;
+    }
 
+    const delayMs = parsed.ms;
+    const delaySec = parsed.seconds;
+
+    const remaining = parts.slice(1);
+    const res = await runElimFromItems({ message, delayMs, delaySec, items: remaining });
+    if (!res.ok) await message.reply(res.error);
+  };
+
+  register.expose({
+    logicalId: "rng.elim",
+    name: "elim",
+    handler: handleElim,
+    help: "?elim <1–30s> <items...> — randomly eliminates one item per round",
+  });
+
+  // ------------------------------ ?cancelelim (unchanged; still hidden) ------------------------------
   register(
     "?cancelelim",
     async ({ message }) => {
@@ -254,26 +255,25 @@ export function registerRng(register) {
     { aliases: ["?stopelim", "?endelim"], hideFromHelp: true }
   );
 
-  register(
-    "!awesome",
-    async ({ message }) => {
-      const allowed = AWESOME_CHANNELS[String(message.guildId)] || [];
-      if (!isAllowedChannel(message, allowed)) {
-        console.log(`[AWESOME] blocked in ${message.guildId}/${message.channelId}`);
-        return;
-      }
+  // ------------------------------ !awesome / ?awesome (exposed per guild) ------------------------------
+  const handleAwesome = async ({ message }) => {
+    const uid = targetUserId(message);
+    const x = randIntInclusive(0, 101);
+    await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
 
-      const uid = targetUserId(message);
-      const x = randIntInclusive(0, 101);
-      await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
+    // ClosestRollWins integration
+    try { await onAwesomeRoll(message, x); } catch {}
+  };
 
-      // ClosestRollWins integration
-      try { await onAwesomeRoll(message, x); } catch {}
-    },
-    "!awesome — tells you how awesome someone is (0–101%)",
-    { aliases: ["!a"] }
-  );
+  register.expose({
+    logicalId: "rng.awesome",
+    name: "awesome",
+    handler: handleAwesome,
+    help: "!awesome — tells you how awesome someone is (0–101%)",
+    opts: { aliases: ["a"] }, // keep existing alias behavior on the ! side
+  });
 
+  // ------------------------------ !coinflip (unchanged) ------------------------------
   register(
     "!coinflip",
     async ({ message }) => {

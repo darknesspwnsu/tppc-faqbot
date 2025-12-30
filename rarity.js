@@ -1,7 +1,7 @@
 // rarity.js
 //
-// ?rarity <pokemon> — shows rarity counts from a preprocessed JSON (gated by RARITY_GUILD_ALLOWLIST).
-// !rarity4 / !l4 <pokemon> — shows LEVEL 4 rarity counts from l4_rarity.json (available everywhere).
+// rarity: exposable via register.expose logicalId "rarity.main"
+// l4: exposable via register.expose logicalId "rarity.l4"
 //
 // Data source(s) are GitHub Pages JSON refreshed by GitHub Actions.
 
@@ -13,13 +13,13 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { isAdminOrPrivileged } from "./auth.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
-let rarity = null;      // { lowerName: entry }
-let rarityNorm = null;  // { normalizedKey: entry }
+let rarity = null; // { lowerName: entry }
+let rarityNorm = null; // { normalizedKey: entry }
 let meta = null;
 
 /* ----------------------------- caches (level4) ---------------------------- */
-let rarity4 = null;      // { lowerName: entry }
-let rarity4Norm = null;  // { normalizedKey: entry }
+let rarity4 = null; // { lowerName: entry }
+let rarity4Norm = null; // { normalizedKey: entry }
 let meta4 = null;
 
 /* --------------------------------- config -------------------------------- */
@@ -42,24 +42,6 @@ const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
 // Suggestion tuning (env override)
 const SUGGEST_MIN_SCORE = Number(process.env.RARITY_SUGGEST_MIN_SCORE ?? 0.55);
 const SUGGEST_MAX_LEN_DIFF = Number(process.env.RARITY_SUGGEST_MAX_LEN_DIFF ?? 12);
-
-// Rarity allowlist (ONLY applies to ?rarity / ?rarityreload)
-const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const RARITY_ENABLED_ANYWHERE = RARITY_GUILD_ALLOWLIST.length > 0;
-
-function isGuildAllowed(message) {
-  // If no allowlist is set, treat it as disabled.
-  if (!RARITY_ENABLED_ANYWHERE) return false;
-
-  const gid = message?.guild?.id;
-  if (!gid) return false;
-
-  return RARITY_GUILD_ALLOWLIST.includes(gid);
-}
 
 /* --------------------------------- fetch --------------------------------- */
 
@@ -544,7 +526,10 @@ function parseTwoArgs(rest) {
     }
 
     if (/\s/.test(ch)) {
-      if (cur) { out.push(cur); cur = ""; }
+      if (cur) {
+        out.push(cur);
+        cur = "";
+      }
       continue;
     }
 
@@ -690,14 +675,14 @@ export function registerRarity(register) {
   refresh();
   scheduleDailyRefresh(refresh, "RARITY");
 
-  register(
-    "?rarity",
-    async ({ message, rest }) => {
-      if (!isGuildAllowed(message)) return;
-
+  // Exposable rarity main command (policy-controlled by logicalId rarity.main)
+  register.expose({
+    logicalId: "rarity.main",
+    name: "rarity",
+    handler: async ({ message, rest, cmd }) => {
       const qRaw = String(rest ?? "").trim();
       if (!qRaw) {
-        await message.reply("Usage: `?rarity <pokemon>`");
+        await message.reply(`Usage: \`${cmd} <pokemon>\``);
         return;
       }
 
@@ -709,7 +694,7 @@ export function registerRarity(register) {
 
         await message.reply({
           content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-          components: buildDidYouMeanButtons("?rarity", suggestions),
+          components: buildDidYouMeanButtons(cmd, suggestions),
         });
 
         return;
@@ -737,97 +722,105 @@ export function registerRarity(register) {
         ]
       });
     },
-    "?rarity <pokemon> — shows rarity statistics"
-  );
+    help: "?rarity <pokemon> — shows rarity statistics"
+  });
 
-  register(
-    "?rarityreload",
-    async ({ message }) => {
-      if (!isGuildAllowed(message)) return;
+  // Rarity reload should be OFF wherever rarity.main is OFF
+  register.expose({
+    logicalId: "rarity.main",
+    name: "rarityreload",
+    handler: async ({ message }) => {
       if (!isAdminOrPrivileged(message)) return;
 
       await refresh();
       await message.reply("Rarity cache refreshed ✅");
     },
-    "?rarityreload — refreshes rarity cache (admin)",
-    { admin: true }
-  );
+    help: "?rarityreload — refreshes rarity cache (admin)",
+    opts: { admin: true, hideFromHelp: true }
+  });
 }
 
 export function registerLevel4Rarity(register) {
   refreshL4();
 
-  register(
-    "!l4",
-    async ({ message, rest }) => {
-      const qRaw = String(rest ?? "").trim();
-      if (!qRaw) {
-        await message.reply("Usage: `!l4 <pokemon>`");
+  const handleL4 = async ({ message, rest, cmd }) => {
+    const qRaw = String(rest ?? "").trim();
+    if (!qRaw) {
+      await message.reply(`Usage: \`${cmd} <pokemon>\``);
+      return;
+    }
+
+    if (!rarity4Norm) await refreshL4();
+    if (!rarityNorm) await refresh();
+
+    const r = findEntry({ lowerIndex: rarity4, normIndex: rarity4Norm }, qRaw);
+
+    if (!r) {
+      const generalHit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
+      if (generalHit) {
+        await message.reply(`No Level 4 rarity data found for \`${generalHit.name}\`.`);
         return;
       }
 
-      if (!rarity4Norm) await refreshL4();
-      if (!rarityNorm) await refresh();
+      const sL4 = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
+      const sGen = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
+      const merged = mergeSuggestions(sL4, sGen);
 
-      const r = findEntry({ lowerIndex: rarity4, normIndex: rarity4Norm }, qRaw);
-
-      if (!r) {
-        const generalHit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
-        if (generalHit) {
-          await message.reply(`No Level 4 rarity data found for \`${generalHit.name}\`.`);
-          return;
-        }
-
-        const sL4 = getSuggestionsFromIndex(rarity4Norm, qRaw, 5);
-        const sGen = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
-        const merged = mergeSuggestions(sL4, sGen);
-
-        if (merged.length) {
-          await message.reply({
-            content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-            components: buildDidYouMeanButtons("!l4", merged),
-          });
-          return;
-        }
-
-        const guess = prettyVariantGuess(qRaw);
-        await message.reply(`No exact match for \`${guess ?? qRaw}\`.`);
+      if (merged.length) {
+        await message.reply({
+          content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
+          components: buildDidYouMeanButtons(cmd, merged),
+        });
         return;
       }
 
-      const updatedDate = parseLastUpdatedTextEastern(meta4?.lastUpdatedText);
-      const updatedLine = updatedDate
-        ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
-        : "";
+      const guess = prettyVariantGuess(qRaw);
+      await message.reply(`No exact match for \`${guess ?? qRaw}\`.`);
+      return;
+    }
 
-      await message.channel.send({
-        embeds: [
-          {
-            title: `${r.name} - Level 4`,
-            description: updatedLine,
-            color: 0xed8b2d,
-            fields: [
-              { name: "Total", value: fmt(r.total), inline: false },
-              { name: "♂", value: fmt(r.male), inline: true },
-              { name: "♀", value: fmt(r.female), inline: true },
-              { name: "(?)", value: fmt(r.ungendered), inline: true },
-              { name: "Genderless", value: fmt(r.genderless), inline: true }
-            ],
-            footer: { text: "Source: forums.tppc.info/showthread.php?t=318183" }
-          }
-        ]
-      });
-    },
-    "!l4 <pokemon> — shows level 4 rarity statistics",
-    { aliases: ["!rarity4", "!l4rarity", "!rarityl4"] }
-  );
+    const updatedDate = parseLastUpdatedTextEastern(meta4?.lastUpdatedText);
+    const updatedLine = updatedDate
+      ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
+      : "";
+
+    await message.channel.send({
+      embeds: [
+        {
+          title: `${r.name} - Level 4`,
+          description: updatedLine,
+          color: 0xed8b2d,
+          fields: [
+            { name: "Total", value: fmt(r.total), inline: false },
+            { name: "♂", value: fmt(r.male), inline: true },
+            { name: "♀", value: fmt(r.female), inline: true },
+            { name: "(?)", value: fmt(r.ungendered), inline: true },
+            { name: "Genderless", value: fmt(r.genderless), inline: true }
+          ],
+          footer: { text: "Source: forums.tppc.info/showthread.php?t=318183" }
+        }
+      ]
+    });
+  };
+
+  // Exposable l4 command (policy-controlled by logicalId rarity.l4)
+  register.expose({
+    logicalId: "rarity.l4",
+    name: "l4",
+    handler: handleL4,
+    help: "!l4 <pokemon> — shows level 4 rarity statistics",
+    // IMPORTANT: bare aliases (no !/?). register.expose will prefix-match them.
+    opts: { aliases: ["rarity4", "l4rarity", "rarityl4"] }
+  });
 
   register(
     "!rc",
     async ({ message, rest }) => {
       const [q1, q2] = parseTwoArgs(rest);
       if (!q1 || !q2) {
-        await message.reply("Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)");
+        await message.reply(
+          "Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)"
+        );
         return;
       }
       if (!rarityNorm) await refresh();
@@ -1006,8 +999,13 @@ export async function handleRarityInteraction(interaction) {
 
   await interaction.deferUpdate().catch(() => {});
 
+  // Rarity main (supports both prefixes; actual cmd used is encoded in the button customId)
   if (cmdKey === "?rarity") return { cmd: "?rarity", rest: mon };
+  if (cmdKey === "!rarity") return { cmd: "!rarity", rest: mon };
+
+  // L4 (supports both prefixes; actual cmd used is encoded in the button customId)
   if (cmdKey === "!l4") return { cmd: "!l4", rest: mon };
+  if (cmdKey === "?l4") return { cmd: "?l4", rest: mon };
 
   if (cmdKey === "!rc_left") return { cmd: "!rc", rest: `"${mon}" "${extra}"` };
   if (cmdKey === "!rc_right") return { cmd: "!rc", rest: `"${extra}" "${mon}"` };

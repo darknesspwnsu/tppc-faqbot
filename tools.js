@@ -5,36 +5,14 @@
 // - !tools (wiki link)
 // - !organizer / !boxorganizer (organizer link)
 // - !promo / !setpromo (now persists to DB when DB is enabled; else in-memory)
+//
+// Tools do not read config directly.
+// All gating (channels, env flags, permissions) is handled by the command registry.
 
 import { registerCalculator } from "./calculator.js";
 import { registerRarity, registerLevel4Rarity } from "./rarity.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import { getUserText, setUserText } from "./db.js";
-
-/* --------------------------------- config -------------------------------- */
-
-const RARITY_GUILD_ALLOWLIST = (process.env.RARITY_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const RARITY_ENABLED_ANYWHERE = RARITY_GUILD_ALLOWLIST.length > 0;
-
-// DB enablement in your bot is currently tied to TRADING_GUILD_ALLOWLIST.
-// If that list is empty, bot.js skips initDb entirely.
-// We mirror the same intent here: only use DB when TRADING is enabled AND this guild is allowed.
-const TRADING_GUILD_ALLOWLIST = (process.env.TRADING_GUILD_ALLOWLIST || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const DB_ENABLED_ANYWHERE = TRADING_GUILD_ALLOWLIST.length > 0;
-
-function dbEnabledForGuild(guildId) {
-  if (!DB_ENABLED_ANYWHERE) return false;
-  if (!guildId) return false;
-  return true; // DB on for all guilds once enabled anywhere
-}
 
 /* ------------------------------ promo storage ------------------------------ */
 
@@ -52,18 +30,16 @@ async function getPromoForGuild(guildId) {
   if (promoCache.has(guildId)) return promoCache.get(guildId);
 
   // DB path
-  if (dbEnabledForGuild(guildId)) {
-    try {
-      const t = await getUserText({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND });
-      const promo = (t && String(t).trim()) ? String(t).trim() : "Not set";
-      promoCache.set(guildId, promo);
-      return promo;
-    } catch (e) {
-      // If DB is misconfigured/unavailable, fall back safely to in-memory.
-      const promo = "Not set";
-      promoCache.set(guildId, promo);
-      return promo;
-    }
+  try {
+    const t = await getUserText({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND });
+    const promo = (t && String(t).trim()) ? String(t).trim() : "Not set";
+    promoCache.set(guildId, promo);
+    return promo;
+  } catch (e) {
+    // If DB is misconfigured/unavailable, fall back safely to in-memory.
+    const promo = "Not set";
+    promoCache.set(guildId, promo);
+    return promo;
   }
 
   // In-memory fallback (per guild)
@@ -78,12 +54,10 @@ async function setPromoForGuild(guildId, promoText) {
   const promo = String(promoText || "").trim() || "Not set";
   promoCache.set(guildId, promo);
 
-  if (dbEnabledForGuild(guildId)) {
-    try {
-      await setUserText({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND, text: promo });
-    } catch (e) {
-      // Ignore DB failures; cache already updated, so bot still behaves.
-    }
+  try {
+    await setUserText({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND, text: promo });
+  } catch (e) {
+    // Ignore DB failures; cache already updated, so bot still behaves.
   }
 }
 
@@ -143,13 +117,7 @@ export function registerTools(register) {
     "!setpromo <text> — sets the last promo (admin or privileged users only)"
   );
 
-  // Delegate: calculator command family
   registerCalculator(register);
-
-  // Rarity: gated by RARITY_GUILD_ALLOWLIST inside rarity.js
-  // Level 4 rarity: available everywhere
-  if (RARITY_ENABLED_ANYWHERE) {
-    registerRarity(register);
-  }
+  registerRarity(register);
   registerLevel4Rarity(register, "Tools");
 }
