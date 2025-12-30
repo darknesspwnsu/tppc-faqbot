@@ -8,13 +8,14 @@
 //   - Default: nosorted (preserve first-seen scan order)
 // - Determine thread starter (OP) username from the first post on page 1
 // - Skip ALL posts by the starter on any page (starter may reply multiple times)
+// - Optional phrase filter: only include users whose post message contains a phrase
 // - DM header: "TPPC Forums thread list for <link> (Started by: <username>)"
 //
 // Slash usage:
-//   /getforumlist url:<threadUrl> mode:[sorted|nosorted]
+//   /getforumlist url:<threadUrl> mode:[sorted|nosorted] phrase:[optional]
 //
 // Notes:
-// - All replies are EPHEMERAL (private to the person invoking the command).
+// - All interaction outputs are EPHEMERAL (private to invoker).
 // - Results are sent via DM to the invoker.
 
 import { MessageFlags } from "discord.js";
@@ -128,7 +129,10 @@ function extractUsernameFromPostTable(postHtml) {
   if (!m) return null;
 
   const txt = htmlToText(m[1]);
-  const firstLine = txt.split("\n").map((s) => s.trim()).filter(Boolean)[0];
+  const firstLine = txt
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
   return firstLine || null;
 }
 
@@ -180,19 +184,23 @@ function findThreadStarterUsernameFromPage1(html) {
   return starter || null;
 }
 
-async function scrapeThreadUserIdPairs(threadUrl) {
+async function scrapeThreadUserIdPairs(threadUrl, { phrase = null } = {}) {
   const page1Html = await fetchWithTimeout(threadUrl);
   const pageCount = computePageCountFromHtml(page1Html);
 
   const starterName = findThreadStarterUsernameFromPage1(page1Html);
   const starterKey = starterName ? normUser(starterName) : null;
 
-  const seen = new Map(); // username -> rpgId (string|null), insertion order = scan order
+  // Map insertion order = scan order
+  // NOTE: for phrase-filtered scrapes we do NOT mark someone as seen until they match.
+  const seen = new Map(); // username -> rpgId (string|null)
   const warnings = [];
 
   if (!starterName) {
     warnings.push("Could not detect thread starter (OP). Starter posts may not be excluded.");
   }
+
+  const phraseNorm = phrase ? String(phrase).toLowerCase() : null;
 
   function processPage(html) {
     const posts = extractPostTables(html);
@@ -203,14 +211,22 @@ async function scrapeThreadUserIdPairs(threadUrl) {
       // Skip all posts by thread starter
       if (starterKey && normUser(username) === starterKey) continue;
 
-      // Only first post by each username counts
+      // If we already recorded this user, ignore subsequent posts.
+      // For phrase filter: we only record when a post matches, so this
+      // check is safe and does not prevent later qualifying posts.
       if (seen.has(username)) continue;
 
       const sidebarText = extractAlt2CellText(postHtml);
       const linkedIds = extractLinkedIdsFromSidebarText(sidebarText);
       const postText = extractPostMessageText(postHtml);
-      const targetId = findIdInPostText(postText, linkedIds);
 
+      // Optional phrase filter (case-insensitive substring match)
+      if (phraseNorm) {
+        const txt = String(postText || "").toLowerCase();
+        if (!txt.includes(phraseNorm)) continue;
+      }
+
+      const targetId = findIdInPostText(postText, linkedIds);
       seen.set(username, targetId);
     }
   }
@@ -228,7 +244,13 @@ async function scrapeThreadUserIdPairs(threadUrl) {
     warnings.push("No posters found (thread empty, inaccessible, or HTML layout changed).");
   }
 
-  return { pairs: seen, pageCount, warnings, starterName: starterName || "Unknown" };
+  return {
+    pairs: seen,
+    pageCount,
+    warnings,
+    starterName: starterName || "Unknown",
+    phrase: phraseNorm ? String(phrase) : null,
+  };
 }
 
 async function dmChunked(user, header, lines) {
@@ -278,6 +300,12 @@ export function registerForumList(register) {
             { name: "sorted (A→Z)", value: "sorted" },
           ],
         },
+        {
+          type: 3, // STRING
+          name: "phrase",
+          description: "Only include posters whose message contains this phrase (optional)",
+          required: false,
+        },
       ],
     },
     async ({ interaction }) => {
@@ -287,7 +315,7 @@ export function registerForumList(register) {
       if (!isAdminOrPrivileged(interactionAsMessageLike(interaction))) {
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
-          content: "You don’t have permission to use this command."
+          content: "You don’t have permission to use this command.",
         });
         return;
       }
@@ -303,6 +331,7 @@ export function registerForumList(register) {
 
       const urlRaw = interaction.options?.getString?.("url") ?? "";
       const mode = (interaction.options?.getString?.("mode") ?? "nosorted").toLowerCase();
+      const phrase = String(interaction.options?.getString?.("phrase") ?? "").trim();
       const sorted = mode === "sorted";
 
       const threadUrl = normalizeThreadUrl(urlRaw);
@@ -326,12 +355,12 @@ export function registerForumList(register) {
 
         let result;
         try {
-          result = await scrapeThreadUserIdPairs(threadUrl);
+          result = await scrapeThreadUserIdPairs(threadUrl, {
+            phrase: phrase || null,
+          });
         } catch (e) {
           console.warn("[getforumlist] scrape failed:", e);
-          await interaction.editReply(
-            "❌ Failed to scrape that thread (network/HTML issue). Try again later."
-          );
+          await interaction.editReply("❌ Failed to scrape that thread (network/HTML issue). Try again later.");
           return;
         }
 
@@ -354,6 +383,7 @@ export function registerForumList(register) {
           `Pages scanned: ${pageCount}\n` +
           `Unique users (excluding starter): ${rows.length}\n` +
           `Mode: ${sorted ? "sorted" : "nosorted"}\n` +
+          (phrase ? `Phrase filter: "${phrase}"\n` : "") +
           (warnings.length ? `⚠️ ${warnings.join(" ")}\n` : "") +
           `\nusername - rpg id\n----------------`;
 
@@ -369,6 +399,7 @@ export function registerForumList(register) {
       } finally {
         scrapeLocksByGuild.delete(gid);
       }
-    }
+    },
+    { admin: true }
   );
 }

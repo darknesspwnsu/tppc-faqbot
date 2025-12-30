@@ -12,6 +12,7 @@ const activeReadingSessions = new Map();
  *   startedAt: number,
  *   startedBy: string,
  *   participantsById: Map<string, string>, // id -> displayName snapshot (no ping formatting)
+ *   phrase: string|null,                  // optional filter phrase (case-insensitive substring)
  *   messageCount: number
  * }
  */
@@ -35,9 +36,12 @@ export function registerReading(register) {
   // Start
   register(
     "!startReading",
-    async ({ message }) => {
+    async ({ message, rest }) => {
       if (!message.guildId) return;
       if (!isAdminOrPrivileged(message)) return;
+
+      const phrase = String(rest ?? "").trim();
+      const phraseNorm = phrase ? phrase.toLowerCase() : null;
 
       const key = sessionKey(message.guildId, message.channelId);
       if (activeReadingSessions.has(key)) {
@@ -51,10 +55,15 @@ export function registerReading(register) {
         startedAt: Date.now(),
         startedBy: message.author.id,
         participantsById: new Map(),
+        phrase: phraseNorm,
         messageCount: 0,
       });
 
-      await message.reply("✅ Reading started. I’m now tracking unique responders in this channel.");
+      await message.reply(
+        phraseNorm
+          ? `✅ Reading started. I’m tracking unique responders whose messages include: "${phrase}"`
+          : "✅ Reading started. I’m now tracking unique responders in this channel."
+      );
     },
     "!startReading — start tracking unique responders in this channel"
   );
@@ -93,21 +102,22 @@ export function registerReading(register) {
       deduped.sort((a, b) => normalizeSortKey(a).localeCompare(normalizeSortKey(b)));
 
       if (!deduped.length) {
-        await message.channel.send("📖 Reading ended. No participants spoke during the session.");
+        const note = session.phrase
+          ? `📖 Reading ended. No messages matched the phrase "${session.phrase}".`
+          : "📖 Reading ended. No participants spoke during the session.";
+
+        await message.channel.send(note);
         return;
       }
 
       // Output does NOT tag (no <@id>)
-      // Keep it readable + safe from pinging: plain text list, newline-separated.
       const header = `📖 Reading ended. Participants (${deduped.length}):`;
       const body = deduped.join("\n");
 
-      // Discord message safety: keep under ~2000 chars (with some buffer)
       const out = `${header}\n\n${body}`;
       if (out.length <= 1900) {
         await message.channel.send(out);
       } else {
-        // Chunk if very long
         await message.channel.send(header);
         let chunk = "";
         for (const line of deduped) {
@@ -134,6 +144,12 @@ export function registerReading(register) {
       const key = sessionKey(message.guildId, message.channelId);
       const session = activeReadingSessions.get(key);
       if (!session) return;
+
+      // Optional phrase filter (case-insensitive substring)
+      if (session.phrase) {
+        const content = String(message.content ?? "");
+        if (!content.toLowerCase().includes(session.phrase)) return;
+      }
 
       session.messageCount += 1;
 
