@@ -17,5 +17,6 @@ describe("games registry", () => {
     expect(ids).toContain("hangman");
     expect(ids).toContain("deal_or_no_deal");
     expect(ids).toContain("auction");
+    expect(ids).toContain("pokemon_unscramble");
   });
 });
