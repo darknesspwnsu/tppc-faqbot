@@ -19,6 +19,7 @@ import {
   makeGameQoL,
   withGameSubcommands,
 } from "./framework.js";
+import { parseMinMaxRangeToken } from "./helpers.js";
 
 const manager = createGameManager({ id: "higherorlower", prettyName: "HigherOrLower", scope: "guild" });
 
@@ -63,8 +64,7 @@ const HOL_RULES = holRules();
 const isInt = (n) => Number.isFinite(n) && Number.isInteger(n);
 
 function parseRangeToken(token) {
-  const m = String(token || "").trim().match(/^(\d+)\s*[-–—]\s*(\d+)$/);
-  return m ? { min: Number(m[1]), max: Number(m[2]) } : null;
+  return parseMinMaxRangeToken(token);
 }
 
 const randIntInclusive = (min, max) => min + Math.floor(Math.random() * (max - min + 1));

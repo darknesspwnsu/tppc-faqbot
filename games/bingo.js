@@ -31,20 +31,12 @@ import {
   requireActive,
   requireCanManage,
 } from "./framework.js";
+import { parseMinMaxRangeToken } from "./helpers.js";
 
 /* --------------------------------- parsing -------------------------------- */
 
 function parseRangeToken(token) {
-  // Accept "1-151" (also allow en-dash/em-dash)
-  const m = String(token ?? "")
-    .trim()
-    .match(/^(\d+)\s*[-–—]\s*(\d+)$/);
-  if (!m) return null;
-
-  const min = Number(m[1]);
-  const max = Number(m[2]);
-  if (!Number.isInteger(min) || !Number.isInteger(max)) return null;
-  return { min, max };
+  return parseMinMaxRangeToken(token);
 }
 
 function parseDrawList(raw) {
