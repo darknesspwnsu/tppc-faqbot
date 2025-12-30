@@ -43,24 +43,33 @@ function humanDuration(ms) {
   return `${totalHours} hour${totalHours === 1 ? "" : "s"}`;
 }
 
-async function buildNameList(client, guild, userIds) {
+async function buildNameList(_client, guild, userIds) {
   const names = [];
 
+  let bulk = null;
+  try {
+    if (guild?.members?.fetch && Array.isArray(userIds) && userIds.length) {
+      bulk = await guild.members.fetch({ user: userIds });
+    }
+  } catch {}
+
   for (const id of userIds) {
-    try {
-      // Prefer guild member (nickname / displayName)
-      const member = await guild.members.fetch(id).catch(() => null);
+    let member = bulk?.get?.(id) || guild?.members?.cache?.get?.(id) || null;
+    if (!member && guild?.members?.fetch) {
+      try {
+        member = await guild.members.fetch(id).catch(() => null);
+      } catch {}
+    }
 
-      let rawName =
-        member?.displayName ||
-        member?.user?.username ||
-        "";
+    let rawName =
+      member?.displayName ||
+      member?.user?.username ||
+      "";
 
-      rawName = stripEmojisAndSymbols(rawName);
-      const name = camelizeIfNeeded(rawName);
+    rawName = stripEmojisAndSymbols(rawName);
+    const name = camelizeIfNeeded(rawName);
 
-      if (name) names.push(name);
-    } catch {}
+    if (name) names.push(name);
   }
 
   return names;
