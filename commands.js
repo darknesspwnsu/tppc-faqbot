@@ -480,7 +480,11 @@ export function buildCommandRegistry({ client } = {}) {
     const entry = bang.get(cmd);
     if (!entry?.handler) return;
 
-    await entry.handler({ message, cmd, rest });
+    try {
+      await entry.handler({ message, cmd, rest });
+    } catch (err) {
+      console.error("[COMMANDS] bang handler error:", err);
+    }
   }
 
   async function dispatchInteraction(interaction) {
@@ -489,7 +493,11 @@ export function buildCommandRegistry({ client } = {}) {
       const key = String(interaction.commandName).toLowerCase();
       const entry = slash.get(key);
       if (!entry?.handler) return;
-      await entry.handler({ interaction });
+      try {
+        await entry.handler({ interaction });
+      } catch (err) {
+        console.error("[COMMANDS] slash handler error:", err);
+      }
       return;
     }
 
@@ -500,7 +508,11 @@ export function buildCommandRegistry({ client } = {}) {
 
       const match = components.find((c) => customId.startsWith(c.prefix));
       if (match?.handler) {
-        await match.handler({ interaction });
+        try {
+          await match.handler({ interaction });
+        } catch (err) {
+          console.error("[COMMANDS] modal handler error:", err);
+        }
       }
       return;
     }
@@ -510,33 +522,41 @@ export function buildCommandRegistry({ client } = {}) {
     if (customId) {
       // Special-case rarity "did you mean" buttons.
       if (customId.startsWith("rarity_retry:")) {
-        const rerun = await handleRarityInteraction(interaction);
-        if (rerun && rerun.cmd) {
-          const entry = bang.get(String(rerun.cmd).toLowerCase());
-          if (entry?.handler) {
-            const messageLike = {
-              guild: interaction.guild,
-              guildId: interaction.guildId,
-              channel: interaction.channel,
-              channelId: interaction.channelId,
-              author: interaction.user,
-              member: interaction.member,
-              reply: (payload) => interaction.followUp(payload),
-            };
+        try {
+          const rerun = await handleRarityInteraction(interaction);
+          if (rerun && rerun.cmd) {
+            const entry = bang.get(String(rerun.cmd).toLowerCase());
+            if (entry?.handler) {
+              const messageLike = {
+                guild: interaction.guild,
+                guildId: interaction.guildId,
+                channel: interaction.channel,
+                channelId: interaction.channelId,
+                author: interaction.user,
+                member: interaction.member,
+                reply: (payload) => interaction.followUp(payload),
+              };
 
-            await entry.handler({
-              message: messageLike,
-              cmd: rerun.cmd,
-              rest: rerun.rest ?? ""
-            });
+              await entry.handler({
+                message: messageLike,
+                cmd: rerun.cmd,
+                rest: rerun.rest ?? ""
+              });
+            }
           }
+        } catch (err) {
+          console.error("[COMMANDS] rarity retry handler error:", err);
         }
         return;
       }
 
       const match = components.find((c) => customId.startsWith(c.prefix));
       if (match?.handler) {
-        await match.handler({ interaction });
+        try {
+          await match.handler({ interaction });
+        } catch (err) {
+          console.error("[COMMANDS] component handler error:", err);
+        }
       }
     }
   }
