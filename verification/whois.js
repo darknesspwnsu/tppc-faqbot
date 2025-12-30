@@ -4,6 +4,16 @@ import { getUserText } from "../db.js";
 
 const K_VERIFIED = "fuser"; // same kind used by /verifyme
 
+function escapeDiscordMarkdown(text) {
+  return String(text)
+    .replace(/\\/g, "\\\\")
+    .replace(/\*/g, "\\*")
+    .replace(/_/g, "\\_")
+    .replace(/`/g, "\\`")
+    .replace(/~/g, "\\~")
+    .replace(/\|/g, "\\|");
+}
+
 export function registerWhois(register) {
   register.slash(
     {
@@ -38,7 +48,7 @@ export function registerWhois(register) {
       await interaction.reply({
         flags: MessageFlags.Ephemeral,
         content: forumUser
-          ? `✅ ${target} is verified as forum user: **${forumUser}**`
+          ? `✅ ${target} is verified as forum user: **${escapeDiscordMarkdown(forumUser)}**`
           : `❌ ${target} is **not verified**.`,
       });
     }

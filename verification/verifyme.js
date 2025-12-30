@@ -22,6 +22,7 @@ import crypto from "crypto";
 import { MessageFlags } from "discord.js";
 import { ForumClient } from "./forum_client.js";
 import { getUserText, setUserText, deleteUserText } from "../db.js"; // uses your existing helpers:contentReference[oaicite:3]{index=3}
+import { isAdminOrPrivileged } from "../auth.js";
 
 const K_VERIFIED = "fuser";
 const K_PENDING = "fpending";
@@ -48,6 +49,16 @@ function safeJsonParse(s) {
   } catch {
     return null;
   }
+}
+
+function escapeDiscordMarkdown(text) {
+  return String(text)
+    .replace(/\\/g, "\\\\")
+    .replace(/\*/g, "\\*")
+    .replace(/_/g, "\\_")
+    .replace(/`/g, "\\`")
+    .replace(/~/g, "\\~")
+    .replace(/\|/g, "\\|");
 }
 
 function isExpired(expiresAtMs) {
@@ -200,7 +211,7 @@ export function registerVerifyMe(register) {
           await interaction.reply({
             flags: MessageFlags.Ephemeral,
             content:
-              `❌ I couldn't send a forum PM to **${cleaned}**.\n` +
+              `❌ I couldn't send a forum PM to **${escapeDiscordMarkdown(cleaned)}**.\n` +
               (pmRes.error ? `Reason: ${pmRes.error}` : "Please try again later."),
           });
           return;
@@ -210,9 +221,9 @@ export function registerVerifyMe(register) {
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
           content:
-            `📩 I sent a verification code to **${cleaned}** via TPPC forums PM.\n` +
+            `📩 I sent a verification code to  via TPPC forums PM.\n` +
             `⏳ This code expires in ~${ttlMin} minutes.\n` +
-            `Now run: \`/verifyme securitytoken:${token}\` (use the code from the PM).`,
+            `Now run: \`/verifyme securitytoken:<token>\` (use the code from the PM).`,
         });
 
         return;
@@ -282,9 +293,53 @@ export function registerVerifyMe(register) {
 
         await interaction.reply({
           flags: MessageFlags.Ephemeral,
-          content: `✅ Verified! Your Discord account is now linked to forum user **${forumUsername}**.`,
+          content: `✅ Verified! Your Discord account is now linked to forum user **${escapeDiscordMarkdown(forumUsername)}**.`,
         });
       }
+    }
+  );
+}
+
+export function registerUnverify(register) {
+  register.slash(
+    {
+      name: "unverify",
+      description: "Admin: remove TPPC forum verification for a user",
+      options: [
+        {
+          type: 6, // USER
+          name: "user",
+          description: "User to unverify",
+          required: true,
+        },
+      ],
+    },
+    async ({ interaction }) => {
+      const guildId = interaction.guildId;
+      if (!guildId) {
+        await interaction.reply({ ephemeral: true, content: "This command must be used in a server." });
+        return;
+      }
+
+      // Permission gate (admin/privileged only)
+      // interaction.member is available in guild contexts; reuse your existing auth gate
+      const fakeMessageLike = { guildId, member: interaction.member, author: interaction.user };
+      if (!isAdminOrPrivileged(fakeMessageLike)) {
+        await interaction.reply({ ephemeral: true, content: "❌ You do not have permission to use /unverify." });
+        return;
+      }
+
+      const target = interaction.options.getUser("user", true);
+      const userId = target.id;
+
+      // Delete verified + pending records
+      await deleteUserText({ guildId, userId, kind: "fuser" }).catch(() => null);
+      await deleteUserText({ guildId, userId, kind: "fpending" }).catch(() => null);
+
+      await interaction.reply({
+        ephemeral: true,
+        content: `✅ Removed verification for ${target}.`,
+      });
     }
   );
 }
