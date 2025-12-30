@@ -2,7 +2,7 @@
 //
 // Shared helpers for game modules (parsers/formatters).
 
-import { reply } from "./framework.js";
+import { clampInt, reply } from "./framework.js";
 
 /**
  * Parses "min-max" numeric ranges (accepts hyphen/en-dash/em-dash).
@@ -43,4 +43,40 @@ export function registerHelpAndRules(register, { id, label, helpText, rulesText 
     `• !${id}rules — show ${gameLabel} rules`,
     { helpTier: "normal" }
   );
+}
+
+/**
+ * Validates join/max options for reaction-join flows.
+ * Returns { ok: true, joinSeconds, maxPlayers } or { ok:false, err }.
+ */
+export function validateJoinAndMaxForMode({
+  hasMentions,
+  joinSeconds,
+  maxPlayers,
+  defaultJoinSeconds,
+  joinMin,
+  joinMax,
+  maxMin,
+  maxMax,
+  mentionErrorText,
+  joinErrorText,
+  maxErrorText,
+} = {}) {
+  if (hasMentions) {
+    if (joinSeconds != null || maxPlayers != null) {
+      return { ok: false, err: mentionErrorText };
+    }
+    return { ok: true, joinSeconds: null, maxPlayers: null };
+  }
+
+  const join = clampInt(joinSeconds ?? defaultJoinSeconds, joinMin, joinMax);
+  if (!join) return { ok: false, err: joinErrorText };
+
+  let max = null;
+  if (maxPlayers != null) {
+    max = clampInt(maxPlayers, maxMin, maxMax);
+    if (!max) return { ok: false, err: maxErrorText };
+  }
+
+  return { ok: true, joinSeconds: join, maxPlayers: max };
 }

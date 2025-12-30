@@ -33,6 +33,7 @@ import {
   shuffleInPlace,
   withGameSubcommands,
 } from "./framework.js";
+import { validateJoinAndMaxForMode } from "./helpers.js";
 
 const manager = createGameManager({ id: "safarizone", prettyName: "Safari Zone", scope: "guild" });
 
@@ -575,24 +576,24 @@ function parseSzOptions(tokens) {
 }
 
 function validateJoinOptionsForMode(hasMentions, opts) {
-  if (hasMentions) {
-    if (opts.joinSeconds != null || opts.maxPlayers != null) {
-      return { ok: false, err: "❌ `join=` and `max=` are only valid for reaction-join (no @mentions)." };
-    }
-    return { ok: true };
-  }
+  const joinRes = validateJoinAndMaxForMode({
+    hasMentions,
+    joinSeconds: opts.joinSeconds,
+    maxPlayers: opts.maxPlayers,
+    defaultJoinSeconds: DEFAULTS.joinSeconds,
+    joinMin: 5,
+    joinMax: 120,
+    maxMin: 2,
+    maxMax: 50,
+    mentionErrorText: "❌ `join=` and `max=` are only valid for reaction-join (no @mentions).",
+    joinErrorText: "❌ `join=NN` must be between 5 and 120 seconds.",
+    maxErrorText: "❌ `max=NN` must be 2..50.",
+  });
 
-  const joinSeconds = opts.joinSeconds ?? DEFAULTS.joinSeconds;
-  const j = clampInt(joinSeconds, 5, 120);
-  if (!j) return { ok: false, err: "❌ `join=NN` must be between 5 and 120 seconds." };
-  opts.joinSeconds = j;
+  if (!joinRes.ok) return joinRes;
 
-  if (opts.maxPlayers != null) {
-    const m = clampInt(opts.maxPlayers, 2, 50);
-    if (!m) return { ok: false, err: "❌ `max=NN` must be 2..50." };
-    opts.maxPlayers = m;
-  }
-
+  if (joinRes.joinSeconds != null) opts.joinSeconds = joinRes.joinSeconds;
+  if (joinRes.maxPlayers != null) opts.maxPlayers = joinRes.maxPlayers;
   return { ok: true };
 }
 

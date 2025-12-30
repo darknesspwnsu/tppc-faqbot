@@ -40,6 +40,7 @@ import {
   shuffleInPlace,
   collectEntrantsByReactionsWithMax,
 } from "./framework.js";
+import { validateJoinAndMaxForMode } from "./helpers.js";
 
 const DEFAULTS = {
   joinSeconds: 15,
@@ -173,24 +174,21 @@ function parseEeOptions(tokens) {
 }
 
 function validateJoinOptionsForMode(hasMentions, opts) {
-  if (hasMentions) {
-    if (opts.joinSeconds != null || opts.maxPlayers != null) {
-      return { ok: false, err: "❌ `join=` and `max=` are only valid for reaction-join (no @mentions)." };
-    }
-    return { ok: true };
-  }
+  const joinRes = validateJoinAndMaxForMode({
+    hasMentions,
+    joinSeconds: opts.joinSeconds,
+    maxPlayers: opts.maxPlayers,
+    defaultJoinSeconds: DEFAULTS.joinSeconds,
+    joinMin: 5,
+    joinMax: 120,
+    maxMin: 2,
+    maxMax: 50,
+    mentionErrorText: "❌ `join=` and `max=` are only valid for reaction-join (no @mentions).",
+    joinErrorText: "❌ `join=NN` must be between 5 and 120 seconds (example: `!ee join=20`).",
+    maxErrorText: "❌ `max=NN` must be between 2 and 50 (example: `!ee max=8`).",
+  });
 
-  const joinSeconds = opts.joinSeconds ?? DEFAULTS.joinSeconds;
-  if (!Number.isFinite(joinSeconds) || joinSeconds < 5 || joinSeconds > 120) {
-    return { ok: false, err: "❌ `join=NN` must be between 5 and 120 seconds (example: `!ee join=20`)." };
-  }
-
-  if (opts.maxPlayers != null) {
-    const maxPlayers = opts.maxPlayers;
-    if (!Number.isFinite(maxPlayers) || maxPlayers < 2 || maxPlayers > 50) {
-      return { ok: false, err: "❌ `max=NN` must be between 2 and 50 (example: `!ee max=8`)." };
-    }
-  }
+  if (!joinRes.ok) return joinRes;
 
   if (opts.turnWarn != null || opts.turnSkip != null) {
     const w = opts.turnWarn ?? DEFAULTS.turnWarn;
