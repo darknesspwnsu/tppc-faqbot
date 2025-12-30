@@ -9,7 +9,7 @@ import { stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
 
-// messageId -> { guildId, channelId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone? }
+// messageId -> { guildId, channelId, creatorId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone? }
 const activeCollectorsByMessage = new Map();
 
 let reactionHooksInstalled = false;
@@ -79,7 +79,20 @@ async function buildNameList(_client, guild, userIds) {
   return names;
 }
 
-async function finalizeCollector(messageId, reason = "timer") {
+function mention(id) {
+  return `<@${id}>`;
+}
+
+function findCollectorForChannel(guildId, channelId) {
+  for (const [messageId, st] of activeCollectorsByMessage.entries()) {
+    if (st.guildId === guildId && st.channelId === channelId) {
+      return { messageId, state: st };
+    }
+  }
+  return null;
+}
+
+async function finalizeCollector(messageId, reason = "timer", finalText = "Entries have closed for this contest.") {
   const state = activeCollectorsByMessage.get(messageId);
   if (!state) return;
 
@@ -90,7 +103,7 @@ async function finalizeCollector(messageId, reason = "timer") {
     const channel = await state.client.channels.fetch(state.channelId);
     if (channel?.isTextBased?.()) {
       const msg = await channel.messages.fetch(messageId);
-      await msg.edit("Entries have closed for this contest.");
+      await msg.edit(finalText);
     }
   } catch (e) {
     console.warn("Failed to edit contest message:", e);
@@ -224,12 +237,13 @@ export async function collectEntrantsByReactions({
       client: message.client,
       guildId: message.guildId,
       channelId: message.channelId,
+      creatorId: message.author?.id || null,
       endsAtMs: Date.now() + durationMs,
       timeout,
       entrants: new Set(),
       entrantReactionCounts: new Map(),
       maxEntrants,
-      onDone: (set) => resolve(set),
+      onDone: (set, reason) => resolve({ entrants: set, reason, messageId: joinMsg.id }),
     });
   });
 }
@@ -237,6 +251,20 @@ export async function collectEntrantsByReactions({
 function canManageContest(message) {
   // Admin/privileged only to prevent spammy/misuse
   return isAdminOrPrivileged(message);
+}
+
+async function cancelCollector({ messageId, canceledById }) {
+  const state = activeCollectorsByMessage.get(messageId);
+  if (!state) return false;
+  if (state.timeout) {
+    try { clearTimeout(state.timeout); } catch {}
+  }
+  await finalizeCollector(
+    messageId,
+    "cancel",
+    `🛑 This contest was cancelled by ${mention(canceledById)}.`
+  );
+  return true;
 }
 
 /**
@@ -247,6 +275,30 @@ function canManageContest(message) {
  * - list: prints space-separated usernames
  */
 export function registerReactionContests(register) {
+  register(
+    "!cancelcontest",
+    async ({ message }) => {
+      if (!message.guildId) return;
+
+      const found = findCollectorForChannel(message.guildId, message.channelId);
+      if (!found) {
+        await message.reply("No active contest to cancel in this channel.");
+        return;
+      }
+
+      const isOwner = found.state.creatorId && message.author?.id === found.state.creatorId;
+      if (!isOwner && !isAdminOrPrivileged(message)) {
+        await message.reply("Nope — only the contest host or an admin can cancel.");
+        return;
+      }
+
+      const ok = await cancelCollector({ messageId: found.messageId, canceledById: message.author?.id });
+      if (ok) await message.reply("🛑 Contest cancelled.");
+    },
+    "!cancelcontest — cancel an active reaction contest in this channel",
+    { hideFromHelp: true, aliases: ["!endcontest", "!stopcontest"] }
+  );
+
   register(
     "!conteststart",
     async ({ message, rest }) => {
@@ -300,13 +352,14 @@ export function registerReactionContests(register) {
       const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
       const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}`;
 
-      const entrants = await collectEntrantsByReactions({
+      const { entrants, reason } = await collectEntrantsByReactions({
         message,
         promptText: prompt,
         durationMs: ms,
         maxEntrants,
         emoji: "👍",
       });
+      if (reason === "cancel") return;
 
       const ids = [...entrants];
       const names = await buildNameList(message.client, message.guild, ids);

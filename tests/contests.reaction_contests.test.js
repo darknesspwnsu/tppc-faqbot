@@ -61,7 +61,7 @@ describe("collectEntrantsByReactions", () => {
     await add({ message: { id: "m1", guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
     await add({ message: { id: "m1", guildId: "1", partial: false }, partial: false }, { id: "u2", bot: false });
 
-    const entrants = await p;
-    expect([...entrants]).toEqual(["u1", "u2"]);
+    const res = await p;
+    expect([...res.entrants]).toEqual(["u1", "u2"]);
   });
 });
