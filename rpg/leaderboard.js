@@ -3,6 +3,7 @@
 // Cached leaderboards for TPPC RPG challenges.
 
 import { parse } from "node-html-parser";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { RpgClient } from "./rpg_client.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
@@ -321,6 +322,60 @@ function parsePokemonPageCount(html) {
   return Number.isFinite(count) && count > 0 ? count : 1;
 }
 
+function formatVariantLabel(variant) {
+  if (!variant) return "";
+  return variant[0].toUpperCase() + variant.slice(1);
+}
+
+function buildPokemonSuggestions(suggestions, variant) {
+  return suggestions.map((name) => {
+    if (!variant) {
+      return { label: name, query: name };
+    }
+    return {
+      label: `${formatVariantLabel(variant)} ${name}`,
+      query: `${variant} ${name}`,
+    };
+  });
+}
+
+function buildLeaderboardDidYouMeanButtons(suggestions, count) {
+  const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
+
+  const row = new ActionRowBuilder().addComponents(
+    suggestions.slice(0, 5).map(({ label, query }) => {
+      const rest = `pokemon ${query}${count ? ` ${count}` : ""}`;
+      return new ButtonBuilder()
+        .setCustomId(`lb_retry:${enc(rest)}`)
+        .setLabel(label.length > 80 ? label.slice(0, 77) + "…" : label)
+        .setStyle(ButtonStyle.Secondary);
+    })
+  );
+
+  return [row];
+}
+
+async function disableInteractionButtons(interaction) {
+  const rows = interaction.message?.components || [];
+  if (!rows.length) {
+    await interaction.deferUpdate().catch(() => {});
+    return;
+  }
+
+  const disabledRows = rows.map((row) => {
+    const newRow = new ActionRowBuilder();
+    for (const component of row.components || []) {
+      const button = ButtonBuilder.from(component).setDisabled(true);
+      newRow.addComponents(button);
+    }
+    return newRow;
+  });
+
+  await interaction.update({ components: disabledRows }).catch(async () => {
+    await interaction.deferUpdate().catch(() => {});
+  });
+}
+
 function renderTopRows(challengeKey, rows, limit = 5) {
   const out = [];
   const top = rows.filter((row) => !isHeaderRow(row)).slice(0, limit);
@@ -600,9 +655,15 @@ export function registerLeaderboard(register) {
         const { base, variant } = parsePokemonQuery(nameRaw);
         const { entry, suggestions } = await findPokedexEntry(base || nameRaw);
         if (!entry) {
-          const suggestionLine =
-            suggestions.length > 0 ? `\nDid you mean: ${suggestions.join(", ")}?` : "";
-          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.${suggestionLine}`);
+          const refined = buildPokemonSuggestions(suggestions, variant);
+          if (refined.length) {
+            await message.reply({
+              content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
+              components: buildLeaderboardDidYouMeanButtons(refined, hasCount ? count : null),
+            });
+          } else {
+            await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+          }
           return;
         }
 
@@ -676,6 +737,18 @@ export function registerLeaderboard(register) {
   );
 }
 
+export async function handleLeaderboardInteraction(interaction) {
+  if (!interaction?.isButton?.()) return false;
+
+  const id = String(interaction.customId || "");
+  if (!id.startsWith("lb_retry:")) return false;
+
+  const rest = decodeURIComponent(id.slice("lb_retry:".length));
+  await disableInteractionButtons(interaction);
+
+  return { cmd: "!leaderboard", rest };
+}
+
 export const __testables = {
   parseSsAnne,
   parseSafariZone,
@@ -686,4 +759,5 @@ export const __testables = {
   parsePokemonRanks,
   parsePokemonPageCount,
   renderTopRows,
+  buildPokemonSuggestions,
 };
