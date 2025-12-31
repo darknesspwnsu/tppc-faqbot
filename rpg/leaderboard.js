@@ -5,7 +5,8 @@
 import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
-import { findPokedexEntry } from "./pokedex.js";
+import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
+import { normalizeKey } from "../tools/rarity.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 
 const CHALLENGES = {
@@ -505,7 +506,8 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        const { entry, suggestions } = await findPokedexEntry(nameRaw);
+        const { base, variant } = parsePokemonQuery(nameRaw);
+        const { entry, suggestions } = await findPokedexEntry(base || nameRaw);
         if (!entry) {
           const suggestionLine =
             suggestions.length > 0 ? `\nDid you mean: ${suggestions.join(", ")}?` : "";
@@ -514,15 +516,26 @@ export function registerLeaderboard(register) {
         }
 
         const cacheKey = `pokemon:${entry.key}`;
-        const rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client });
+        let rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client });
+        if (variant) {
+          const prefix = normalizeKey(variant);
+          const baseNorm = normalizeKey(entry.name);
+          rows = rows.filter((row) => {
+            const norm = normalizeKey(row.pokemon);
+            return norm.startsWith(prefix) && norm.includes(baseNorm);
+          });
+        }
+
         const lines = renderTopRows("pokemon", rows, count);
         if (!lines.length) {
-          await message.reply(`No leaderboard entries found for ${entry.name}.`);
+          const label = variant ? `${variant} ${entry.name}` : entry.name;
+          await message.reply(`No leaderboard entries found for ${label}.`);
           return;
         }
 
         await message.reply(
-          `🏆 **${entry.name}** (top ${Math.min(count, lines.length)})\n` + lines.join("\n")
+          `🏆 **${variant ? `${variant} ${entry.name}` : entry.name}** (top ${Math.min(count, lines.length)})\n` +
+            lines.join("\n")
         );
         return;
       }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { __testables } from "../../rpg/leaderboard.js";
+import { __testables as pokedexTestables } from "../../rpg/pokedex.js";
 
 const {
   parseSsAnne,
@@ -11,6 +12,7 @@ const {
   parsePokemonRanks,
   renderTopRows,
 } = __testables;
+const { parsePokemonQuery } = pokedexTestables;
 
 describe("rpg leaderboard parsing", () => {
   it("parses speed tower rows", () => {
@@ -221,5 +223,12 @@ describe("rpg leaderboard parsing", () => {
       level: "5,000",
       number: "85970",
     });
+  });
+
+  it("parses pokemon queries with variants", () => {
+    expect(parsePokemonQuery("g.heracross")).toEqual({ base: "heracross", variant: "golden" });
+    expect(parsePokemonQuery("goldenheracross")).toEqual({ base: "heracross", variant: "golden" });
+    expect(parsePokemonQuery("s heracross")).toEqual({ base: "heracross", variant: "shiny" });
+    expect(parsePokemonQuery("dark heracross")).toEqual({ base: "heracross", variant: "dark" });
   });
 });
