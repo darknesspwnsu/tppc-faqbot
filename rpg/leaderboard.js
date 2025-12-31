@@ -612,7 +612,8 @@ export function registerLeaderboard(register) {
 
       const raw = String(rest || "").trim().toLowerCase();
       const parts = raw.split(/\s+/).filter(Boolean);
-      const sub = parts[0] || "";
+      let sub = parts[0] || "";
+      if (sub === "poke") sub = "pokemon";
 
       if (!sub || sub === "help") {
         await message.reply(
@@ -624,7 +625,7 @@ export function registerLeaderboard(register) {
             "• `!leaderboard roulette [weekly]` — Battle Roulette standings",
             "• `!leaderboard speedtower` — Speed Tower standings",
             "• `!leaderboard trainers [1-20]` — Top trainers by level",
-            "• `!leaderboard pokemon <name> [1-20]` — Top trainers for a Pokemon",
+            "• `!leaderboard pokemon|poke <name> [1-20]` — Top trainers for a Pokemon",
           ].join("\n")
         );
         return;
@@ -669,7 +670,7 @@ export function registerLeaderboard(register) {
         const nameTokens = parts.slice(1, hasCount ? -1 : undefined);
         const nameRaw = nameTokens.join(" ").trim();
         if (!nameRaw) {
-          await message.reply("Usage: `!leaderboard pokemon <name> [1-20]`");
+          await message.reply("Usage: `!leaderboard pokemon|poke <name> [1-20]`");
           return;
         }
 
@@ -736,7 +737,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
         );
         return;
       }
@@ -745,13 +746,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
         );
         return;
       }
