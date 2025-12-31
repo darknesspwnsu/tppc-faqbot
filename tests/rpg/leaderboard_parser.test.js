@@ -13,14 +13,18 @@ const {
 describe("rpg leaderboard parsing", () => {
   it("parses speed tower rows", () => {
     const html = `
-      <tr class="r0">
-        <td>Today's #1</td>
-        <td><a href="profile.php?id=3181487">the infinity stones</a></td><td>Team TPPC</td><td>45</td><td>00:40</td>
-      </tr>
-      <tr class="r1">
-        <td>Today's #2</td>
-        <td><a href="profile.php?id=3489027">Fried Shrimp</a></td><td>Team TPPC</td><td>46</td><td>01:16</td>
-      </tr>
+      <table>
+        <tbody>
+          <tr class="r0">
+            <td>Today's #1</td>
+            <td><a href="profile.php?id=3181487">the infinity stones</a></td><td>Team TPPC</td><td>45</td><td>00:40</td>
+          </tr>
+          <tr class="r1">
+            <td>Today's #2</td>
+            <td><a href="profile.php?id=3489027">Fried Shrimp</a></td><td>Team TPPC</td><td>46</td><td>01:16</td>
+          </tr>
+        </tbody>
+      </table>
     `;
     const rows = parseSpeedTower(html);
     expect(rows.length).toBe(2);
@@ -73,26 +77,29 @@ describe("rpg leaderboard parsing", () => {
     });
   });
 
-  it("parses roulette daily table only", () => {
+  it("parses roulette daily and weekly tables", () => {
     const html = `
       <h3>Standings for December 30, 2025</h3>
       <table class="ranks">
         <tbody>
           <tr><th>Standing</th><th>Trainer Name</th><th>Faction</th><th>Wins</th></tr>
-          <tr class="r0"><td class="Team TPPC">1</td><td class="Team TPPC"><a href="profile.php?id=3491889">blazinxd</a></td><td class="Team TPPC">Team TPPC</td><td class="Team TPPC">36</td></tr>
-          <tr class="r1"><td class="Team Galactic">2</td><td class="Team Galactic"><a href="profile.php?id=3476908">zeyny</a></td><td class="Team Galactic">Team Galactic</td><td class="Team Galactic">34</td></tr>
+          <tr class="r0"><td class="Team TPPC">1</td><td class="Team TPPC"><a href="profile.php?id=3491889">blazinxd</td><td class="Team TPPC">Team TPPC</td><td class="Team TPPC">36</td></tr>
+          <tr class="r1"><td class="Team Galactic">2</td><td class="Team Galactic"><a href="profile.php?id=3476908">zeyny</td><td class="Team Galactic">Team Galactic</td><td class="Team Galactic">34</td></tr>
         </tbody>
       </table>
       <h3>Standings for December 28, 2025 through January 03, 2026</h3>
       <table class="ranks">
         <tbody>
-          <tr class="r0"><td>1</td><td><a href="profile.php?id=1475582">Kuroyukihime</a></td><td>Team TPPC</td><td>96</td></tr>
+          <tr><th>Standing</th><th>Trainer Name</th><th>Faction</th><th>Battle Date</th><th>Wins</th></tr>
+          <tr class="r0"><td>1</td><td><a href="profile.php?id=1475582">Kuroyukihime</td><td>Team TPPC</td><td>December 29, 2025</td><td>96</td></tr>
         </tbody>
       </table>
     `;
-    const rows = parseRoulette(html);
-    expect(rows.length).toBe(2);
-    expect(rows[0].trainerId).toBe("3491889");
+    const tables = parseRoulette(html);
+    expect(tables.daily.length).toBe(2);
+    expect(tables.daily[0].trainerId).toBe("3491889");
+    expect(tables.weekly.length).toBe(1);
+    expect(tables.weekly[0].battleDate).toBe("December 29, 2025");
   });
 
   it("parses training challenge rows", () => {

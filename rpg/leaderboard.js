@@ -2,6 +2,8 @@
 //
 // Cached leaderboards for TPPC RPG challenges.
 
+import { parse } from "node-html-parser";
+
 import { RpgClient } from "./rpg_client.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 
@@ -36,6 +38,12 @@ const CHALLENGES = {
     url: "https://www.tppcrpg.net/roulette.php",
     ttlMs: 5 * 60_000,
   },
+  roulette_weekly: {
+    key: "roulette_weekly",
+    name: "Battle Roulette (Weekly)",
+    url: "https://www.tppcrpg.net/roulette.php",
+    ttlMs: 5 * 60_000,
+  },
 };
 
 const ALIASES = new Map([
@@ -54,24 +62,15 @@ const ALIASES = new Map([
   ["br", "roulette"],
 ]);
 
-function stripTags(html) {
-  return String(html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+function getText(node) {
+  if (!node) return "";
+  return String(node.text || "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function parseRowsFromTable(html) {
-  const rows = [];
-  const re = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  let m;
-  while ((m = re.exec(String(html || ""))) !== null) rows.push(m[1]);
-  return rows;
-}
-
-function parseCells(rowHtml) {
-  const cells = [];
-  const re = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
-  let m;
-  while ((m = re.exec(String(rowHtml || ""))) !== null) cells.push(m[1]);
-  return cells;
+function normalizeHtml(html) {
+  return String(html || "").replace(/<a\s+[^>]*>[^<]*?(?=<\/td>)/gi, (m) => `${m}</a>`);
 }
 
 function isHeaderRank(rankText) {
@@ -91,117 +90,162 @@ function isHeaderRow(row) {
   return false;
 }
 
-function parseProfileLink(cellHtml) {
-  const m = /profile\.php\?id=(\d+)/i.exec(String(cellHtml || ""));
-  const name = stripTags(cellHtml);
+function parseTrainerCell(cell) {
+  const link = cell?.querySelector?.("a");
+  const name = getText(link || cell);
+  const href = link?.getAttribute?.("href") || "";
+  const m = /profile\.php\?id=(\d+)/i.exec(href);
   return { trainerId: m?.[1] || null, name };
 }
 
 function parseSpeedTower(html) {
-  const rows = parseRowsFromTable(html);
+  const root = parse(normalizeHtml(html));
+  const rows = root.querySelectorAll("tr");
   const out = [];
   for (const row of rows) {
-    const cells = parseCells(row);
+    const cells = row.querySelectorAll("td");
     if (cells.length < 5) continue;
-    const rankText = stripTags(cells[0]);
+    const rankText = getText(cells[0]);
     if (!rankText.toLowerCase().includes("today")) continue;
-    const { trainerId, name } = parseProfileLink(cells[1]);
+    const { trainerId, name } = parseTrainerCell(cells[1]);
     out.push({
       rank: rankText,
       trainer: name,
       trainerId,
-      faction: stripTags(cells[2]),
-      floor: stripTags(cells[3]),
-      time: stripTags(cells[4]),
+      faction: getText(cells[2]),
+      floor: getText(cells[3]),
+      time: getText(cells[4]),
     });
   }
   return out;
 }
 
 function parseSsAnne(html) {
-  const tableMatch = /<table[^>]*class=["']ranks["'][^>]*>([\s\S]*?)<\/table>/i.exec(String(html || ""));
-  if (!tableMatch) return [];
-  const rows = parseRowsFromTable(tableMatch[1]);
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
   const out = [];
   for (const row of rows) {
-    const cells = parseCells(row);
+    const cells = row.querySelectorAll("td");
     if (cells.length < 4) continue;
-    const rank = stripTags(cells[0]);
+    const rank = getText(cells[0]);
     if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseProfileLink(cells[1]);
+    const { trainerId, name } = parseTrainerCell(cells[1]);
     out.push({
       rank,
       trainer: name,
       trainerId,
-      faction: stripTags(cells[2]),
-      wins: stripTags(cells[3]),
+      faction: getText(cells[2]),
+      wins: getText(cells[3]),
     });
   }
   return out;
 }
 
 function parseSafariZone(html) {
-  const tableMatch = /<table[^>]*class=["']ranks["'][^>]*>([\s\S]*?)<\/table>/i.exec(String(html || ""));
-  if (!tableMatch) return [];
-  const rows = parseRowsFromTable(tableMatch[1]);
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
   const out = [];
   for (const row of rows) {
-    const cells = parseCells(row);
+    const cells = row.querySelectorAll("td");
     if (cells.length < 4) continue;
-    if (isHeaderRank(stripTags(cells[0]))) continue;
+    if (isHeaderRank(getText(cells[0]))) continue;
     out.push({
-      rank: stripTags(cells[0]),
-      trainer: stripTags(cells[1]),
-      pokemon: stripTags(cells[2]),
-      points: stripTags(cells[3]),
+      rank: getText(cells[0]),
+      trainer: getText(cells[1]),
+      pokemon: getText(cells[2]),
+      points: getText(cells[3]),
     });
   }
   return out;
+}
+
+function parseRouletteTable(table, { includeDate } = {}) {
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
+  const out = [];
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (includeDate && cells.length < 5) continue;
+    if (!includeDate && cells.length < 4) continue;
+    const rank = getText(cells[0]);
+    if (isHeaderRank(rank)) continue;
+    const { trainerId, name } = parseTrainerCell(cells[1]);
+    const faction = getText(cells[2]);
+    if (includeDate) {
+      out.push({
+        rank,
+        trainer: name,
+        trainerId,
+        faction,
+        battleDate: getText(cells[3]),
+        wins: getText(cells[4]),
+      });
+    } else {
+      out.push({
+        rank,
+        trainer: name,
+        trainerId,
+        faction,
+        wins: getText(cells[3]),
+      });
+    }
+  }
+  return out;
+}
+
+function findRouletteTableAfterHeading(root, match) {
+  const nodes = root.querySelectorAll("h3, table.ranks");
+  let expectingTable = false;
+  for (const node of nodes) {
+    if (node.tagName === "H3") {
+      const heading = getText(node).toLowerCase();
+      expectingTable = match(heading);
+      continue;
+    }
+    if (expectingTable && node.tagName === "TABLE") {
+      return node;
+    }
+  }
+  return null;
 }
 
 function parseRoulette(html) {
-  const h3Match = /<h3[^>]*>Standings[\s\S]*?<\/h3>\s*<table[^>]*class=["']ranks["'][^>]*>([\s\S]*?)<\/table>/i.exec(
-    String(html || "")
-  );
-  if (!h3Match) return [];
-  const tableHtml = h3Match[1];
-  const rows = parseRowsFromTable(tableHtml);
-  const out = [];
-  for (const row of rows) {
-    const cells = parseCells(row);
-    if (cells.length < 4) continue;
-    const rank = stripTags(cells[0]);
-    if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseProfileLink(cells[1]);
-    out.push({
-      rank,
-      trainer: name,
-      trainerId,
-      faction: stripTags(cells[2]),
-      wins: stripTags(cells[3]),
-    });
-  }
-  return out;
+  const root = parse(normalizeHtml(html));
+  const dailyTable =
+    findRouletteTableAfterHeading(root, (heading) => heading.includes("standings for") && !heading.includes("through")) ||
+    root.querySelectorAll("table.ranks")[0];
+  const weeklyTable =
+    findRouletteTableAfterHeading(root, (heading) => heading.includes("through")) ||
+    root.querySelectorAll("table.ranks")[1];
+  return {
+    daily: parseRouletteTable(dailyTable, { includeDate: false }),
+    weekly: parseRouletteTable(weeklyTable, { includeDate: true }),
+  };
 }
 
 function parseTrainingChallenge(html) {
-  const tableMatch = /<table[^>]*class=["']ranks["'][^>]*>([\s\S]*?)<\/table>/i.exec(String(html || ""));
-  if (!tableMatch) return [];
-  const rows = parseRowsFromTable(tableMatch[1]);
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
   const out = [];
   for (const row of rows) {
-    const cells = parseCells(row);
+    const cells = row.querySelectorAll("td");
     if (cells.length < 5) continue;
-    const rank = stripTags(cells[0]);
+    const rank = getText(cells[0]);
     if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseProfileLink(cells[1]);
+    const { trainerId, name } = parseTrainerCell(cells[1]);
     out.push({
       rank,
       trainer: name,
       trainerId,
-      pokemon: stripTags(cells[2]),
-      level: stripTags(cells[3]),
-      number: stripTags(cells[4]),
+      pokemon: getText(cells[2]),
+      level: getText(cells[3]),
+      number: getText(cells[4]),
     });
   }
   return out;
@@ -217,7 +261,7 @@ function renderTopRows(challengeKey, rows) {
       );
     } else if (challengeKey === "ssanne") {
       out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
-    } else if (challengeKey === "roulette") {
+    } else if (challengeKey === "roulette" || challengeKey === "roulette_weekly") {
       out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
     } else if (challengeKey === "safarizone") {
       out.push(
@@ -238,7 +282,8 @@ async function fetchAndStore(challenge, client) {
   if (challenge.key === "speedtower") rows = parseSpeedTower(html);
   else if (challenge.key === "ssanne") rows = parseSsAnne(html);
   else if (challenge.key === "safarizone") rows = parseSafariZone(html);
-  else if (challenge.key === "roulette") rows = parseRoulette(html);
+  else if (challenge.key === "roulette") rows = parseRoulette(html).daily;
+  else if (challenge.key === "roulette_weekly") rows = parseRoulette(html).weekly;
   else if (challenge.key === "tc") rows = parseTrainingChallenge(html);
   await upsertLeaderboard({ challenge: challenge.key, payload: { rows } });
   return rows;
@@ -317,10 +362,26 @@ export function registerLeaderboard(register) {
       }
 
       const raw = String(rest || "").trim().toLowerCase();
-      const key = ALIASES.get(raw);
-      if (!key) {
+      const parts = raw.split(/\s+/).filter(Boolean);
+      const baseKey = ALIASES.get(parts[0] || "");
+      if (!baseKey) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette|speedtower`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
+        );
+        return;
+      }
+
+      const isWeekly = parts[1] === "weekly";
+      const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
+      if (parts.length > 1 && baseKey !== "roulette") {
+        await message.reply(
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
+        );
+        return;
+      }
+      if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
+        await message.reply(
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
         );
         return;
       }
@@ -354,5 +415,4 @@ export const __testables = {
   parseRoulette,
   parseTrainingChallenge,
   renderTopRows,
-  stripTags,
 };
