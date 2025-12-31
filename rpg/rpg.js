@@ -5,11 +5,13 @@
 import { registerLeaderboard } from "./leaderboard.js";
 import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
+import { registerViewbox } from "./viewbox.js";
 
 const RPG_MODULES = [
   { id: "leaderboard", register: registerLeaderboard },
   { id: "powerplant", register: registerPowerPlant },
   { id: "findmyid", register: registerFindMyId },
+  { id: "viewbox", register: registerViewbox },
 ];
 
 export function registerRpg(register) {
