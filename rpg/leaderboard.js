@@ -69,6 +69,7 @@ const ALIASES = new Map([
   ["trainingchallenge", "tc"],
   ["safarizone", "safarizone"],
   ["safari", "safarizone"],
+  ["sz", "safarizone"],
   ["speedtower", "speedtower"],
   ["speed", "speedtower"],
   ["roulette", "roulette"],
