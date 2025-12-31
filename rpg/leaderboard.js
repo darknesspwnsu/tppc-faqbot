@@ -310,14 +310,19 @@ function formatVariantLabel(variant) {
   return variant[0].toUpperCase() + variant.slice(1);
 }
 
+function formatVariantName(variant, name) {
+  if (!variant) return name;
+  return `${formatVariantLabel(variant)}${name}`;
+}
+
 function buildPokemonSuggestions(suggestions, variant) {
   return suggestions.map((name) => {
     if (!variant) {
       return { label: name, query: name };
     }
     return {
-      label: `${formatVariantLabel(variant)} ${name}`,
-      query: `${variant} ${name}`,
+      label: formatVariantName(variant, name),
+      query: `${variant}${name}`,
     };
   });
 }
@@ -715,13 +720,14 @@ export function registerLeaderboard(register) {
 
         const lines = renderTopRows("pokemon", rows, count);
         if (!lines.length) {
-          const label = variant ? `${variant} ${entry.name}` : entry.name;
+          const label = formatVariantName(variant, entry.name);
           await message.reply(`No leaderboard entries found for ${label}.`);
           return;
         }
 
+        const label = formatVariantName(variant, entry.name);
         const body =
-          `🏆 **${variant ? `${variant} ${entry.name}` : entry.name}** (top ${Math.min(count, lines.length)})\n` +
+          `🏆 **${label}** (top ${Math.min(count, lines.length)})\n` +
           lines.join("\n");
         await message.reply(appendCacheFootnote(body, cached.updatedAt));
         return;
