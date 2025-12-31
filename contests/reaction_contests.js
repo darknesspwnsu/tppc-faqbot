@@ -1,7 +1,7 @@
 // contests/reaction_contests.js
 //
 // Reaction contest utility:
-// - Command: !conteststart [mode] <time> [quota]
+// - Command: !conteststart [mode] <time> [quota] [winners]
 // - Modes: list | choose | elim
 // - Scope: guild + channel (bound to the start message)
 import { isAdminOrPrivileged } from "../auth.js";
@@ -83,6 +83,17 @@ function mention(id) {
   return `<@${id}>`;
 }
 
+function chooseMany(arr, count) {
+  const pool = Array.isArray(arr) ? arr.slice() : [];
+  const picks = [];
+  const n = Math.min(count, pool.length);
+  for (let i = 0; i < n; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(idx, 1)[0]);
+  }
+  return picks;
+}
+
 function findCollectorForChannel(guildId, channelId) {
   for (const [messageId, st] of activeCollectorsByMessage.entries()) {
     if (st.guildId === guildId && st.channelId === channelId) {
@@ -126,7 +137,7 @@ function contestStartHelpText() {
     "",
     "**Modes:**",
     "• `list` (default) — prints a space-separated list of entrants",
-    "• `choose` — picks 1 winner",
+    "• `choose` — picks N winners (default 1)",
     "• `elim` — runs elimination until 1 remains (2s between rounds)",
     "",
     "**Time:**",
@@ -135,10 +146,14 @@ function contestStartHelpText() {
     "**Quota (optional):**",
     "• Ends early once N entrants have reacted",
     "",
+    "**Winners (choose mode only):**",
+    "• `winners=<n>` (default 1)",
+    "",
     "**Examples:**",
     "• `!conteststart 2min`",
     "• `!conteststart list 1min 20`",
     "• `!conteststart choose 30sec`",
+    "• `!conteststart choose 30sec winners=3`",
     "• `!conteststart elim 2min 10`",
     ""
   ].join("\n");
@@ -267,9 +282,9 @@ async function cancelCollector({ messageId, canceledById }) {
 }
 
 /**
- * !conteststart [mode choose|elim|list] <time> [quota]
+ * !conteststart [mode choose|elim|list] <time> [quota] [winners]
  * - Backwards compatible: if first token is a duration => treated as list mode
- * - choose: picks one entrant
+ * - choose: picks N entrants (default 1)
  * - elim: runs elimination on entrant usernames (default 2s between rounds)
  * - list: prints space-separated usernames
  */
@@ -321,30 +336,63 @@ export function registerReactionContests(register) {
 
       let mode = "list";
       let timeTok = tokens[0] || "";
-      let quotaTok = tokens[1];
+      let extras = tokens.slice(1);
 
       // If first token is a known mode, shift
       const modeMaybe = (tokens[0] || "").toLowerCase();
       if (["choose", "elim", "list"].includes(modeMaybe)) {
         mode = modeMaybe;
         timeTok = tokens[1] || "";
-        quotaTok = tokens[2];
+        extras = tokens.slice(2);
       }
 
       const ms = parseDurationToMs(timeTok);
       if (!ms) {
-        await message.reply("Invalid time. Examples: `30sec`, `5min`, `1hour`. Usage: `!conteststart [choose|elim|list] <time> [quota]`");
+        await message.reply("Invalid time. Examples: `30sec`, `5min`, `1hour`. Usage: `!conteststart [choose|elim|list] <time> [quota] [winners]`");
         return;
       }
 
       let maxEntrants = null;
-      if (quotaTok != null) {
-        const n = Number(quotaTok);
-        if (!Number.isInteger(n) || n <= 0 || n > 1000) {
+      let winnerCount = 1;
+      let winnerExplicit = false;
+
+      for (const tok of extras) {
+        const t = String(tok).trim();
+        if (!t) continue;
+
+        const winnerMatch = /^(winners?|pick|picks?)=(\d+)$/i.exec(t);
+        if (winnerMatch) {
+          winnerCount = Number(winnerMatch[2]);
+          winnerExplicit = true;
+          continue;
+        }
+
+        if (/^\d+$/.test(t)) {
+          const n = Number(t);
+          if (maxEntrants == null) {
+            maxEntrants = n;
+            continue;
+          }
+          if (mode === "choose" && !winnerExplicit) {
+            winnerCount = n;
+            winnerExplicit = true;
+            continue;
+          }
+        }
+      }
+
+      if (maxEntrants != null) {
+        if (!Number.isInteger(maxEntrants) || maxEntrants <= 0 || maxEntrants > 1000) {
           await message.reply("Invalid quota. Usage: `!conteststart [mode] <time> [quota]` (example: `!conteststart 2min 10`).");
           return;
         }
-        maxEntrants = n;
+      }
+
+      if (mode === "choose") {
+        if (!Number.isInteger(winnerCount) || winnerCount <= 0 || winnerCount > 1000) {
+          await message.reply("Invalid winners count. Use `winners=<n>` with a positive integer.");
+          return;
+        }
       }
 
       const MAX_MS = 24 * 60 * 60_000;
@@ -353,7 +401,11 @@ export function registerReactionContests(register) {
         return;
       }
 
-      const modeLabel = mode === "list" ? "list" : mode === "choose" ? "choose a winner" : "run an elimination";
+      const chooseLabel =
+        mode === "choose"
+          ? (winnerCount > 1 ? `choose ${winnerCount} winners` : "choose a winner")
+          : null;
+      const modeLabel = mode === "list" ? "list" : mode === "choose" ? chooseLabel : "run an elimination";
       const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
       const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}`;
 
@@ -380,8 +432,18 @@ export function registerReactionContests(register) {
       }
 
       if (mode === "choose") {
-        const pick = chooseOne(names);
-        await message.channel.send(`━━━━━━━━━━━━━━\nWinner: **${pick}**\n\n(From ${names.length} entrant(s))`);
+        if (winnerCount > names.length) {
+          await message.channel.send(
+            `Not enough entrants to pick ${winnerCount} winners (only ${names.length}).`
+          );
+          return;
+        }
+
+        const picks = winnerCount > 1 ? chooseMany(names, winnerCount) : [chooseOne(names)];
+        const label = winnerCount > 1 ? "Winners" : "Winner";
+        await message.channel.send(
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**\n\n(From ${names.length} entrant(s))`
+        );
         return;
       }
 
@@ -401,7 +463,7 @@ export function registerReactionContests(register) {
         await message.channel.send(`❌ Could not start elimination: ${res.error}`);
       }
     },
-    "!conteststart [choose|elim|list] <time> [quota] — reaction contest using 👍",
+    "!conteststart [choose|elim|list] <time> [quota] [winners] — reaction contest using 👍",
     { aliases: ["!contest", "!startcontest"] }
   );
 }
