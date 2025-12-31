@@ -93,6 +93,14 @@ export async function initDb() {
       PRIMARY KEY (message_id)
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS poll_untracked (
+      message_id VARCHAR(32) NOT NULL,
+      untracked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id)
+    )
+  `);
 }
 
 /**

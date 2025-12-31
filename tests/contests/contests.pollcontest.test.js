@@ -1,12 +1,14 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => true),
 }));
 
+const mockExecute = vi.fn(async () => [[], []]);
+
 vi.mock("../../db.js", () => ({
   getDb: () => ({
-    execute: vi.fn(async () => [[], []]),
+    execute: mockExecute,
   }),
 }));
 
@@ -42,6 +44,11 @@ function mockInteraction(overrides = {}) {
 }
 
 describe("pollcontest helpers", () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockExecute.mockResolvedValue([[], []]);
+  });
+
   test("resolveWinnersOnly detects ties", () => {
     const res = _test.resolveWinnersOnly([
       { voters: ["a"] },
@@ -53,6 +60,11 @@ describe("pollcontest helpers", () => {
 });
 
 describe("pollcontest validation", () => {
+  beforeEach(() => {
+    mockExecute.mockReset();
+    mockExecute.mockResolvedValue([[], []]);
+  });
+
   test("shows a modal for /pollcontest", async () => {
     const { handlers, register } = buildRegister();
     registerPollContest(register);
@@ -133,6 +145,121 @@ describe("pollcontest validation", () => {
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "Poll contests must be created in a server channel.",
+        flags: expect.any(Number),
+      })
+    );
+  });
+
+  test("rejects invalid poll_id references", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const interaction = mockInteraction({
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({ poll: null })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Could not find a poll with that message ID in this channel.",
+        flags: expect.any(Number),
+      })
+    );
+  });
+
+  test("rejects poll_id when poll was started by bot", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const answers = new Map([
+      [0, { text: "A" }],
+      [1, { text: "B" }],
+    ]);
+
+    mockExecute.mockResolvedValue([[], []]);
+
+    const interaction = mockInteraction({
+      client: { on: vi.fn(), user: { id: "bot" } },
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({
+            id: "123",
+            author: { id: "bot" },
+            poll: {
+              allowMultiselect: false,
+              expiresTimestamp: Date.now() + 60_000,
+              answers,
+            },
+          })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "That poll was started by Spectreon and is already tracked.",
+        flags: expect.any(Number),
+      })
+    );
+  });
+
+  test("allows poll_id when bot poll was previously untracked", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const answers = new Map([
+      [0, { text: "A" }],
+      [1, { text: "B" }],
+    ]);
+
+    mockExecute.mockImplementation(async (sql) => {
+      if (String(sql).includes("poll_untracked")) {
+        return [[{ message_id: "123" }], []];
+      }
+      return [[], []];
+    });
+
+    const interaction = mockInteraction({
+      client: { on: vi.fn(), user: { id: "bot" } },
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({
+            id: "123",
+            author: { id: "bot" },
+            poll: {
+              allowMultiselect: false,
+              expiresTimestamp: Date.now() + 60_000,
+              answers,
+            },
+          })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("Using existing poll."),
         flags: expect.any(Number),
       })
     );
