@@ -80,7 +80,7 @@ export function registerPowerPlant(register) {
       );
     },
     "!powerplant — show TPPC power plant control",
-    { aliases: ["!pp"], category: "Info" }
+    { aliases: ["!pp"] }
   );
 }
 

@@ -334,7 +334,7 @@ export function registerViewbox(register) {
       );
     },
     "!viewbox — usage for viewing a trainer's box",
-    { hideFromHelp: true, category: "Info" }
+    { hideFromHelp: true }
   );
 
   register.component(VIEWBOX_CONFIRM_PREFIX, async ({ interaction }) => {

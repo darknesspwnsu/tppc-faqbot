@@ -21,8 +21,9 @@ The bot provides:
 
 * Trading utilities (IDs, FT/LF lists)
 * Rarity lookups and comparisons
-* Contest and RNG tooling
+* Contest and RNG tooling (reaction `choose` supports `winners=<n>`)
 * Interactive Discord games
+* RPG utilities (leaderboards, viewbox, power plant status)
 * Verification and moderation utilities
 * A dynamic, policy-aware help system
 

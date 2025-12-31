@@ -451,7 +451,7 @@ export function buildCommandRegistry({ client } = {}) {
   // Info registry must call helpModel(guildId) per-request (see info/helpbox.js).
   registerInfo(withCategory(register, "Info"), { helpModel });
   registerVerification(withCategory(register, "Info"));
-  registerRpg(withCategory(register, "Info"));
+  registerRpg(withCategory(register, "Rpg"));
   registerContests(withCategory(register, "Contests"));
   registerGames(withCategory(register, "Games"));
   registerToybox(withCategory(register, "Fun"));

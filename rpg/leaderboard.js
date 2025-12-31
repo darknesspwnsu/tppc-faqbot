@@ -774,7 +774,7 @@ export function registerLeaderboard(register) {
       await message.reply(appendCacheFootnote(body, res.updatedAt));
     },
     "!leaderboard <challenge> — show cached TPPC RPG leaderboard",
-    { aliases: ["!lb"], category: "Info" }
+    { aliases: ["!lb"] }
   );
 }
 

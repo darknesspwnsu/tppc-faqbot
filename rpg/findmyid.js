@@ -60,7 +60,7 @@ export function registerFindMyId(register) {
       await message.reply("Use `/findmyid name:<name>` to search for a trainer ID.");
     },
     "!findmyid — usage for the trainer ID lookup",
-    { hideFromHelp: true, category: "Info" }
+    { hideFromHelp: true }
   );
 
   register.slash(

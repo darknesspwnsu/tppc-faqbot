@@ -31,12 +31,13 @@ spam, or ambiguity.
 - Wiki lookups (local index, Cloudflare-safe)
 - FAQ system with fuzzy matching
 - Promo tracking (`!promo` / `!setpromo`)
+- RPG tools: leaderboards, power plant status, ID/box lookup
 
 ---
 
 ### 🎲 Contests
 - RNG tools: `roll`, `choose`, `elim`, `awesome`
-- Reaction-based contests
+- Reaction-based contests (`choose` supports `winners=<n>`, default 1)
 - Whispers (hidden phrases + optional prizes)
 - Reading & forum list helpers
 - Contest helpers reused by games where applicable
@@ -111,6 +112,7 @@ This prevents collisions with other bots **without breaking muscle memory**.
 ├── tools/                    # TPPC tools & promo system
 ├── trades/                   # FT / LF / ID commands
 ├── tools/rarity.js           # Rarity, comparisons, history
+├── rpg/                      # RPG utilities (leaderboards, power plant, viewbox)
 ├── contests/
 │   ├── contests.js           # Contest module registry
 │   ├── rng.js
@@ -133,7 +135,7 @@ This prevents collisions with other bots **without breaking muscle memory**.
 ├── shared/
 │   └── time_utils.js
 ├── shared/
-│   └── time_utils.js
+│   └── pokename_utils.js
 ├── data/
 │   ├── wiki_data.json
 │   └── privileged_users.json
