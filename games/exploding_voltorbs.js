@@ -20,6 +20,7 @@ import {
   createGameManager,
   withGameSubcommands,
   assignContestRoleForEntrants,
+  scheduleRoundCooldown,
 } from "./framework.js";
 import { getMentionedUsers, parseMentionToken, registerHelpAndRules } from "./helpers.js";
 import { isAdminOrPrivileged } from "../auth.js";
@@ -220,30 +221,31 @@ function scheduleExplosion(game) {
     // This prevents weird edge cases where lastHolderId points to someone already eliminated.
     live.lastHolderId = null;
 
-    await sendToStartChannel(
-      live,
-      `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
+    const channel = await getStartChannel(live);
+    await scheduleRoundCooldown({
+      state: live,
+      manager,
+      channel,
+      delayMs: cooloffMs,
+      message:
+        `💥 **BOOM!** <@${blownId}> was holding the Voltorb and got blown up!\n\n` +
         `${remainingLine}\n\n` +
-        `⏳ Next round in **${cooloffSec}s**...`
-    );
+        `⏳ Next round in **${cooloffSec}s**...`,
+      onStart: async (still) => {
+        // Round begins now
+        if (still.pendingHolderId) {
+          still.holderId = still.pendingHolderId;
+        } else {
+          // Fallback: should never happen, but stay safe
+          still.holderId = randChoiceFromSet(still.aliveIds);
+        }
+        still.pendingHolderId = null;
+        still.coolingOff = false;
 
-    live.timers.setTimeout(async () => {
-      const still = manager.getState({ guildId: live.guildId });
-      if (!still) return;
-
-      // Round begins now
-      if (still.pendingHolderId) {
-        still.holderId = still.pendingHolderId;
-      } else {
-        // Fallback: should never happen, but stay safe
-        still.holderId = randChoiceFromSet(still.aliveIds);
-      }
-      still.pendingHolderId = null;
-      still.coolingOff = false;
-
-      await sendToStartChannel(still, `🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
-      scheduleExplosion(still);
-    }, cooloffMs);
+        await sendToStartChannel(still, `🔄 Next up: <@${still.holderId}> is now holding the Voltorb!`);
+        scheduleExplosion(still);
+      },
+    });
   }, explodeDelayMs);
 }
 

@@ -16,6 +16,7 @@ import {
   mention,
   nowMs,
   requireSameChannel,
+  scheduleRoundCooldown,
   shuffleInPlace,
   withGameSubcommands,
 } from "./framework.js";
@@ -25,6 +26,7 @@ const manager = createGameManager({ id: "pokemon_unscramble", prettyName: "Pokem
 
 const DEFAULT_TIME_SEC = 20;
 const DEFAULT_JOIN_SEC = 15;
+const DEFAULT_ROUND_COOLDOWN_MS = 5000;
 
 const PENDING_MODAL = new Map(); // customId -> { guildId, channelId, hostId, opts }
 
@@ -197,11 +199,17 @@ async function finalizeRound(st, channel, winnerId) {
   }
 
   st.roundNumber += 1;
-  st.timers.setTimeout(async () => {
-    const live = manager.getState({ guildId: st.guildId });
-    if (!live) return;
-    await startRound(live, channel);
-  }, 2000);
+  const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
+  await scheduleRoundCooldown({
+    state: st,
+    manager,
+    channel,
+    delayMs: DEFAULT_ROUND_COOLDOWN_MS,
+    message: `⏳ Next round in **${cooldownSec} seconds**...`,
+    onStart: async (live) => {
+      await startRound(live, channel);
+    },
+  });
 }
 
 function buildStartState({ guildId, channelId, creatorId, players, timeLimitSec, roundsTarget, wordList, client }) {

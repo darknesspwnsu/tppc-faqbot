@@ -351,6 +351,37 @@ export class TimerBag {
   }
 }
 
+/**
+ * Generic cooldown helper for round-based games.
+ *
+ * Sends an optional message, then schedules the next-round callback
+ * using the game's TimerBag and manager to ensure cleanup safety.
+ */
+export async function scheduleRoundCooldown({
+  state,
+  manager,
+  channel,
+  delayMs,
+  message,
+  onStart,
+}) {
+  const ms = Math.max(0, Number(delayMs) || 0);
+  if (message && channel?.send) {
+    try {
+      await channel.send(message);
+    } catch {}
+  }
+
+  const timers = state?.timers;
+  if (!timers?.setTimeout) return;
+
+  timers.setTimeout(async () => {
+    const live = manager?.getState ? manager.getState({ guildId: state?.guildId }) : state;
+    if (!live) return;
+    if (onStart) await onStart(live, channel);
+  }, ms);
+}
+
 /* ------------------------------- safe editing ------------------------------ */
 
 /**
