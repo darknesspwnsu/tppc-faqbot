@@ -7,7 +7,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { RpgClient } from "./rpg_client.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
-import { normalizeKey } from "../tools/rarity.js";
+import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 
 const CHALLENGES = {
@@ -112,6 +112,23 @@ function parseTrainerCell(cell) {
   return { trainerId: m?.[1] || null, name };
 }
 
+function parseRanksTable(html, { minCells, parseRow }) {
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
+  const out = [];
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < minCells) continue;
+    const rank = getText(cells[0]);
+    if (isHeaderRank(rank)) continue;
+    const parsed = parseRow(cells);
+    if (parsed) out.push(parsed);
+  }
+  return out;
+}
+
 function parseSpeedTower(html) {
   const root = parse(normalizeHtml(html));
   const rows = root.querySelectorAll("tr");
@@ -135,46 +152,33 @@ function parseSpeedTower(html) {
 }
 
 function parseSsAnne(html) {
-  const root = parse(normalizeHtml(html));
-  const table = root.querySelector("table.ranks");
-  if (!table) return [];
-  const rows = table.querySelectorAll("tr");
-  const out = [];
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 4) continue;
-    const rank = getText(cells[0]);
-    if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseTrainerCell(cells[1]);
-    out.push({
-      rank,
-      trainer: name,
-      trainerId,
-      faction: getText(cells[2]),
-      wins: getText(cells[3]),
-    });
-  }
-  return out;
+  return parseRanksTable(html, {
+    minCells: 4,
+    parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
+      return {
+        rank: getText(cells[0]),
+        trainer: name,
+        trainerId,
+        faction: getText(cells[2]),
+        wins: getText(cells[3]),
+      };
+    },
+  });
 }
 
 function parseSafariZone(html) {
-  const root = parse(normalizeHtml(html));
-  const table = root.querySelector("table.ranks");
-  if (!table) return [];
-  const rows = table.querySelectorAll("tr");
-  const out = [];
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 4) continue;
-    if (isHeaderRank(getText(cells[0]))) continue;
-    out.push({
-      rank: getText(cells[0]),
-      trainer: getText(cells[1]),
-      pokemon: getText(cells[2]),
-      points: getText(cells[3]),
-    });
-  }
-  return out;
+  return parseRanksTable(html, {
+    minCells: 4,
+    parseRow(cells) {
+      return {
+        rank: getText(cells[0]),
+        trainer: getText(cells[1]),
+        pokemon: getText(cells[2]),
+        points: getText(cells[3]),
+      };
+    },
+  });
 }
 
 function parseRouletteTable(table, { includeDate } = {}) {
@@ -242,75 +246,54 @@ function parseRoulette(html) {
 }
 
 function parseTrainingChallenge(html) {
-  const root = parse(normalizeHtml(html));
-  const table = root.querySelector("table.ranks");
-  if (!table) return [];
-  const rows = table.querySelectorAll("tr");
-  const out = [];
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 5) continue;
-    const rank = getText(cells[0]);
-    if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseTrainerCell(cells[1]);
-    out.push({
-      rank,
-      trainer: name,
-      trainerId,
-      pokemon: getText(cells[2]),
-      level: getText(cells[3]),
-      number: getText(cells[4]),
-    });
-  }
-  return out;
+  return parseRanksTable(html, {
+    minCells: 5,
+    parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
+      return {
+        rank: getText(cells[0]),
+        trainer: name,
+        trainerId,
+        pokemon: getText(cells[2]),
+        level: getText(cells[3]),
+        number: getText(cells[4]),
+      };
+    },
+  });
 }
 
 function parseTrainerRanks(html) {
-  const root = parse(normalizeHtml(html));
-  const table = root.querySelector("table.ranks");
-  if (!table) return [];
-  const rows = table.querySelectorAll("tr");
-  const out = [];
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 5) continue;
-    const rank = getText(cells[0]);
-    if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseTrainerCell(cells[1]);
-    out.push({
-      rank,
-      trainer: name,
-      trainerId,
-      faction: getText(cells[2]),
-      level: getText(cells[3]),
-      number: getText(cells[4]),
-    });
-  }
-  return out;
+  return parseRanksTable(html, {
+    minCells: 5,
+    parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
+      return {
+        rank: getText(cells[0]),
+        trainer: name,
+        trainerId,
+        faction: getText(cells[2]),
+        level: getText(cells[3]),
+        number: getText(cells[4]),
+      };
+    },
+  });
 }
 
 function parsePokemonRanks(html) {
-  const root = parse(normalizeHtml(html));
-  const table = root.querySelector("table.ranks");
-  if (!table) return [];
-  const rows = table.querySelectorAll("tr");
-  const out = [];
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 5) continue;
-    const rank = getText(cells[0]);
-    if (isHeaderRank(rank)) continue;
-    const { trainerId, name } = parseTrainerCell(cells[1]);
-    out.push({
-      rank,
-      trainer: name,
-      trainerId,
-      pokemon: getText(cells[2]),
-      level: getText(cells[3]),
-      number: getText(cells[4]),
-    });
-  }
-  return out;
+  return parseRanksTable(html, {
+    minCells: 5,
+    parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
+      return {
+        rank: getText(cells[0]),
+        trainer: name,
+        trainerId,
+        pokemon: getText(cells[2]),
+        level: getText(cells[3]),
+        number: getText(cells[4]),
+      };
+    },
+  });
 }
 
 function parsePokemonPageCount(html) {

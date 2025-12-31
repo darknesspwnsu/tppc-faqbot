@@ -10,7 +10,7 @@ import {
   normalizeKey,
   normalizeQueryVariants,
   queryVariantPrefix,
-} from "../tools/rarity.js";
+} from "../shared/pokename_utils.js";
 
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
 
@@ -47,17 +47,17 @@ function parsePokemonQuery(raw) {
     return { base, variant };
   }
 
-  const mStuck = lower.match(/^([sdg])([a-z0-9].+)$/);
-  if (mStuck) {
-    variant = variant || (mStuck[1] === "s" ? "shiny" : mStuck[1] === "d" ? "dark" : "golden");
-    base = q.slice(1).trim();
-    return { base, variant };
-  }
-
   const mPrefix = lower.match(/^(shiny|dark|golden)([a-z0-9].+)$/);
   if (mPrefix) {
     variant = variant || mPrefix[1];
     base = q.slice(mPrefix[1].length).trim();
+    return { base, variant };
+  }
+
+  const mStuck = lower.match(/^([sdg])([a-z0-9].+)$/);
+  if (mStuck) {
+    variant = variant || (mStuck[1] === "s" ? "shiny" : mStuck[1] === "d" ? "dark" : "golden");
+    base = q.slice(1).trim();
     return { base, variant };
   }
 

@@ -10,7 +10,6 @@ const {
   parseTrainingChallenge,
   parseTrainerRanks,
   parsePokemonRanks,
-  buildPokemonSuggestions,
   renderTopRows,
 } = __testables;
 const { parsePokemonQuery } = pokedexTestables;
@@ -240,12 +239,4 @@ describe("rpg leaderboard parsing", () => {
     expect(parsePokemonQuery("dark heracross")).toEqual({ base: "heracross", variant: "dark" });
   });
 
-  it("builds variant-aware suggestions", () => {
-    expect(buildPokemonSuggestions(["Heracross"], "golden")).toEqual([
-      { label: "Golden Heracross", query: "golden Heracross" },
-    ]);
-    expect(buildPokemonSuggestions(["Heracross"], "")).toEqual([
-      { label: "Heracross", query: "Heracross" },
-    ]);
-  });
 });

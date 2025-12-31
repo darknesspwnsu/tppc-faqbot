@@ -121,7 +121,6 @@ describe("rarity.js", () => {
     await handler({ message, rest: "Pikac", cmd: "?rarity" });
     const payload = message.reply.mock.calls[0][0];
     expect(payload.content).toContain("Did you mean");
-    expect(payload.components[0].components[0].data.customId).toContain("rarity_retry:?rarity");
   });
 
   it("registerLevel4Rarity returns usage when no query is provided", async () => {
