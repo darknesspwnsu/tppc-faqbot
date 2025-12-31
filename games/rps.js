@@ -17,7 +17,7 @@ import {
 
 const manager = createGameManager({ id: "rps", prettyName: "RPS", scope: "guild" });
 const CHOICES = ["rock", "paper", "scissors"];
-const DEFAULT_ROUND_COOLDOWN_MS = 3000;
+const DEFAULT_ROUND_COOLDOWN_MS = 5000;
 
 function rpsHelp() {
   return [
@@ -65,6 +65,34 @@ const pretty = (c) => (c === "rock" ? "Rock" : c === "paper" ? "Paper" : "Scisso
 const fmtSeconds = (ms) => `${Math.ceil(ms / 1000)}s`;
 const msLeft = (st) => Math.max(0, (st.deadlineMs || 0) - Date.now());
 const tag = (id) => `<@${id}>`;
+function getEphemeralMap(st) {
+  if (!st._ephemeralByUser) st._ephemeralByUser = new Map();
+  return st._ephemeralByUser;
+}
+
+async function clearEphemeralForUser(st, userId) {
+  const map = getEphemeralMap(st);
+  const interaction = map.get(userId);
+  if (interaction?.deleteReply) {
+    await interaction.deleteReply().catch(() => {});
+  }
+  map.delete(userId);
+}
+
+async function replyEphemeral(interaction, st, content) {
+  const userId = interaction.user?.id;
+  if (userId) await clearEphemeralForUser(st, userId);
+
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ content }).catch(async () => {
+      await interaction.followUp({ content, ephemeral: true }).catch(() => {});
+    });
+  } else {
+    await interaction.reply({ content, ephemeral: true });
+  }
+
+  if (userId) getEphemeralMap(st).set(userId, interaction);
+}
 
 function mkButtons(disabled = false) {
   return new ActionRowBuilder().addComponents(
@@ -152,11 +180,32 @@ function scheduleTimers(st, board) {
     if (!p1Missing && !p2Missing) return;
 
     if (live.mode === "pvp" && p1Missing && p2Missing) {
-      resetRound(live);
-      scheduleTimers(live, board);
+      const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
       await board.update({
-        content: buildStatusText(live) + "\n\n⏱️ Both players missed the timer — round restarted.",
-        components: [mkButtons(false)],
+        content: [
+          "⏱️ **Round missed**",
+          headerLine(live),
+          scoreLine(live),
+          "",
+          "Both players missed the timer.",
+          "",
+          `⏳ Next round in **${cooldownSec} seconds**...`,
+        ].join("\n"),
+        components: [mkButtons(true)],
+      });
+
+      await scheduleRoundCooldown({
+        state: live,
+        manager,
+        channel: board,
+        delayMs: DEFAULT_ROUND_COOLDOWN_MS,
+        onStart: async (still) => {
+          resetRound(still);
+          await clearEphemeralForUser(still, still.p1Id);
+          if (still.mode === "pvp") await clearEphemeralForUser(still, still.p2Id);
+          scheduleTimers(still, board);
+          await board.update({ content: buildStatusText(still), components: [mkButtons(false)] });
+        },
       });
       return;
     }
@@ -188,7 +237,7 @@ function scheduleTimers(st, board) {
       return;
     }
 
-    resetRound(live);
+    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
     await board.update({
       content: [
         "⏱️ **Round forfeited**",
@@ -197,19 +246,20 @@ function scheduleTimers(st, board) {
         "",
         `${loserName} did not pick in time — ${winnerName} wins this round.`,
         "",
-        buildStatusText(live),
+        `⏳ Next round in **${cooldownSec} seconds**...`,
       ].join("\n"),
-      components: [mkButtons(false)],
+      components: [mkButtons(true)],
     });
 
-    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
     await scheduleRoundCooldown({
       state: live,
       manager,
       channel: board,
       delayMs: DEFAULT_ROUND_COOLDOWN_MS,
-      message: `⏳ Next round in **${cooldownSec} seconds**...`,
       onStart: async (still) => {
+        resetRound(still);
+        await clearEphemeralForUser(still, still.p1Id);
+        if (still.mode === "pvp") await clearEphemeralForUser(still, still.p2Id);
         scheduleTimers(still, board);
         await board.update({ content: buildStatusText(still), components: [mkButtons(false)] });
       },
@@ -227,28 +277,29 @@ async function resolveIfReady(st, board) {
   const result = outcome(p1, p2);
 
   if (result === 0) {
-    resetRound(st);
+    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
     await board.update({
       content: [
-        "🤝 **Tie!** Round restarted.",
+        "🤝 **Tie!**",
         headerLine(st),
         scoreLine(st),
         "",
         `Both chose **${pretty(p1)}**.`,
         "",
-        buildStatusText(st),
+        `⏳ Next round in **${cooldownSec} seconds**...`,
       ].join("\n"),
-      components: [mkButtons(false)],
+      components: [mkButtons(true)],
     });
 
-    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
     await scheduleRoundCooldown({
       state: st,
       manager,
       channel: board,
       delayMs: DEFAULT_ROUND_COOLDOWN_MS,
-      message: `⏳ Next round in **${cooldownSec} seconds**...`,
       onStart: async (live) => {
+        resetRound(live);
+        await clearEphemeralForUser(live, live.p1Id);
+        if (live.mode === "pvp") await clearEphemeralForUser(live, live.p2Id);
         scheduleTimers(live, board);
         await board.update({ content: buildStatusText(live), components: [mkButtons(false)] });
       },
@@ -282,7 +333,7 @@ async function resolveIfReady(st, board) {
     return;
   }
 
-  resetRound(st);
+  const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
   await board.update({
     content: [
       "✅ **Round resolved**",
@@ -292,19 +343,20 @@ async function resolveIfReady(st, board) {
       `Reveal: ${tag(st.p1Id)} chose **${pretty(p1)}** — ${p2Name} chose **${pretty(p2)}**`,
       `Winner: ${winner}  |  Loser: ${loser}`,
       "",
-      buildStatusText(st),
+      `⏳ Next round in **${cooldownSec} seconds**...`,
     ].join("\n"),
-    components: [mkButtons(false)],
+    components: [mkButtons(true)],
   });
 
-  const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
   await scheduleRoundCooldown({
     state: st,
     manager,
     channel: board,
     delayMs: DEFAULT_ROUND_COOLDOWN_MS,
-    message: `⏳ Next round in **${cooldownSec} seconds**...`,
     onStart: async (live) => {
+      resetRound(live);
+      await clearEphemeralForUser(live, live.p1Id);
+      if (live.mode === "pvp") await clearEphemeralForUser(live, live.p2Id);
       scheduleTimers(live, board);
       await board.update({ content: buildStatusText(live), components: [mkButtons(false)] });
     },
@@ -445,9 +497,7 @@ export function registerRPS(register) {
     const isP1 = uid === st.p1Id;
     const isP2 = st.mode === "pvp" && uid === st.p2Id;
     if (!isP1 && !isP2) {
-      try {
-        await interaction.reply({ content: "Only the players in this match can use these buttons.", ephemeral: true });
-      } catch {}
+      await replyEphemeral(interaction, st, "Only the players in this match can use these buttons.");
       return;
     }
 
@@ -455,18 +505,14 @@ export function registerRPS(register) {
     const pick =
       cid === "rps:rock" ? "rock" : cid === "rps:paper" ? "paper" : cid === "rps:scissors" ? "scissors" : null;
     if (!pick) {
-      try {
-        await interaction.reply({ content: "Unknown choice.", ephemeral: true });
-      } catch {}
+      await replyEphemeral(interaction, st, "Unknown choice.");
       return;
     }
 
     if (isP1) st.p1Choice = pick;
     else st.p2Choice = pick;
 
-    try {
-      await interaction.reply({ content: `✅ Choice locked in: **${pretty(pick)}**`, ephemeral: true });
-    } catch {}
+    await replyEphemeral(interaction, st, `✅ Choice locked in: **${pretty(pick)}**`);
 
     await board.update({ content: buildStatusText(st), components: [mkButtons(false)] });
     await resolveIfReady(st, board);
