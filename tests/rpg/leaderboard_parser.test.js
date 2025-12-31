@@ -225,6 +225,13 @@ describe("rpg leaderboard parsing", () => {
     });
   });
 
+  it("parses pokemon page count", () => {
+    const html = `
+      <div class="pagination">Page 1 of 7</div>
+    `;
+    expect(__testables.parsePokemonPageCount(html)).toBe(7);
+  });
+
   it("parses pokemon queries with variants", () => {
     expect(parsePokemonQuery("g.heracross")).toEqual({ base: "heracross", variant: "golden" });
     expect(parsePokemonQuery("goldenheracross")).toEqual({ base: "heracross", variant: "golden" });

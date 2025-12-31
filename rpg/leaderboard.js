@@ -54,7 +54,10 @@ const CHALLENGES = {
   },
 };
 
-const POKEMON_TTL_MS = 5 * 60_000;
+const POKEMON_TTL_MS = 24 * 60 * 60_000;
+const POKEMON_REFRESH_ET = { hour: 6, minute: 5 };
+
+const pokemonCache = new Map(); // lookupKey -> { rows, updatedAtMs }
 
 const ALIASES = new Map([
   ["ssanne", "ssanne"],
@@ -309,6 +312,15 @@ function parsePokemonRanks(html) {
   return out;
 }
 
+function parsePokemonPageCount(html) {
+  const root = parse(String(html || ""));
+  const text = getText(root);
+  const m = /Page\s+1\s+of\s+(\d+)/i.exec(text);
+  if (!m) return 1;
+  const count = Number(m[1]);
+  return Number.isFinite(count) && count > 0 ? count : 1;
+}
+
 function renderTopRows(challengeKey, rows, limit = 5) {
   const out = [];
   const top = rows.filter((row) => !isHeaderRow(row)).slice(0, limit);
@@ -374,18 +386,90 @@ async function getCachedOrFetch(challengeKey, client) {
 }
 
 async function getCachedPokemon({ cacheKey, lookupKey, client }) {
-  const cached = await getLeaderboard({ challenge: cacheKey });
+  const cachedMem = pokemonCache.get(lookupKey);
   const now = Date.now();
+  const staleMem = !cachedMem?.updatedAtMs || now - cachedMem.updatedAtMs > POKEMON_TTL_MS;
+  if (cachedMem && !staleMem) return cachedMem.rows || [];
+
+  const cached = await getLeaderboard({ challenge: cacheKey });
   const stale = !cached?.updatedAt || now - cached.updatedAt > POKEMON_TTL_MS;
   if (!cached || stale || !cached.payload?.rows?.length) {
-    const html = await client.fetchPage(
-      `https://www.tppcrpg.net/ranks_individual.php?f=${encodeURIComponent(lookupKey)}`
-    );
-    const rows = parsePokemonRanks(html);
+    const rows = await fetchPokemonPages({ lookupKey, client });
     await upsertLeaderboard({ challenge: cacheKey, payload: { rows } });
+    pokemonCache.set(lookupKey, { rows, updatedAtMs: Date.now() });
     return rows;
   }
-  return cached.payload.rows || [];
+  const rows = cached.payload.rows || [];
+  pokemonCache.set(lookupKey, { rows, updatedAtMs: cached.updatedAt || Date.now() });
+  return rows;
+}
+
+async function fetchPokemonPages({ lookupKey, client }) {
+  const firstUrl = `https://www.tppcrpg.net/ranks_individual.php?p=1&f=${encodeURIComponent(lookupKey)}`;
+  const firstHtml = await client.fetchPage(firstUrl);
+  const totalPages = parsePokemonPageCount(firstHtml);
+  const rows = [...parsePokemonRanks(firstHtml)];
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    const url = `https://www.tppcrpg.net/ranks_individual.php?p=${page}&f=${encodeURIComponent(lookupKey)}`;
+    const html = await client.fetchPage(url);
+    rows.push(...parsePokemonRanks(html));
+  }
+
+  return rows;
+}
+
+function schedulePokemonCacheRefresh(client) {
+  let lastRefreshKey = null;
+
+  function getEtDateKey() {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }
+
+  function getEtTimeParts() {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === "hour")?.value);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value);
+    return { hour, minute };
+  }
+
+  async function refreshAll() {
+    for (const lookupKey of pokemonCache.keys()) {
+      try {
+        const rows = await fetchPokemonPages({ lookupKey, client });
+        pokemonCache.set(lookupKey, { rows, updatedAtMs: Date.now() });
+        const cacheKey = `pokemon:${lookupKey}`;
+        await upsertLeaderboard({ challenge: cacheKey, payload: { rows } });
+      } catch (err) {
+        console.error(`[rpg] pokemon leaderboard refresh failed for ${lookupKey}:`, err);
+      }
+    }
+  }
+
+  async function tick() {
+    const { hour, minute } = getEtTimeParts();
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return;
+    if (hour < POKEMON_REFRESH_ET.hour) return;
+    if (hour === POKEMON_REFRESH_ET.hour && minute < POKEMON_REFRESH_ET.minute) return;
+
+    const dateKey = getEtDateKey();
+    if (lastRefreshKey === dateKey) return;
+    lastRefreshKey = dateKey;
+    await refreshAll();
+  }
+
+  tick();
+  setInterval(tick, 10 * 60_000);
 }
 
 function scheduleTrainingChallenge(client) {
@@ -432,6 +516,7 @@ function scheduleTrainingChallenge(client) {
 export function registerLeaderboard(register) {
   const client = new RpgClient();
   scheduleTrainingChallenge(client);
+  schedulePokemonCacheRefresh(client);
 
   register(
     "!leaderboard",
@@ -593,5 +678,6 @@ export const __testables = {
   parseTrainingChallenge,
   parseTrainerRanks,
   parsePokemonRanks,
+  parsePokemonPageCount,
   renderTopRows,
 };
