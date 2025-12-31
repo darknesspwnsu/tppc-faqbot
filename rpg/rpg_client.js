@@ -146,8 +146,29 @@ export class RpgClient {
   async fetchPage(pathOrUrl) {
     await this.login();
     const res = await this._fetch(pathOrUrl, { method: "GET" });
-    if (!res.ok) throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
-    return await res.text();
+    if (res.ok) return await res.text();
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers?.get?.("location");
+      if (location && /login\.php/i.test(location)) {
+        await this.login({ force: true });
+        const retry = await this._fetch(pathOrUrl, { method: "GET" });
+        if (!retry.ok) {
+          throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+        }
+        return await retry.text();
+      }
+
+      if (location) {
+        const next = await this._fetch(location, { method: "GET" });
+        if (!next.ok) {
+          throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
+        }
+        return await next.text();
+      }
+    }
+
+    throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
 }
 
