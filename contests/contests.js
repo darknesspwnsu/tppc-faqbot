@@ -8,6 +8,7 @@ import { registerReactionContests } from "./reaction_contests.js";
 import { registerWhispers } from "./whispers.js";
 import { registerReading } from "./reading.js";
 import { registerForumList } from "./get_forum_list.js";
+import { registerPollContest } from "./pollcontest.js";
 
 const CONTEST_MODULES = [
   { id: "rng", register: registerRng },
@@ -15,6 +16,7 @@ const CONTEST_MODULES = [
   { id: "whispers", register: registerWhispers },
   { id: "reading", register: registerReading },
   { id: "forum_list", register: registerForumList },
+  { id: "pollcontest", register: registerPollContest },
 ];
 
 export function registerContests(register) {

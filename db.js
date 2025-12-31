@@ -78,6 +78,21 @@ export async function initDb() {
       PRIMARY KEY (challenge)
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS poll_contests (
+      message_id VARCHAR(32) NOT NULL,
+      guild_id   VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      owner_id   VARCHAR(32) NOT NULL,
+      ends_at_ms BIGINT UNSIGNED NOT NULL,
+      run_choose TINYINT(1) NOT NULL,
+      get_lists  TINYINT(1) NOT NULL,
+      winners_only TINYINT(1) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id)
+    )
+  `);
 }
 
 /**
@@ -143,4 +158,3 @@ export async function deleteUserText({ guildId, userId, kind }) {
     [String(guildId), String(userId), String(kind)]
   );
 }
-
