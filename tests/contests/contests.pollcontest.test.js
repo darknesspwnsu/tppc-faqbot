@@ -264,4 +264,43 @@ describe("pollcontest validation", () => {
       })
     );
   });
+
+  test("allows ended poll_id and shows ended note", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const answers = new Map([
+      [0, { text: "A" }],
+      [1, { text: "B" }],
+    ]);
+
+    const interaction = mockInteraction({
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({
+            id: "123",
+            author: { id: "other" },
+            poll: {
+              allowMultiselect: false,
+              expiresTimestamp: Date.now() - 1000,
+              answers,
+            },
+          })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("already ended"),
+        flags: expect.any(Number),
+      })
+    );
+  });
 });

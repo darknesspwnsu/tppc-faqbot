@@ -358,6 +358,10 @@ async function processPoll(messageId) {
     }
     message = await channel.messages.fetch(record.messageId);
   } catch (err) {
+    if (err?.code === 10008 || err?.status === 404) {
+      await deletePollRecord(messageId);
+      return;
+    }
     console.error("[pollcontest] failed to fetch poll message:", err);
     await deletePollRecord(messageId);
     return;
@@ -622,13 +626,7 @@ export function registerPollContest(register) {
           return;
         }
 
-        if (endsAtMs <= Date.now()) {
-          await interaction.reply({
-            content: "That poll has already ended.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
+        const pollEnded = endsAtMs <= Date.now();
 
         if (activePolls.has(messageId)) {
           await interaction.reply({
@@ -668,11 +666,15 @@ export function registerPollContest(register) {
           channelId: interaction.channelId,
           pollMessageId: messageId,
           pollEndsAtMs: endsAtMs,
+          pollEnded,
         });
 
         const config = { ...getPendingConfig(token), token };
         await interaction.reply({
-          ...buildConfigView(config, "Using existing poll."),
+          ...buildConfigView(
+            config,
+            pollEnded ? "Using existing poll (already ended)." : "Using existing poll."
+          ),
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -888,17 +890,23 @@ export function registerPollContest(register) {
         schedulePoll(record);
         clearPendingConfig(token);
 
-        try {
-          await interaction.channel.send(
-            `⏰ Bot will end this poll at ${formatDiscordTimestamp(endsAtMs)}.`
-          );
-        } catch (err) {
-          console.error("[pollcontest] failed to send poll end note:", err);
+        if (config.pollMessageId && config.pollEndsAtMs <= Date.now()) {
+          await processPoll(messageId);
+        } else {
+          try {
+            await interaction.channel.send(
+              `⏰ Bot will end this poll at ${formatDiscordTimestamp(endsAtMs)}.`
+            );
+          } catch (err) {
+            console.error("[pollcontest] failed to send poll end note:", err);
+          }
         }
 
         const view = buildConfigDisabledView(
           { ...config, token },
-          `✅ Poll started. Bot will end this poll at ${formatDiscordTimestamp(endsAtMs)}.`
+          config.pollMessageId && config.pollEndsAtMs <= Date.now()
+            ? "✅ Poll started. Processing results now."
+            : `✅ Poll started. Bot will end this poll at ${formatDiscordTimestamp(endsAtMs)}.`
         );
         await interaction.update(view);
       } catch (err) {
