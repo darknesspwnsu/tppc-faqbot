@@ -588,6 +588,8 @@ function scheduleTrainingChallenge(client) {
 }
 
 export function registerLeaderboard(register) {
+  const primaryCmd = "!ld";
+  const aliasCmd = "?leaderboard";
   const hasCreds = Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
   let client = null;
   const getClient = () => {
@@ -602,11 +604,11 @@ export function registerLeaderboard(register) {
   }
 
   register(
-    "!leaderboard",
+    primaryCmd,
     async ({ message, rest }) => {
       if (!message.guildId) return;
       if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-        console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for !leaderboard");
+        console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${primaryCmd}`);
         await message.reply("❌ RPG leaderboard credentials are not configured.");
         return;
       }
@@ -620,13 +622,13 @@ export function registerLeaderboard(register) {
         await message.reply(
           [
             "**Leaderboard options:**",
-            "• `!leaderboard ssanne` — SS Anne standings",
-            "• `!leaderboard safarizone` — Safari Zone standings",
-            "• `!leaderboard tc` — Training Challenge standings",
-            "• `!leaderboard roulette [weekly]` — Battle Roulette standings",
-            "• `!leaderboard speedtower` — Speed Tower standings",
-            "• `!leaderboard trainers [1-20]` — Top trainers by level",
-            "• `!leaderboard pokemon|poke <name> [1-20]` — Top trainers for a Pokemon",
+            `• \`${primaryCmd} ssanne\` — SS Anne standings`,
+            `• \`${primaryCmd} safarizone\` — Safari Zone standings`,
+            `• \`${primaryCmd} tc\` — Training Challenge standings`,
+            `• \`${primaryCmd} roulette [weekly]\` — Battle Roulette standings`,
+            `• \`${primaryCmd} speedtower\` — Speed Tower standings`,
+            `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
+            `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
           ].join("\n")
         );
         return;
@@ -671,7 +673,7 @@ export function registerLeaderboard(register) {
         const nameTokens = parts.slice(1, hasCount ? -1 : undefined);
         const nameRaw = nameTokens.join(" ").trim();
         if (!nameRaw) {
-          await message.reply("Usage: `!leaderboard pokemon|poke <name> [1-20]`");
+          await message.reply(`Usage: \`${primaryCmd} pokemon|poke <name> [1-20]\``);
           return;
         }
 
@@ -738,7 +740,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
         );
         return;
       }
@@ -747,13 +749,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]`"
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
         );
         return;
       }
@@ -775,8 +777,8 @@ export function registerLeaderboard(register) {
         lines.join("\n");
       await message.reply(appendCacheFootnote(body, res.updatedAt));
     },
-    "!leaderboard <challenge> — show cached TPPC RPG leaderboard",
-    { aliases: ["!lb"] }
+    `${primaryCmd} <challenge> — show cached TPPC RPG leaderboard`,
+    { aliases: [aliasCmd] }
   );
 }
 
@@ -789,7 +791,7 @@ export async function handleLeaderboardInteraction(interaction) {
   const rest = decodeURIComponent(id.slice("lb_retry:".length));
   await disableInteractionButtons(interaction);
 
-  return { cmd: "!leaderboard", rest };
+  return { cmd: "!ld", rest };
 }
 
 export const __testables = {
