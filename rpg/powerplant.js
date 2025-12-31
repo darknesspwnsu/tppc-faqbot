@@ -52,7 +52,11 @@ async function getCachedOrFetch(client) {
 }
 
 export function registerPowerPlant(register) {
-  const client = new RpgClient();
+  let client = null;
+  const getClient = () => {
+    if (!client) client = new RpgClient();
+    return client;
+  };
 
   register(
     "!powerplant",
@@ -64,7 +68,7 @@ export function registerPowerPlant(register) {
         return;
       }
 
-      const res = await getCachedOrFetch(client);
+      const res = await getCachedOrFetch(getClient());
       const team = res?.controller;
       if (!team) {
         await message.reply("No power plant controller data found.");

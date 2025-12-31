@@ -558,9 +558,18 @@ function scheduleTrainingChallenge(client) {
 }
 
 export function registerLeaderboard(register) {
-  const client = new RpgClient();
-  scheduleTrainingChallenge(client);
-  schedulePokemonCacheRefresh(client);
+  const hasCreds = Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
+  let client = null;
+  const getClient = () => {
+    if (!client) client = new RpgClient();
+    return client;
+  };
+
+  if (hasCreds) {
+    const initClient = getClient();
+    scheduleTrainingChallenge(initClient);
+    schedulePokemonCacheRefresh(initClient);
+  }
 
   register(
     "!leaderboard",
@@ -600,7 +609,7 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        const res = await getCachedOrFetch("trainers", client);
+        const res = await getCachedOrFetch("trainers", getClient());
         if (!res) {
           await message.reply("❌ Unknown challenge.");
           return;
@@ -651,7 +660,7 @@ export function registerLeaderboard(register) {
         }
 
         const cacheKey = `pokemon:${entry.key}`;
-        let rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client });
+        let rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client: getClient() });
         if (variant) {
           const prefix = normalizeKey(variant);
           const baseNorm = normalizeKey(entry.name);
@@ -698,7 +707,7 @@ export function registerLeaderboard(register) {
         return;
       }
 
-      const res = await getCachedOrFetch(key, client);
+      const res = await getCachedOrFetch(key, getClient());
       if (!res) {
         await message.reply("❌ Unknown challenge.");
         return;
