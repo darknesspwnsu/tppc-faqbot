@@ -7,6 +7,7 @@ const {
   parseSpeedTower,
   parseRoulette,
   parseTrainingChallenge,
+  parseTrainerRanks,
   renderTopRows,
 } = __testables;
 
@@ -163,5 +164,40 @@ describe("rpg leaderboard parsing", () => {
       },
     ]);
     expect(lines[0]).toBe("Today's #1 — the infinity stones (Team TPPC) • 45 • 00:40");
+  });
+
+  it("parses trainer ranks", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr><th>Rank</th><th>Trainer Name</th><th>Faction</th><th>Level</th><th>Number</th></tr>
+          <tr class="r1 TeamGalactic"><td>1</td><td><a href="profile.php?id=3476575">GratzMatt Gym</a></td><td>Team Galactic</td><td>22,207</td><td><a href="battle.php?Battle=Trainer&Trainer=3476575">3476575</a></td></tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parseTrainerRanks(html);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      rank: "1",
+      trainer: "GratzMatt Gym",
+      trainerId: "3476575",
+      faction: "Team Galactic",
+      level: "22,207",
+      number: "3476575",
+    });
+  });
+
+  it("renders top rows for trainer ranks", () => {
+    const lines = renderTopRows("trainers", [
+      {
+        rank: "1",
+        trainer: "GratzMatt Gym",
+        trainerId: "3476575",
+        faction: "Team Galactic",
+        level: "22,207",
+        number: "3476575",
+      },
+    ], 10);
+    expect(lines[0]).toBe("#1 — GratzMatt Gym (Team Galactic) • Lv 22,207 • ID 3476575");
   });
 });

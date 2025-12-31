@@ -44,6 +44,12 @@ const CHALLENGES = {
     url: "https://www.tppcrpg.net/roulette.php",
     ttlMs: 5 * 60_000,
   },
+  trainers: {
+    key: "trainers",
+    name: "Top Trainers",
+    url: "https://www.tppcrpg.net/ranks_team.php",
+    ttlMs: 5 * 60_000,
+  },
 };
 
 const ALIASES = new Map([
@@ -251,9 +257,33 @@ function parseTrainingChallenge(html) {
   return out;
 }
 
-function renderTopRows(challengeKey, rows) {
+function parseTrainerRanks(html) {
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
   const out = [];
-  const top = rows.filter((row) => !isHeaderRow(row)).slice(0, 5);
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < 5) continue;
+    const rank = getText(cells[0]);
+    if (isHeaderRank(rank)) continue;
+    const { trainerId, name } = parseTrainerCell(cells[1]);
+    out.push({
+      rank,
+      trainer: name,
+      trainerId,
+      faction: getText(cells[2]),
+      level: getText(cells[3]),
+      number: getText(cells[4]),
+    });
+  }
+  return out;
+}
+
+function renderTopRows(challengeKey, rows, limit = 5) {
+  const out = [];
+  const top = rows.filter((row) => !isHeaderRow(row)).slice(0, limit);
   for (const row of top) {
     if (challengeKey === "speedtower") {
       out.push(
@@ -271,6 +301,10 @@ function renderTopRows(challengeKey, rows) {
       out.push(
         `#${row.rank} — ${row.trainer} • ${row.pokemon} Lv${row.level} • ID ${row.number}`
       );
+    } else if (challengeKey === "trainers") {
+      out.push(
+        `#${row.rank} — ${row.trainer} (${row.faction}) • Lv ${row.level} • ID ${row.number}`
+      );
     }
   }
   return out;
@@ -285,6 +319,7 @@ async function fetchAndStore(challenge, client) {
   else if (challenge.key === "roulette") rows = parseRoulette(html).daily;
   else if (challenge.key === "roulette_weekly") rows = parseRoulette(html).weekly;
   else if (challenge.key === "tc") rows = parseTrainingChallenge(html);
+  else if (challenge.key === "trainers") rows = parseTrainerRanks(html);
   await upsertLeaderboard({ challenge: challenge.key, payload: { rows } });
   return rows;
 }
@@ -363,10 +398,54 @@ export function registerLeaderboard(register) {
 
       const raw = String(rest || "").trim().toLowerCase();
       const parts = raw.split(/\s+/).filter(Boolean);
-      const baseKey = ALIASES.get(parts[0] || "");
+      const sub = parts[0] || "";
+
+      if (!sub || sub === "help") {
+        await message.reply(
+          [
+            "**Leaderboard options:**",
+            "• `!leaderboard ssanne` — SS Anne standings",
+            "• `!leaderboard safarizone` — Safari Zone standings",
+            "• `!leaderboard tc` — Training Challenge standings",
+            "• `!leaderboard roulette [weekly]` — Battle Roulette standings",
+            "• `!leaderboard speedtower` — Speed Tower standings",
+            "• `!leaderboard trainers [1-20]` — Top trainers by level",
+          ].join("\n")
+        );
+        return;
+      }
+
+      if (sub === "trainers") {
+        const countRaw = parts[1] || "";
+        const count = countRaw ? Number(countRaw) : 5;
+        if (!Number.isInteger(count) || count < 1 || count > 20) {
+          await message.reply("❌ `num_trainers` must be an integer between 1 and 20.");
+          return;
+        }
+
+        const res = await getCachedOrFetch("trainers", client);
+        if (!res) {
+          await message.reply("❌ Unknown challenge.");
+          return;
+        }
+
+        const lines = renderTopRows("trainers", res.rows || [], count);
+        if (!lines.length) {
+          await message.reply(`No leaderboard entries found for ${res.challenge.name}.`);
+          return;
+        }
+
+        await message.reply(
+          `🏆 **${res.challenge.name}** (top ${Math.min(count, lines.length)})\n` +
+            lines.join("\n")
+        );
+        return;
+      }
+
+      const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
         );
         return;
       }
@@ -375,13 +454,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
         );
         return;
       }
@@ -392,7 +471,7 @@ export function registerLeaderboard(register) {
         return;
       }
 
-      const lines = renderTopRows(res.challenge.key, res.rows || []);
+      const lines = renderTopRows(res.challenge.key, res.rows || [], 5);
       if (!lines.length) {
         await message.reply(`No leaderboard entries found for ${res.challenge.name}.`);
         return;
@@ -414,5 +493,6 @@ export const __testables = {
   parseSpeedTower,
   parseRoulette,
   parseTrainingChallenge,
+  parseTrainerRanks,
   renderTopRows,
 };
