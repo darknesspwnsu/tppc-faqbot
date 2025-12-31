@@ -4,6 +4,9 @@ const dbMocks = vi.hoisted(() => ({
   getSavedId: vi.fn(),
   setSavedId: vi.fn(),
   deleteSavedId: vi.fn(),
+  getUserText: vi.fn(),
+  setUserText: vi.fn(),
+  deleteUserText: vi.fn(),
 }));
 
 vi.mock("../../db.js", () => dbMocks);
@@ -52,12 +55,20 @@ function makeInteraction({
   value = null,
   user = null,
   usersText = "",
+  label = "",
+  target = "",
 } = {}) {
   return {
     guildId,
     user: { id: userId },
     options: {
-      getString: (key) => (key === "action" ? action : key === "users" ? usersText : null),
+      getString: (key) => {
+        if (key === "action") return action;
+        if (key === "users") return usersText;
+        if (key === "label") return label;
+        if (key === "target") return target;
+        return null;
+      },
       getInteger: (key) => (key === "value" ? value : null),
       getUser: (key) => (key === "user" ? user : null),
     },
@@ -70,6 +81,9 @@ describe("id.js", () => {
     dbMocks.getSavedId.mockReset();
     dbMocks.setSavedId.mockReset();
     dbMocks.deleteSavedId.mockReset();
+    dbMocks.getUserText.mockReset();
+    dbMocks.setUserText.mockReset();
+    dbMocks.deleteUserText.mockReset();
   });
 
   it("handles add and del in message handler", async () => {
@@ -79,18 +93,23 @@ describe("id.js", () => {
     const handler = getExposeHandler(register, "id");
     const message = makeMessage();
 
-    await handler({ message, rest: "add 123" });
+    dbMocks.getUserText.mockResolvedValueOnce(null);
+    dbMocks.getSavedId.mockResolvedValueOnce(null);
+    await handler({ message, rest: "add 123 main" });
     expect(dbMocks.setSavedId).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
       savedId: 123,
     });
 
-    dbMocks.getSavedId.mockResolvedValueOnce(123);
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({ ids: [{ id: 123, label: "main", addedAt: 1 }] })
+    );
     await handler({ message, rest: "del" });
-    expect(dbMocks.deleteSavedId).toHaveBeenCalledWith({
+    expect(dbMocks.deleteUserText).toHaveBeenCalledWith({
       guildId: "g1",
       userId: "u1",
+      kind: "ids",
     });
   });
 
@@ -101,6 +120,7 @@ describe("id.js", () => {
     const handler = getExposeHandler(register, "id");
     const message = makeMessage({ mentions: [{ id: "u2" }] });
 
+    dbMocks.getUserText.mockResolvedValueOnce(null);
     dbMocks.getSavedId.mockResolvedValueOnce(null);
     await handler({ message, rest: "<@u2>" });
 
@@ -114,7 +134,9 @@ describe("id.js", () => {
     const handler = getSlashHandler(register, "id");
     const interaction = makeInteraction();
 
-    dbMocks.getSavedId.mockResolvedValueOnce(456);
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({ ids: [{ id: 456, label: null, addedAt: 1 }] })
+    );
     await handler({ interaction });
 
     expect(interaction.reply).toHaveBeenCalledWith(
@@ -129,8 +151,10 @@ describe("id.js", () => {
     registerId(register);
 
     const handler = getSlashHandler(register, "id");
-    const interaction = makeInteraction({ action: "add", value: 789 });
+    const interaction = makeInteraction({ action: "add", value: 789, label: "main" });
 
+    dbMocks.getUserText.mockResolvedValueOnce(null);
+    dbMocks.getSavedId.mockResolvedValueOnce(null);
     await handler({ interaction });
 
     expect(dbMocks.setSavedId).toHaveBeenCalledWith({
@@ -140,6 +164,164 @@ describe("id.js", () => {
     });
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({ content: "✅ ID saved." })
+    );
+  });
+
+  it("returns defaults, labels, and all for message handler", async () => {
+    const register = makeRegister();
+    registerId(register);
+
+    const handler = getExposeHandler(register, "id");
+    const message = makeMessage();
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: null, addedAt: 2 },
+          { id: 333, label: "storage", addedAt: 3 },
+        ],
+      })
+    );
+    await handler({ message, rest: "" });
+    expect(message.channel.send).toHaveBeenCalledWith("<@u1> 111 (main)");
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: null, addedAt: 2 },
+          { id: 333, label: "storage", addedAt: 3 },
+        ],
+      })
+    );
+    await handler({ message, rest: "all" });
+    expect(message.channel.send).toHaveBeenCalledWith(
+      "<@u1>: 111 (main), 222, 333 (storage)"
+    );
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: null, addedAt: 2 },
+          { id: 333, label: "storage", addedAt: 3 },
+        ],
+      })
+    );
+    await handler({ message, rest: "storage" });
+    expect(message.channel.send).toHaveBeenCalledWith("<@u1> 333 (storage)");
+  });
+
+  it("supports setdefault and deletes by label", async () => {
+    const register = makeRegister();
+    registerId(register);
+
+    const handler = getExposeHandler(register, "id");
+    const message = makeMessage();
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: "storage", addedAt: 2 },
+        ],
+      })
+    );
+    await handler({ message, rest: "setdefault storage" });
+    expect(dbMocks.setSavedId).toHaveBeenCalledWith({
+      guildId: "g1",
+      userId: "u1",
+      savedId: 222,
+    });
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: "storage", addedAt: 2 },
+        ],
+      })
+    );
+    await handler({ message, rest: "del storage" });
+    expect(dbMocks.setUserText).toHaveBeenCalled();
+  });
+
+  it("rejects reserved labels and duplicate ids", async () => {
+    const register = makeRegister();
+    registerId(register);
+
+    const handler = getExposeHandler(register, "id");
+    const message = makeMessage();
+
+    await handler({ message, rest: "add 123 all" });
+    expect(message.reply).toHaveBeenCalledWith(
+      "Label \"all\" is reserved. Please choose another label."
+    );
+
+    await handler({ message, rest: "add 123 help" });
+    expect(message.reply).toHaveBeenCalledWith(
+      "Label \"help\" is reserved. Please choose another label."
+    );
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [{ id: 123, label: "main", addedAt: 1 }],
+      })
+    );
+    await handler({ message, rest: "add 123" });
+    expect(message.reply).toHaveBeenCalledWith("That ID is already saved.");
+  });
+
+  it("supports slash list and setdefault", async () => {
+    const register = makeRegister();
+    registerId(register);
+
+    const handler = getSlashHandler(register, "id");
+    const interaction = makeInteraction({ action: "list" });
+
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: "storage", addedAt: 2 },
+        ],
+      })
+    );
+    await handler({ interaction });
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("111 (main), 222 (storage)"),
+      })
+    );
+
+    const interactionSet = makeInteraction({ action: "setdefault", target: "storage" });
+    dbMocks.getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        ids: [
+          { id: 111, label: "main", addedAt: 1 },
+          { id: 222, label: "storage", addedAt: 2 },
+        ],
+      })
+    );
+    await handler({ interaction: interactionSet });
+    expect(dbMocks.setSavedId).toHaveBeenCalledWith({
+      guildId: "g1",
+      userId: "u1",
+      savedId: 222,
+    });
+  });
+
+  it("responds to help in message handler", async () => {
+    const register = makeRegister();
+    registerId(register);
+
+    const handler = getExposeHandler(register, "id");
+    const message = makeMessage();
+
+    await handler({ message, rest: "help", cmd: "!id" });
+    expect(message.reply).toHaveBeenCalledWith(
+      "!id add <number> [label] | !id del [id|label] | !id setdefault <id|label> | !id [@user] [label|all]"
     );
   });
 });
