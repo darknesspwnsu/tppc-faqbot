@@ -8,10 +8,12 @@ import { parse } from "node-html-parser";
 import { RpgClient } from "./rpg_client.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { getSavedId, getUserText } from "../db.js";
 
 const VIEWBOX_URL = "https://www.tppcrpg.net/profile.php";
 const COOLDOWN_MS = 60_000;
 const MAX_MESSAGE_LEN = 2000;
+const IDS_KIND = "ids";
 
 const FILTER_CHOICES = [
   { name: "All Pokemon", value: "all" },
@@ -35,6 +37,10 @@ const VARIANT_LABELS = {
 const userCooldowns = new Map(); // userId -> lastMs
 const VIEWBOX_CONFIRM_PREFIX = "viewbox_confirm:";
 
+function mention(id) {
+  return `<@${id}>`;
+}
+
 function decodeGenderSymbols(s) {
   return String(s || "")
     .replace(/&#9794;|&#x2642;/gi, "\u2642")
@@ -51,6 +57,35 @@ function getText(node) {
 function getVariantCode(classAttr) {
   const m = /(?:^|\s)([NSDG])(?:\s|$)/.exec(String(classAttr || ""));
   return m ? m[1] : "N";
+}
+
+function parseSavedIds(text) {
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    const entries = Array.isArray(parsed) ? parsed : parsed?.ids;
+    if (!Array.isArray(entries)) return [];
+    return entries
+      .map((entry) => ({
+        id: Number(entry?.id),
+        label: entry?.label ? String(entry.label) : null,
+        addedAt: Number(entry?.addedAt) || 0,
+      }))
+      .filter((entry) => Number.isSafeInteger(entry.id));
+  } catch {
+    return [];
+  }
+}
+
+async function loadUserIds({ guildId, userId }) {
+  const text = await getUserText({ guildId, userId, kind: IDS_KIND });
+  const entries = parseSavedIds(text);
+  if (entries.length) return entries;
+
+  const legacy = await getSavedId({ guildId, userId });
+  if (legacy == null) return [];
+
+  return [{ id: Number(legacy), label: null, addedAt: 0 }];
 }
 
 function parseEntryText(text) {
@@ -245,6 +280,20 @@ function buildConfirmButtons({ userId, id, filter }) {
   ];
 }
 
+function buildIdButtons({ userId, ids, filter }) {
+  const row = new ActionRowBuilder();
+  for (const entry of ids) {
+    const label = entry.label ? `${entry.id} (${entry.label})` : String(entry.id);
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`${VIEWBOX_CONFIRM_PREFIX}select:${userId}:${entry.id}:${filter || "all"}`)
+        .setLabel(label)
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  return [row];
+}
+
 async function disableInteractionButtons(interaction) {
   const rows = interaction.message?.components || [];
   if (!rows.length) {
@@ -330,7 +379,7 @@ export function registerViewbox(register) {
     async ({ message }) => {
       if (!message.guildId) return;
       await message.reply(
-        "Use `/viewbox id:<id> filter:<optional>` to view a trainer's box. You can also use `name:<trainer>` to look up an ID."
+        "Use `/viewbox id:<id> filter:<optional>` to view a trainer's box. You can also use `rpgusername:<trainer>` or `user:@discord` to look up a saved ID."
       );
     },
     "!viewbox — usage for viewing a trainer's box",
@@ -355,7 +404,7 @@ export function registerViewbox(register) {
       return;
     }
 
-    if (action !== "continue") {
+    if (action !== "continue" && action !== "select") {
       await interaction.deferUpdate().catch(() => {});
       return;
     }
@@ -390,9 +439,15 @@ export function registerViewbox(register) {
           required: false,
         },
         {
+          type: 6, // USER
+          name: "user",
+          description: "Discord user to look up their saved IDs",
+          required: false,
+        },
+        {
           type: 3, // STRING
-          name: "name",
-          description: "Trainer name to search for",
+          name: "rpgusername",
+          description: "RPG username to search for",
           required: false,
         },
         {
@@ -407,29 +462,17 @@ export function registerViewbox(register) {
     async ({ interaction }) => {
       const userId = interaction.user?.id;
       const id = String(interaction.options?.getString?.("id") || "").trim();
-      const name = String(interaction.options?.getString?.("name") || "").trim();
+      const rpgUsername = String(interaction.options?.getString?.("rpgusername") || "").trim();
       const filter = String(interaction.options?.getString?.("filter") || "all");
+      const targetUser = interaction.options?.getUser?.("user") || null;
       const bypassCooldown = isAdminOrPrivileged({
         member: interaction.member,
         author: interaction.user,
         guildId: interaction.guildId,
       });
 
-      if (!id && !name) {
-        await interaction.reply({ content: "Please provide a trainer ID or name.", ephemeral: true });
-        return;
-      }
-
       const now = Date.now();
       const last = userCooldowns.get(userId) || 0;
-      if (!bypassCooldown && now - last < COOLDOWN_MS) {
-        const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
-        await interaction.reply({
-          content: `⚠️ This command is on cooldown for another ${remaining}s!`,
-          ephemeral: true,
-        });
-        return;
-      }
 
       if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
         console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for /viewbox");
@@ -439,6 +482,14 @@ export function registerViewbox(register) {
 
       try {
         if (id) {
+          if (!bypassCooldown && now - last < COOLDOWN_MS) {
+            const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
+            await interaction.reply({
+              content: `⚠️ This command is on cooldown for another ${remaining}s!`,
+              ephemeral: true,
+            });
+            return;
+          }
           await sendViewboxResults({
             interaction,
             id,
@@ -449,30 +500,75 @@ export function registerViewbox(register) {
           return;
         }
 
-        const matches = await fetchFindMyIdMatches(getClient(), name);
-        if (!matches.length) {
+        if (rpgUsername) {
+          if (!bypassCooldown && now - last < COOLDOWN_MS) {
+            const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
+            await interaction.reply({
+              content: `⚠️ This command is on cooldown for another ${remaining}s!`,
+              ephemeral: true,
+            });
+            return;
+          }
+
+          const matches = await fetchFindMyIdMatches(getClient(), rpgUsername);
+          if (!matches.length) {
+            await interaction.reply({
+              content: `❌ No trainer matches found for "${rpgUsername}".`,
+              ephemeral: true,
+            });
+            return;
+          }
+
+          if (matches.length > 1) {
+            const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
+            await interaction.reply({
+              content: `⚠️ Multiple trainer matches found for "${rpgUsername}". Please narrow down your search term or use a trainer ID.\n${lines.join("\n")}`,
+              ephemeral: true,
+            });
+            return;
+          }
+
+          const match = matches[0];
           await interaction.reply({
-            content: `❌ No trainer matches found for "${name}".`,
+            content: `✅ Located ID ${match.id} for entered username "${rpgUsername}". Proceed with retrieving box contents?`,
+            components: buildConfirmButtons({ userId, id: match.id, filter }),
             ephemeral: true,
           });
           return;
         }
 
-        if (matches.length > 1) {
-          const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
+        const resolvedUser = targetUser || interaction.user;
+        const savedIds = await loadUserIds({
+          guildId: interaction.guildId,
+          userId: resolvedUser.id,
+        });
+
+        if (!savedIds.length) {
           await interaction.reply({
-            content: `⚠️ Multiple trainer matches found for "${name}". Please narrow down your search term or use a trainer ID.\n${lines.join("\n")}`,
+            content: `❌ ${mention(resolvedUser.id)} has not set an ID.`,
             ephemeral: true,
           });
           return;
         }
 
-        const match = matches[0];
+        if (savedIds.length === 1) {
+          await sendViewboxResults({
+            interaction,
+            id: savedIds[0].id,
+            filter,
+            bypassCooldown,
+            client: getClient(),
+          });
+          return;
+        }
+
         await interaction.reply({
-          content: `✅ Located ID ${match.id} for entered username "${name}". Proceed with retrieving box contents?`,
-          components: buildConfirmButtons({ userId, id: match.id, filter }),
+          content: `Select which box to view for ${mention(resolvedUser.id)}:`,
+          components: buildIdButtons({ userId, ids: savedIds, filter }),
           ephemeral: true,
         });
+        return;
+
       } catch (err) {
         console.error("[rpg] viewbox failed:", err);
         await interaction.reply({
