@@ -32,6 +32,7 @@ describe("rpg leaderboard parsing", () => {
     const html = `
       <table class="ranks">
         <tbody>
+          <tr><th>Standing</th><th>Trainer Name</th><th>Faction</th><th>Wins</th></tr>
           <tr class="r0">
             <td class="Team TPPC">1</td>
             <td class="Team TPPC"><a href="profile.php?id=3181487">the infinity stones</a></td>
@@ -56,6 +57,7 @@ describe("rpg leaderboard parsing", () => {
     const html = `
       <table class="ranks">
         <tbody>
+          <tr><th>Standing</th><th>Trainer Name</th><th>Pok&eacute;mon</th><th>Points</th></tr>
           <tr class="r1"><td>1</td><td>Space  Cowboy</td><td>Sunkern</td><td>7,719,200</td></tr>
           <tr class="r0"><td>2</td><td>LucaBrasi3</td><td>Sunkern</td><td>7,534,184</td></tr>
         </tbody>
@@ -76,6 +78,7 @@ describe("rpg leaderboard parsing", () => {
       <h3>Standings for December 30, 2025</h3>
       <table class="ranks">
         <tbody>
+          <tr><th>Standing</th><th>Trainer Name</th><th>Faction</th><th>Wins</th></tr>
           <tr class="r0"><td class="Team TPPC">1</td><td class="Team TPPC"><a href="profile.php?id=3491889">blazinxd</a></td><td class="Team TPPC">Team TPPC</td><td class="Team TPPC">36</td></tr>
           <tr class="r1"><td class="Team Galactic">2</td><td class="Team Galactic"><a href="profile.php?id=3476908">zeyny</a></td><td class="Team Galactic">Team Galactic</td><td class="Team Galactic">34</td></tr>
         </tbody>
@@ -96,6 +99,7 @@ describe("rpg leaderboard parsing", () => {
     const html = `
       <table class="ranks">
         <tbody>
+          <tr><th>Rank</th><th>Trainer Name</th><th>Pok&eacute;mon</th><th>Level</th><th>Number</th></tr>
           <tr class="r1"><td>1</td><td><a href="profile.php?id=499999">xXMewtwoMaster1314Xx</a></td><td>Luxray</td><td>353</td><td><a href="battle.php?Battle=Trainer&Trainer=499999">499999</a></td></tr>
           <tr class="r0"><td>2</td><td><a href="profile.php?id=3398019">Anavel</a></td><td>Scyther</td><td>295</td><td><a href="battle.php?Battle=Trainer&Trainer=3398019">3398019</a></td></tr>
         </tbody>
@@ -124,7 +128,7 @@ describe("rpg leaderboard parsing", () => {
         wins: "28",
       },
     ]);
-    expect(lines[0]).toBe("#1 — the infinity stones (Team TPPC) • Wins 28");
+    expect(lines[0]).toBe("#1 — the infinity stones (Team TPPC) • 28");
   });
 
   it("renders top rows for safari zone", () => {
@@ -132,5 +136,25 @@ describe("rpg leaderboard parsing", () => {
       { rank: "1", trainer: "Space Cowboy", pokemon: "Sunkern", points: "7,719,200" },
     ]);
     expect(lines[0]).toBe("#1 — Space Cowboy • Sunkern • 7,719,200 pts");
+  });
+
+  it("renders top rows for roulette without wins label", () => {
+    const lines = renderTopRows("roulette", [
+      { rank: "1", trainer: "blazinxd", faction: "Team TPPC", wins: "36" },
+    ]);
+    expect(lines[0]).toBe("#1 — blazinxd (Team TPPC) • 36");
+  });
+
+  it("renders top rows for speed tower without floor label", () => {
+    const lines = renderTopRows("speedtower", [
+      {
+        rank: "Today's #1",
+        trainer: "the infinity stones",
+        faction: "Team TPPC",
+        floor: "45",
+        time: "00:40",
+      },
+    ]);
+    expect(lines[0]).toBe("Today's #1 — the infinity stones (Team TPPC) • 45 • 00:40");
   });
 });

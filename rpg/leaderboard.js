@@ -74,6 +74,23 @@ function parseCells(rowHtml) {
   return cells;
 }
 
+function isHeaderRank(rankText) {
+  const value = String(rankText || "").trim().toLowerCase();
+  return value === "standing" || value === "rank";
+}
+
+function isHeaderRow(row) {
+  const rank = String(row?.rank || "").trim().toLowerCase();
+  const trainer = String(row?.trainer || "").trim().toLowerCase();
+  const faction = String(row?.faction || "").trim().toLowerCase();
+  const pokemon = String(row?.pokemon || "").trim().toLowerCase();
+  if (isHeaderRank(rank)) return true;
+  if (trainer === "trainer name") return true;
+  if (faction === "faction") return true;
+  if (pokemon === "pokémon" || pokemon === "pokemon") return true;
+  return false;
+}
+
 function parseProfileLink(cellHtml) {
   const m = /profile\.php\?id=(\d+)/i.exec(String(cellHtml || ""));
   const name = stripTags(cellHtml);
@@ -110,6 +127,7 @@ function parseSsAnne(html) {
     const cells = parseCells(row);
     if (cells.length < 4) continue;
     const rank = stripTags(cells[0]);
+    if (isHeaderRank(rank)) continue;
     const { trainerId, name } = parseProfileLink(cells[1]);
     out.push({
       rank,
@@ -130,6 +148,7 @@ function parseSafariZone(html) {
   for (const row of rows) {
     const cells = parseCells(row);
     if (cells.length < 4) continue;
+    if (isHeaderRank(stripTags(cells[0]))) continue;
     out.push({
       rank: stripTags(cells[0]),
       trainer: stripTags(cells[1]),
@@ -152,6 +171,7 @@ function parseRoulette(html) {
     const cells = parseCells(row);
     if (cells.length < 4) continue;
     const rank = stripTags(cells[0]);
+    if (isHeaderRank(rank)) continue;
     const { trainerId, name } = parseProfileLink(cells[1]);
     out.push({
       rank,
@@ -173,6 +193,7 @@ function parseTrainingChallenge(html) {
     const cells = parseCells(row);
     if (cells.length < 5) continue;
     const rank = stripTags(cells[0]);
+    if (isHeaderRank(rank)) continue;
     const { trainerId, name } = parseProfileLink(cells[1]);
     out.push({
       rank,
@@ -188,18 +209,16 @@ function parseTrainingChallenge(html) {
 
 function renderTopRows(challengeKey, rows) {
   const out = [];
-  const top = rows.slice(0, 5);
+  const top = rows.filter((row) => !isHeaderRow(row)).slice(0, 5);
   for (const row of top) {
     if (challengeKey === "speedtower") {
       out.push(
-        `${row.rank} — ${row.trainer} (${row.faction}) • Floor ${row.floor} • ${row.time}`
+        `${row.rank} — ${row.trainer} (${row.faction}) • ${row.floor} • ${row.time}`
       );
     } else if (challengeKey === "ssanne") {
-      out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • Wins ${row.wins}`);
+      out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
     } else if (challengeKey === "roulette") {
-      out.push(
-        `#${row.rank} — ${row.trainer} (${row.faction}) • Wins ${row.wins}`
-      );
+      out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
     } else if (challengeKey === "safarizone") {
       out.push(
         `#${row.rank} — ${row.trainer} • ${row.pokemon} • ${row.points} pts`
@@ -301,7 +320,7 @@ export function registerLeaderboard(register) {
       const key = ALIASES.get(raw);
       if (!key) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette|br|speedtower`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette|speedtower`"
         );
         return;
       }
@@ -314,7 +333,7 @@ export function registerLeaderboard(register) {
 
       const lines = renderTopRows(res.challenge.key, res.rows || []);
       if (!lines.length) {
-        await message.reply(`No data found for ${res.challenge.name}.`);
+        await message.reply(`No leaderboard entries found for ${res.challenge.name}.`);
         return;
       }
 
