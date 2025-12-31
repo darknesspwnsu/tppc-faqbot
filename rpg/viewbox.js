@@ -329,7 +329,9 @@ export function registerViewbox(register) {
     "!viewbox",
     async ({ message }) => {
       if (!message.guildId) return;
-      await message.reply("Use `/viewbox id:<id> filter:<optional>` to view a trainer's box.");
+      await message.reply(
+        "Use `/viewbox id:<id> filter:<optional>` to view a trainer's box. You can also use `name:<trainer>` to look up an ID."
+      );
     },
     "!viewbox — usage for viewing a trainer's box",
     { hideFromHelp: true, category: "Info" }
@@ -459,7 +461,7 @@ export function registerViewbox(register) {
         if (matches.length > 1) {
           const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
           await interaction.reply({
-            content: `⚠️ Multiple trainer matches found for "${name}". Please use a trainer ID.\n${lines.join("\n")}`,
+            content: `⚠️ Multiple trainer matches found for "${name}". Please narrow down your search term or use a trainer ID.\n${lines.join("\n")}`,
             ephemeral: true,
           });
           return;
