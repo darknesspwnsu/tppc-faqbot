@@ -7,7 +7,7 @@ import { getSavedId, setSavedId, deleteSavedId, getUserText, setUserText, delete
 
 const IDS_KIND = "ids";
 const MAX_IDS = 5;
-const LABEL_RE = /^[A-Za-z0-9_]{1,20}$/;
+const LABEL_RE = /^[A-Za-z0-9_-]{1,20}$/;
 const RESERVED_LABELS = new Set(["all", "help"]);
 const ID_HELP =
   "!id add <number> [label] | !id del [id|label] | !id setdefault <id|label> | !id [@user] [label|all]";
@@ -130,7 +130,7 @@ async function addEntry({ guildId, userId, idToken, labelToken, prefix }) {
 
   const labelRaw = normalizeLabel(labelToken);
   if (labelRaw && !LABEL_RE.test(labelRaw)) {
-    return { error: "Label must be 1–20 characters using letters, numbers, or underscores." };
+    return { error: "Label must be 1–20 characters using letters, numbers, underscores, or hyphens." };
   }
   if (labelRaw && RESERVED_LABELS.has(labelKey(labelRaw))) {
     return {
