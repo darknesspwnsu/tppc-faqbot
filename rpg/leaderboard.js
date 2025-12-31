@@ -392,6 +392,24 @@ function renderTopRows(challengeKey, rows, limit = 5) {
   return out;
 }
 
+function formatCacheAge(updatedAtMs) {
+  if (!updatedAtMs) return "";
+  const diffMs = Date.now() - updatedAtMs;
+  if (!Number.isFinite(diffMs) || diffMs < 0) return "";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "cached just now";
+  if (mins < 60) return `cached ${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `cached ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `cached ${days}d ago`;
+}
+
+function appendCacheFootnote(text, updatedAtMs) {
+  const note = formatCacheAge(updatedAtMs);
+  return note ? `${text}\n_${note}_` : text;
+}
+
 async function fetchAndStore(challenge, client) {
   const html = await client.fetchPage(challenge.url);
   let rows = [];
@@ -417,17 +435,23 @@ async function getCachedOrFetch(challengeKey, client) {
 
   if (!cached || stale || !cached.payload?.rows?.length) {
     const rows = await fetchAndStore(challenge, client);
-    return { challenge, rows };
+    return { challenge, rows, updatedAt: Date.now() };
   }
 
-  return { challenge, rows: cached.payload.rows || [] };
+  return {
+    challenge,
+    rows: cached.payload.rows || [],
+    updatedAt: cached.updatedAt || null,
+  };
 }
 
 async function getCachedPokemon({ cacheKey, lookupKey, client }) {
   const cachedMem = pokemonCache.get(lookupKey);
   const now = Date.now();
   const staleMem = !cachedMem?.updatedAtMs || now - cachedMem.updatedAtMs > POKEMON_TTL_MS;
-  if (cachedMem && !staleMem && cachedMem.pageCount) return cachedMem.rows || [];
+  if (cachedMem && !staleMem && cachedMem.pageCount) {
+    return { rows: cachedMem.rows || [], updatedAt: cachedMem.updatedAtMs };
+  }
 
   const cached = await getLeaderboard({ challenge: cacheKey });
   const stale = !cached?.updatedAt || now - cached.updatedAt > POKEMON_TTL_MS;
@@ -438,14 +462,14 @@ async function getCachedPokemon({ cacheKey, lookupKey, client }) {
     const { rows, pageCount } = await fetchPokemonPages({ lookupKey, client });
     await upsertLeaderboard({ challenge: cacheKey, payload: { rows, pageCount } });
     pokemonCache.set(lookupKey, { rows, pageCount, updatedAtMs: Date.now() });
-    return rows;
+    return { rows, updatedAt: Date.now() };
   }
   pokemonCache.set(lookupKey, {
     rows: cachedRows,
     pageCount: cachedPageCount,
     updatedAtMs: cached.updatedAt || Date.now(),
   });
-  return cachedRows;
+  return { rows: cachedRows, updatedAt: cached.updatedAt || null };
 }
 
 async function fetchPokemonPages({ lookupKey, client }) {
@@ -621,10 +645,10 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        await message.reply(
+        const body =
           `🏆 **${res.challenge.name}** (top ${Math.min(count, lines.length)})\n` +
-            lines.join("\n")
-        );
+          lines.join("\n");
+        await message.reply(appendCacheFootnote(body, res.updatedAt));
         return;
       }
 
@@ -644,8 +668,22 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        const { base, variant } = parsePokemonQuery(nameRaw);
-        const { entry, suggestions } = await findPokedexEntry(base || nameRaw);
+        let { base, variant } = parsePokemonQuery(nameRaw);
+        let lookup = base || nameRaw;
+        let result = await findPokedexEntry(lookup);
+        if (!result.entry && variant) {
+          const fallback = await findPokedexEntry(nameRaw);
+          if (fallback.entry || fallback.suggestions.length) {
+            result = fallback;
+            if (fallback.entry) {
+              variant = "";
+              base = nameRaw;
+              lookup = nameRaw;
+            }
+          }
+        }
+
+        const { entry, suggestions } = result;
         if (!entry) {
           const refined = buildPokemonSuggestions(suggestions, variant);
           if (refined.length) {
@@ -660,7 +698,12 @@ export function registerLeaderboard(register) {
         }
 
         const cacheKey = `pokemon:${entry.key}`;
-        let rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client: getClient() });
+        const cached = await getCachedPokemon({
+          cacheKey,
+          lookupKey: entry.key,
+          client: getClient(),
+        });
+        let rows = cached.rows || [];
         if (variant) {
           const prefix = normalizeKey(variant);
           const baseNorm = normalizeKey(entry.name);
@@ -677,10 +720,10 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        await message.reply(
+        const body =
           `🏆 **${variant ? `${variant} ${entry.name}` : entry.name}** (top ${Math.min(count, lines.length)})\n` +
-            lines.join("\n")
-        );
+          lines.join("\n");
+        await message.reply(appendCacheFootnote(body, cached.updatedAt));
         return;
       }
 
@@ -719,10 +762,10 @@ export function registerLeaderboard(register) {
         return;
       }
 
-      await message.reply(
+      const body =
         `🏆 **${res.challenge.name}** (top ${Math.min(5, lines.length)})\n` +
-          lines.join("\n")
-      );
+        lines.join("\n");
+      await message.reply(appendCacheFootnote(body, res.updatedAt));
     },
     "!leaderboard <challenge> — show cached TPPC RPG leaderboard",
     { aliases: ["!lb"], category: "Info" }
