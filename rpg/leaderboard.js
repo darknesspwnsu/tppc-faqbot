@@ -588,8 +588,8 @@ function scheduleTrainingChallenge(client) {
 }
 
 export function registerLeaderboard(register) {
-  const primaryCmd = "!ld";
-  const aliasCmd = "?leaderboard";
+  const primaryCmd = "!leaderboard";
+  const aliasCmds = ["!ld", "!lb"];
   const hasCreds = Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
   let client = null;
   const getClient = () => {
@@ -778,7 +778,7 @@ export function registerLeaderboard(register) {
       await message.reply(appendCacheFootnote(body, res.updatedAt));
     },
     `${primaryCmd} <challenge> — show cached TPPC RPG leaderboard`,
-    { aliases: [aliasCmd] }
+    { aliases: aliasCmds }
   );
 }
 
@@ -791,7 +791,7 @@ export async function handleLeaderboardInteraction(interaction) {
   const rest = decodeURIComponent(id.slice("lb_retry:".length));
   await disableInteractionButtons(interaction);
 
-  return { cmd: "!ld", rest };
+  return { cmd: "!leaderboard", rest };
 }
 
 export const __testables = {
