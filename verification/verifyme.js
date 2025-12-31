@@ -188,11 +188,13 @@ function parseMemberListTotal(html) {
 }
 
 function findUserIdInMemberListHtml(html, targetUsername) {
-  const re = /member\.php\?[^"']*u=(\d+)[^"']*">([^<]+)<\/a>/gi;
+  const re = /member\.php\?[^"']*u=(\d+)[^"']*">([\s\S]*?)<\/a>/gi;
   let m;
   while ((m = re.exec(String(html || ""))) !== null) {
     const userId = m[1];
-    const name = decodeHtmlEntities(m[2]);
+    const name = decodeHtmlEntities(m[2].replace(/<[^>]+>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim();
     if (name === targetUsername) return userId;
   }
   return null;
