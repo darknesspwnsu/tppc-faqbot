@@ -10,11 +10,16 @@ const MAX_IDS = 5;
 const LABEL_RE = /^[A-Za-z0-9_]{1,20}$/;
 const RESERVED_LABELS = new Set(["all", "help"]);
 const ID_HELP =
-  "?id add <number> [label] | ?id del [id|label] | ?id setdefault <id|label> | ?id [@user] [label|all]";
+  "!id add <number> [label] | !id del [id|label] | !id setdefault <id|label> | !id [@user] [label|all]";
 
 function formatHelp(prefix) {
   const p = prefix === "!" || prefix === "?" ? prefix : "?";
   return ID_HELP.replace(/[!?]id\b/g, `${p}id`);
+}
+
+function formatAddUsage(prefix) {
+  const p = prefix === "!" || prefix === "?" || prefix === "/" ? prefix : "?";
+  return `Invalid input. Use: \`${ID_HELP.replace(/[!?]id\b/g, `${p}id`).split(" | ")[0]}\` where <number> is 1–5000000.`;
 }
 
 function mention(id) {
@@ -113,9 +118,9 @@ function resolveByTarget(entries, target) {
   return resolveByLabel(entries, target);
 }
 
-async function addEntry({ guildId, userId, idToken, labelToken }) {
+async function addEntry({ guildId, userId, idToken, labelToken, prefix }) {
   if (!/^\d+$/.test(idToken)) {
-    return { error: "Invalid input. Use: `?id add <number> [label]` where <number> is 1–5000000." };
+    return { error: formatAddUsage(prefix) };
   }
 
   const id = Number(idToken);
@@ -239,6 +244,7 @@ async function handleIdMessage({ message, rest, cmd }) {
       userId: message.author.id,
       idToken,
       labelToken,
+      prefix: cmd?.[0],
     });
     await message.reply(result.error || result.ok);
     return;
@@ -363,6 +369,7 @@ async function handleIdSlash({ interaction }) {
       userId: interaction.user.id,
       idToken: value == null ? "" : String(value),
       labelToken: label,
+      prefix: "/",
     });
     await interaction.reply({ flags: MessageFlags.Ephemeral, content: result.error || result.ok });
     return;

@@ -1,8 +1,8 @@
 // trades/trade_commands.js
 //
 // Registers DB-backed trading list commands:
-// - ft   (exposable: !ft or ?ft depending on policy) + shortcuts (?ftadd / ?ftdel)
-// - lf   (exposable: !lf or ?lf depending on policy) + shortcuts (?lfadd / ?lfdel)
+// - ft   (exposable: !ft or ?ft depending on policy) + shortcuts (!ftadd / !ftdel)
+// - lf   (exposable: !lf or ?lf depending on policy) + shortcuts (!lfadd / !lfdel)
 
 import {
   getUserText,
@@ -34,7 +34,7 @@ function normalizeCommandArg(rest) {
 
 function makeTextListHandler(kind, label, opts = {}) {
   // opts:
-  // - baseCmd: string (e.g. "?ft") used in usage messages; if omitted, uses ctx.cmd
+  // - baseCmd: string (e.g. "!ft") used in usage messages; if omitted, uses ctx.cmd
   // - shortcutAdd: boolean
   // - shortcutDel: boolean
   const pretty = kind === "ft" ? "Trading" : "Looking-for";
@@ -150,14 +150,14 @@ export function registerTradeCommands(register) {
     logicalId: "trading.ft",
     name: "ft",
     handler: makeTextListHandler("ft", "is trading"),
-    help: "?ft add <list> | ?ft del | ?ft [@user...] — is trading list"
+    help: "!ft add <list> | !ft del | !ft [@user...] — is trading list"
   });
 
   register.expose({
     logicalId: "trading.lf",
     name: "lf",
     handler: makeTextListHandler("lf", "is looking for"),
-    help: "?lf add <list> | ?lf del | ?lf [@user...] — is looking for list"
+    help: "!lf add <list> | !lf del | !lf [@user...] — is looking for list"
   });
 
   // -------------------- shortcuts (MIRROR canonical prefix) --------------------
@@ -165,7 +165,7 @@ export function registerTradeCommands(register) {
     logicalId: "trading.ft",
     name: "ftadd",
     handler: makeTextListHandler("ft", "is trading", { shortcutAdd: true }),
-    help: "?ftadd <text> — shortcut for ?ft add <text>",
+    help: "!ftadd <text> — shortcut for !ft add <text>",
     opts: { hideFromHelp: true }
   });
 
@@ -173,7 +173,7 @@ export function registerTradeCommands(register) {
     logicalId: "trading.ft",
     name: "ftdel",
     handler: makeTextListHandler("ft", "is trading", { shortcutDel: true }),
-    help: "?ftdel — shortcut for ?ft del",
+    help: "!ftdel — shortcut for !ft del",
     opts: { hideFromHelp: true }
   });
 
@@ -181,7 +181,7 @@ export function registerTradeCommands(register) {
     logicalId: "trading.lf",
     name: "lfadd",
     handler: makeTextListHandler("lf", "is looking for", { shortcutAdd: true }),
-    help: "?lfadd <text> — shortcut for ?ft add <text>",
+    help: "!lfadd <text> — shortcut for !lf add <text>",
     opts: { hideFromHelp: true }
   });
 
@@ -189,7 +189,7 @@ export function registerTradeCommands(register) {
     logicalId: "trading.lf",
     name: "lfdel",
     handler: makeTextListHandler("lf", "is looking for", { shortcutDel: true }),
-    help: "?lfdel — shortcut for ?lf del",
+    help: "!lfdel — shortcut for !lf del",
     opts: { hideFromHelp: true }
   });
 }
