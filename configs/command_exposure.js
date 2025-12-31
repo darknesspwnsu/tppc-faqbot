@@ -24,13 +24,13 @@ export const COMMAND_EXPOSURE_BY_GUILD = {
 
   // Official: disable collisions entirely
   "329934860388925442": {
-    "rarity.main": "q",
-    "rng.choose": "q",
-    "rng.elim": "q",
-    "rng.roll": "q",
-    "trading.ft": "q",
-    "trading.id": "q",
-    "trading.lf": "q",
+    "rarity.main": "bang",
+    "rng.choose": "bang",
+    "rng.elim": "bang",
+    "rng.roll": "bang",
+    "trading.ft": "bang",
+    "trading.id": "bang",
+    "trading.lf": "bang",
   },
 };
 
