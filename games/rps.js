@@ -9,6 +9,7 @@ import {
   guardBoardInteraction,
   makeGameQoL,
   parseMentionIdsInOrder,
+  scheduleRoundCooldown,
   requireCanManage,
   requireSameChannel,
   withGameSubcommands,
@@ -16,6 +17,7 @@ import {
 
 const manager = createGameManager({ id: "rps", prettyName: "RPS", scope: "guild" });
 const CHOICES = ["rock", "paper", "scissors"];
+const DEFAULT_ROUND_COOLDOWN_MS = 3000;
 
 function rpsHelp() {
   return [
@@ -187,7 +189,6 @@ function scheduleTimers(st, board) {
     }
 
     resetRound(live);
-    scheduleTimers(live, board);
     await board.update({
       content: [
         "⏱️ **Round forfeited**",
@@ -199,6 +200,19 @@ function scheduleTimers(st, board) {
         buildStatusText(live),
       ].join("\n"),
       components: [mkButtons(false)],
+    });
+
+    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
+    await scheduleRoundCooldown({
+      state: live,
+      manager,
+      channel: board,
+      delayMs: DEFAULT_ROUND_COOLDOWN_MS,
+      message: `⏳ Next round in **${cooldownSec} seconds**...`,
+      onStart: async (still) => {
+        scheduleTimers(still, board);
+        await board.update({ content: buildStatusText(still), components: [mkButtons(false)] });
+      },
     });
   }, 30_000);
 }
@@ -214,7 +228,6 @@ async function resolveIfReady(st, board) {
 
   if (result === 0) {
     resetRound(st);
-    scheduleTimers(st, board);
     await board.update({
       content: [
         "🤝 **Tie!** Round restarted.",
@@ -226,6 +239,19 @@ async function resolveIfReady(st, board) {
         buildStatusText(st),
       ].join("\n"),
       components: [mkButtons(false)],
+    });
+
+    const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
+    await scheduleRoundCooldown({
+      state: st,
+      manager,
+      channel: board,
+      delayMs: DEFAULT_ROUND_COOLDOWN_MS,
+      message: `⏳ Next round in **${cooldownSec} seconds**...`,
+      onStart: async (live) => {
+        scheduleTimers(live, board);
+        await board.update({ content: buildStatusText(live), components: [mkButtons(false)] });
+      },
     });
     return;
   }
@@ -257,7 +283,6 @@ async function resolveIfReady(st, board) {
   }
 
   resetRound(st);
-  scheduleTimers(st, board);
   await board.update({
     content: [
       "✅ **Round resolved**",
@@ -270,6 +295,19 @@ async function resolveIfReady(st, board) {
       buildStatusText(st),
     ].join("\n"),
     components: [mkButtons(false)],
+  });
+
+  const cooldownSec = Math.max(1, Math.round(DEFAULT_ROUND_COOLDOWN_MS / 1000));
+  await scheduleRoundCooldown({
+    state: st,
+    manager,
+    channel: board,
+    delayMs: DEFAULT_ROUND_COOLDOWN_MS,
+    message: `⏳ Next round in **${cooldownSec} seconds**...`,
+    onStart: async (live) => {
+      scheduleTimers(live, board);
+      await board.update({ content: buildStatusText(live), components: [mkButtons(false)] });
+    },
   });
 }
 
