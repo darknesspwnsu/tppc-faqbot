@@ -1,0 +1,136 @@
+import { describe, it, expect } from "vitest";
+import { __testables } from "../../rpg/leaderboard.js";
+
+const {
+  parseSsAnne,
+  parseSafariZone,
+  parseSpeedTower,
+  parseRoulette,
+  parseTrainingChallenge,
+  renderTopRows,
+} = __testables;
+
+describe("rpg leaderboard parsing", () => {
+  it("parses speed tower rows", () => {
+    const html = `
+      <tr class="r0">
+        <td>Today's #1</td>
+        <td><a href="profile.php?id=3181487">the infinity stones</a></td><td>Team TPPC</td><td>45</td><td>00:40</td>
+      </tr>
+      <tr class="r1">
+        <td>Today's #2</td>
+        <td><a href="profile.php?id=3489027">Fried Shrimp</a></td><td>Team TPPC</td><td>46</td><td>01:16</td>
+      </tr>
+    `;
+    const rows = parseSpeedTower(html);
+    expect(rows.length).toBe(2);
+    expect(rows[0].trainerId).toBe("3181487");
+    expect(rows[0].floor).toBe("45");
+  });
+
+  it("parses SS Anne rows", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr class="r0">
+            <td class="Team TPPC">1</td>
+            <td class="Team TPPC"><a href="profile.php?id=3181487">the infinity stones</a></td>
+            <td class="Team TPPC">Team TPPC</td>
+            <td class="Team TPPC">28</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parseSsAnne(html);
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toEqual({
+      rank: "1",
+      trainer: "the infinity stones",
+      trainerId: "3181487",
+      faction: "Team TPPC",
+      wins: "28",
+    });
+  });
+
+  it("parses safari zone rows", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr class="r1"><td>1</td><td>Space  Cowboy</td><td>Sunkern</td><td>7,719,200</td></tr>
+          <tr class="r0"><td>2</td><td>LucaBrasi3</td><td>Sunkern</td><td>7,534,184</td></tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parseSafariZone(html);
+    expect(rows.length).toBe(2);
+    expect(rows[0]).toEqual({
+      rank: "1",
+      trainer: "Space Cowboy",
+      pokemon: "Sunkern",
+      points: "7,719,200",
+    });
+  });
+
+  it("parses roulette daily table only", () => {
+    const html = `
+      <h3>Standings for December 30, 2025</h3>
+      <table class="ranks">
+        <tbody>
+          <tr class="r0"><td class="Team TPPC">1</td><td class="Team TPPC"><a href="profile.php?id=3491889">blazinxd</a></td><td class="Team TPPC">Team TPPC</td><td class="Team TPPC">36</td></tr>
+          <tr class="r1"><td class="Team Galactic">2</td><td class="Team Galactic"><a href="profile.php?id=3476908">zeyny</a></td><td class="Team Galactic">Team Galactic</td><td class="Team Galactic">34</td></tr>
+        </tbody>
+      </table>
+      <h3>Standings for December 28, 2025 through January 03, 2026</h3>
+      <table class="ranks">
+        <tbody>
+          <tr class="r0"><td>1</td><td><a href="profile.php?id=1475582">Kuroyukihime</a></td><td>Team TPPC</td><td>96</td></tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parseRoulette(html);
+    expect(rows.length).toBe(2);
+    expect(rows[0].trainerId).toBe("3491889");
+  });
+
+  it("parses training challenge rows", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr class="r1"><td>1</td><td><a href="profile.php?id=499999">xXMewtwoMaster1314Xx</a></td><td>Luxray</td><td>353</td><td><a href="battle.php?Battle=Trainer&Trainer=499999">499999</a></td></tr>
+          <tr class="r0"><td>2</td><td><a href="profile.php?id=3398019">Anavel</a></td><td>Scyther</td><td>295</td><td><a href="battle.php?Battle=Trainer&Trainer=3398019">3398019</a></td></tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parseTrainingChallenge(html);
+    expect(rows.length).toBe(2);
+    expect(rows[0].pokemon).toBe("Luxray");
+    expect(rows[0].level).toBe("353");
+  });
+
+  it("renders top rows per challenge", () => {
+    const lines = renderTopRows("tc", [
+      { rank: "1", trainer: "A", pokemon: "Luxray", level: "100", number: "123" },
+    ]);
+    expect(lines[0]).toMatch(/Luxray/);
+  });
+
+  it("renders top rows for SS Anne", () => {
+    const lines = renderTopRows("ssanne", [
+      {
+        rank: "1",
+        trainer: "the infinity stones",
+        trainerId: "3181487",
+        faction: "Team TPPC",
+        wins: "28",
+      },
+    ]);
+    expect(lines[0]).toBe("#1 — the infinity stones (Team TPPC) • Wins 28");
+  });
+
+  it("renders top rows for safari zone", () => {
+    const lines = renderTopRows("safarizone", [
+      { rank: "1", trainer: "Space Cowboy", pokemon: "Sunkern", points: "7,719,200" },
+    ]);
+    expect(lines[0]).toBe("#1 — Space Cowboy • Sunkern • 7,719,200 pts");
+  });
+});

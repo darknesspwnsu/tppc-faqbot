@@ -1,0 +1,154 @@
+// rpg/rpg_client.js
+//
+// Lightweight client for TPPC RPG pages.
+// Logs in and reuses cookies for scraping leaderboards.
+
+function ensureFetch() {
+  if (typeof fetch !== "function") {
+    throw new Error("Global fetch() not available. Use Node 18+ or add a fetch polyfill.");
+  }
+}
+
+function parseCookiePair(setCookieLine) {
+  const first = String(setCookieLine || "").split(";")[0];
+  const eq = first.indexOf("=");
+  if (eq <= 0) return null;
+  const name = first.slice(0, eq).trim();
+  const value = first.slice(eq + 1).trim();
+  if (!name) return null;
+  return [name, value];
+}
+
+function getSetCookiesFromResponse(res) {
+  try {
+    if (typeof res?.headers?.getSetCookie === "function") {
+      return res.headers.getSetCookie() || [];
+    }
+  } catch {}
+
+  try {
+    if (typeof res?.headers?.raw === "function") {
+      const raw = res.headers.raw();
+      const sc = raw?.["set-cookie"];
+      if (Array.isArray(sc)) return sc;
+    }
+  } catch {}
+
+  try {
+    const single = res?.headers?.get?.("set-cookie");
+    if (single) return [single];
+  } catch {}
+
+  return [];
+}
+
+export class RpgClient {
+  constructor({
+    baseUrl = "https://www.tppcrpg.net",
+    username = process.env.RPG_USERNAME,
+    password = process.env.RPG_PASSWORD,
+    timeoutMs = 30_000,
+  } = {}) {
+    ensureFetch();
+
+    if (!username || !password) {
+      throw new Error("RpgClient missing credentials (RPG_USERNAME / RPG_PASSWORD).");
+    }
+
+    this.baseUrl = String(baseUrl).replace(/\/+$/, "");
+    this.username = username;
+    this.password = password;
+    this.timeoutMs = timeoutMs;
+
+    this.cookies = new Map(); // name -> value
+    this.loggedIn = false;
+    this._lastLoginAtMs = 0;
+  }
+
+  _cookieHeader() {
+    if (!this.cookies.size) return "";
+    return [...this.cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+  }
+
+  _updateCookies(res) {
+    const setCookies = getSetCookiesFromResponse(res);
+    for (const sc of setCookies) {
+      const pair = parseCookiePair(sc);
+      if (!pair) continue;
+      const [name, value] = pair;
+      this.cookies.set(name, value);
+    }
+  }
+
+  async _fetch(pathOrUrl, { method = "GET", headers = {}, body = null } = {}) {
+    const url = String(pathOrUrl).startsWith("http")
+      ? String(pathOrUrl)
+      : `${this.baseUrl}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const cookie = this._cookieHeader();
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://www.tppcrpg.net/)",
+          ...(cookie ? { Cookie: cookie } : {}),
+          ...headers,
+        },
+        body,
+        redirect: "manual",
+        signal: controller.signal,
+      });
+      this._updateCookies(res);
+      return res;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async login({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && this.loggedIn && now - this._lastLoginAtMs < 10 * 60_000) return true;
+
+    const form = new URLSearchParams();
+    form.set("LoginID", this.username);
+    form.set("NewPass", this.password);
+
+    const res = await this._fetch("/login.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+    });
+
+    const ok = res.status === 200 || res.status === 302;
+    if (!ok) {
+      this.loggedIn = false;
+      throw new Error(`RPG login failed (HTTP ${res.status}).`);
+    }
+
+    let bodyText = "";
+    try {
+      bodyText = await res.text();
+    } catch {}
+    if (bodyText && !bodyText.includes("Logout")) {
+      this.loggedIn = false;
+      throw new Error("RPG login rejected (invalid username/password).");
+    }
+
+    this.loggedIn = true;
+    this._lastLoginAtMs = Date.now();
+    return true;
+  }
+
+  async fetchPage(pathOrUrl) {
+    await this.login();
+    const res = await this._fetch(pathOrUrl, { method: "GET" });
+    if (!res.ok) throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
+    return await res.text();
+  }
+}
+
+export const __testables = { parseCookiePair, getSetCookiesFromResponse };

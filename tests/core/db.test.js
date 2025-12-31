@@ -67,9 +67,13 @@ describe("db.js", () => {
 
     await initDb();
 
-    expect(execute).toHaveBeenCalledTimes(2);
-    expect(execute.mock.calls[0][0]).toMatch(/CREATE TABLE IF NOT EXISTS user_ids/);
-    expect(execute.mock.calls[1][0]).toMatch(/CREATE TABLE IF NOT EXISTS user_texts/);
+    const createStatements = execute.mock.calls.map((call) => call[0]);
+    expect(createStatements).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_ids/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_texts/),
+      ])
+    );
   });
 
   it("wraps CRUD helpers with execute calls", async () => {

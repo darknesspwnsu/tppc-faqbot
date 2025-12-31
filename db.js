@@ -69,6 +69,15 @@ export async function initDb() {
       PRIMARY KEY (guild_id, user_id, kind)
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS rpg_leaderboards (
+      challenge VARCHAR(32) NOT NULL,
+      payload   TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (challenge)
+    )
+  `);
 }
 
 /**
@@ -134,5 +143,4 @@ export async function deleteUserText({ guildId, userId, kind }) {
     [String(guildId), String(userId), String(kind)]
   );
 }
-
 

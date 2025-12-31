@@ -29,6 +29,7 @@ import { REST, Routes } from "discord.js";
 import { registerContests } from "./contests/contests.js";
 import { registerTrades } from "./trades/trades.js";
 import { registerGames } from "./games/games.js";
+import { registerRpg } from "./rpg/rpg.js";
 
 import { registerInfo } from "./info/info.js";
 import { registerTools } from "./tools/tools.js";
@@ -449,6 +450,7 @@ export function buildCommandRegistry({ client } = {}) {
   // Info registry must call helpModel(guildId) per-request (see info/helpbox.js).
   registerInfo(withCategory(register, "Info"), { helpModel });
   registerVerification(withCategory(register, "Info"));
+  registerRpg(withCategory(register, "Info"));
   registerContests(withCategory(register, "Contests"));
   registerGames(withCategory(register, "Games"));
   registerToybox(withCategory(register, "Fun"));
