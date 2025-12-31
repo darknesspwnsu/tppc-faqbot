@@ -513,6 +513,45 @@ function buildDidYouMeanButtons(command, suggestions, extraArgs = "") {
   return [row];
 }
 
+async function disableInteractionButtons(interaction) {
+  const rows = interaction.message?.components || [];
+  if (!rows.length) {
+    await interaction.deferUpdate().catch(() => {});
+    return;
+  }
+
+  const disabledRows = rows.map((row) => {
+    const newRow = new ActionRowBuilder();
+    for (const component of row.components || []) {
+      let button = null;
+      if (typeof ButtonBuilder.from === "function") {
+        try {
+          button = ButtonBuilder.from(component);
+        } catch {}
+      }
+      if (!button || typeof button.setDisabled !== "function") {
+        const customId = component?.customId ?? component?.custom_id ?? "";
+        const label = component?.label ?? component?.data?.label ?? "";
+        const style = component?.style ?? component?.data?.style ?? ButtonStyle.Secondary;
+        button = new ButtonBuilder();
+        if (customId) button.setCustomId(customId);
+        if (label) button.setLabel(label);
+        if (style) button.setStyle(style);
+        if (component?.emoji) button.setEmoji(component.emoji);
+      }
+      if (typeof button.setDisabled === "function") {
+        button.setDisabled(true);
+      }
+      newRow.addComponents(button);
+    }
+    return newRow;
+  });
+
+  await interaction.update({ components: disabledRows }).catch(async () => {
+    await interaction.deferUpdate().catch(() => {});
+  });
+}
+
 /* --------------------------------- exports -------------------------------- */
 
 export function registerRarity(register) {
@@ -841,7 +880,7 @@ export async function handleRarityInteraction(interaction) {
   const mon = decodeURIComponent(encMon || "");
   const extra = decodeURIComponent(encExtra || "");
 
-  await interaction.deferUpdate().catch(() => {});
+  await disableInteractionButtons(interaction);
 
   // Rarity main (supports both prefixes; actual cmd used is encoded in the button customId)
   if (cmdKey === "?rarity") return { cmd: "?rarity", rest: mon };

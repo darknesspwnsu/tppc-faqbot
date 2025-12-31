@@ -43,8 +43,9 @@ vi.mock("discord.js", () => {
     constructor() {
       this.components = [];
     }
-    addComponents(comps) {
-      this.components.push(...comps);
+    addComponents(...comps) {
+      const flat = comps.flat();
+      this.components.push(...flat);
       return this;
     }
   }
@@ -145,7 +146,22 @@ describe("rarity.js", () => {
     const interaction = {
       isButton: () => true,
       customId: "rarity_retry:?rarity:Pikachu:",
+      update: vi.fn(async () => ({})),
       deferUpdate: vi.fn(async () => ({})),
+      message: {
+        components: [
+          {
+            components: [
+              {
+                type: 2,
+                custom_id: "rarity_retry:?rarity:Pikachu:",
+                label: "Pikachu",
+                style: 2,
+              },
+            ],
+          },
+        ],
+      },
     };
 
     const res = await handleRarityInteraction(interaction);
