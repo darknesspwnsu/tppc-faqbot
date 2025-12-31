@@ -404,7 +404,7 @@ export function registerLeaderboard(register) {
       );
     },
     "!leaderboard <challenge> — show cached TPPC RPG leaderboard",
-    { category: "Info" }
+    { aliases: ["!lb"], category: "Info" }
   );
 }
 
