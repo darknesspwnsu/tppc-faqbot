@@ -57,7 +57,7 @@ const CHALLENGES = {
 const POKEMON_TTL_MS = 24 * 60 * 60_000;
 const POKEMON_REFRESH_ET = { hour: 6, minute: 5 };
 
-const pokemonCache = new Map(); // lookupKey -> { rows, updatedAtMs }
+const pokemonCache = new Map(); // lookupKey -> { rows, pageCount, updatedAtMs }
 
 const ALIASES = new Map([
   ["ssanne", "ssanne"],
@@ -389,19 +389,25 @@ async function getCachedPokemon({ cacheKey, lookupKey, client }) {
   const cachedMem = pokemonCache.get(lookupKey);
   const now = Date.now();
   const staleMem = !cachedMem?.updatedAtMs || now - cachedMem.updatedAtMs > POKEMON_TTL_MS;
-  if (cachedMem && !staleMem) return cachedMem.rows || [];
+  if (cachedMem && !staleMem && cachedMem.pageCount) return cachedMem.rows || [];
 
   const cached = await getLeaderboard({ challenge: cacheKey });
   const stale = !cached?.updatedAt || now - cached.updatedAt > POKEMON_TTL_MS;
-  if (!cached || stale || !cached.payload?.rows?.length) {
-    const rows = await fetchPokemonPages({ lookupKey, client });
-    await upsertLeaderboard({ challenge: cacheKey, payload: { rows } });
-    pokemonCache.set(lookupKey, { rows, updatedAtMs: Date.now() });
+  const cachedRows = cached?.payload?.rows || [];
+  const cachedPageCount = cached?.payload?.pageCount || null;
+  const shouldRefetch = !cached || stale || !cachedRows.length || !cachedPageCount;
+  if (shouldRefetch) {
+    const { rows, pageCount } = await fetchPokemonPages({ lookupKey, client });
+    await upsertLeaderboard({ challenge: cacheKey, payload: { rows, pageCount } });
+    pokemonCache.set(lookupKey, { rows, pageCount, updatedAtMs: Date.now() });
     return rows;
   }
-  const rows = cached.payload.rows || [];
-  pokemonCache.set(lookupKey, { rows, updatedAtMs: cached.updatedAt || Date.now() });
-  return rows;
+  pokemonCache.set(lookupKey, {
+    rows: cachedRows,
+    pageCount: cachedPageCount,
+    updatedAtMs: cached.updatedAt || Date.now(),
+  });
+  return cachedRows;
 }
 
 async function fetchPokemonPages({ lookupKey, client }) {
@@ -416,7 +422,7 @@ async function fetchPokemonPages({ lookupKey, client }) {
     rows.push(...parsePokemonRanks(html));
   }
 
-  return rows;
+  return { rows, pageCount: totalPages };
 }
 
 function schedulePokemonCacheRefresh(client) {
@@ -446,10 +452,10 @@ function schedulePokemonCacheRefresh(client) {
   async function refreshAll() {
     for (const lookupKey of pokemonCache.keys()) {
       try {
-        const rows = await fetchPokemonPages({ lookupKey, client });
-        pokemonCache.set(lookupKey, { rows, updatedAtMs: Date.now() });
+        const { rows, pageCount } = await fetchPokemonPages({ lookupKey, client });
+        pokemonCache.set(lookupKey, { rows, pageCount, updatedAtMs: Date.now() });
         const cacheKey = `pokemon:${lookupKey}`;
-        await upsertLeaderboard({ challenge: cacheKey, payload: { rows } });
+        await upsertLeaderboard({ challenge: cacheKey, payload: { rows, pageCount } });
       } catch (err) {
         console.error(`[rpg] pokemon leaderboard refresh failed for ${lookupKey}:`, err);
       }
