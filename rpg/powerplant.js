@@ -76,7 +76,7 @@ export function registerPowerPlant(register) {
       }
 
       await message.reply(
-        `Currently controlled by **${team}**! Type !faq pp for more information about Power Hour, etc`
+        `Currently controlled by **${team}**! Type \`!wiki power plant\` for more information about Power Hour, etc`
       );
     },
     "!powerplant — show TPPC power plant control",
