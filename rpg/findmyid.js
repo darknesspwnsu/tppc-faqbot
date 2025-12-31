@@ -53,6 +53,16 @@ export function registerFindMyId(register) {
     return client;
   };
 
+  register(
+    "!findmyid",
+    async ({ message }) => {
+      if (!message.guildId) return;
+      await message.reply("Use `/findmyid name:<name>` to search for a trainer ID.");
+    },
+    "!findmyid — usage for the trainer ID lookup",
+    { hideFromHelp: true, category: "Info" }
+  );
+
   register.slash(
     {
       name: "findmyid",
