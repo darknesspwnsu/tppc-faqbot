@@ -21,7 +21,7 @@ const FILTER_CHOICES = [
   { name: "Normal", value: "normal" },
   { name: "Shiny / Dark", value: "shinydark" },
   { name: "Level 4 Only (L4)", value: "l4" },
-  { name: "Unknown Gender (?) Only", value: "unknown" },
+  { name: "Ungendered (?) only", value: "unknown" },
 ];
 
 const VARIANT_ORDER = ["G", "S", "D", "N"];
