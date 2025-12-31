@@ -3,8 +3,12 @@
 // Central registry for RPG modules.
 
 import { registerLeaderboard } from "./leaderboard.js";
+import { registerPowerPlant } from "./powerplant.js";
 
-const RPG_MODULES = [{ id: "leaderboard", register: registerLeaderboard }];
+const RPG_MODULES = [
+  { id: "leaderboard", register: registerLeaderboard },
+  { id: "powerplant", register: registerPowerPlant },
+];
 
 export function registerRpg(register) {
   for (const m of RPG_MODULES) {
