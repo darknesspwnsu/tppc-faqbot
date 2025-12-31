@@ -38,6 +38,18 @@ function makeTextListHandler(kind, label, opts = {}) {
   // - shortcutAdd: boolean
   // - shortcutDel: boolean
   const pretty = kind === "ft" ? "Trading" : "Looking-for";
+  const helpLine =
+    kind === "ft"
+      ? "!ft add <list> | !ft del | !ft [@user...] — is trading list"
+      : "!lf add <list> | !lf del | !lf [@user...] — is looking for list";
+  const shortcutAddLine =
+    kind === "ft"
+      ? "!ftadd <text> — shortcut for !ft add <text>"
+      : "!lfadd <text> — shortcut for !lf add <text>";
+  const shortcutDelLine =
+    kind === "ft"
+      ? "!ftdel — shortcut for !ft del"
+      : "!lfdel — shortcut for !lf del";
 
   return async ({ message, rest, cmd }) => {
     if (!message.guild) return;
@@ -51,6 +63,16 @@ function makeTextListHandler(kind, label, opts = {}) {
     // IMPORTANT: preserve current behavior for existing commands,
     // but also be correct if this handler runs under !ft/!lf later.
     const baseCmd = opts.baseCmd || String(cmd || "").trim() || (kind === "ft" ? "?ft" : "?lf");
+
+    // help
+    if (lower === "help") {
+      const prefix = String(baseCmd || "").trim()[0] || "?";
+      const line = (isShortcutAdd ? shortcutAddLine : isShortcutDel ? shortcutDelLine : helpLine)
+        .replace(/[!?]f[tl]\b/g, (m) => `${prefix}${m.slice(1)}`)
+        .replace(/[!?]f(t|l)(add|del)\b/g, (m) => `${prefix}${m.slice(1)}`);
+      await message.reply(line);
+      return;
+    }
 
     // del
     if (isShortcutDel || lower === "del") {

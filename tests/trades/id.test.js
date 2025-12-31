@@ -320,8 +320,10 @@ describe("id.js", () => {
     const message = makeMessage();
 
     await handler({ message, rest: "help", cmd: "!id" });
-    expect(message.reply).toHaveBeenCalledWith(
-      "!id add <number> [label] | !id del [id|label] | !id setdefault <id|label> | !id [@user] [label|all]"
-    );
+    const reply = message.reply.mock.calls[0]?.[0] || "";
+    expect(reply).toContain("**ID commands**");
+    expect(reply).toContain("!id add <number> [label]");
+    expect(reply).toContain("!id del");
+    expect(reply).toContain("!id setdefault <id|label>");
   });
 });

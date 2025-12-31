@@ -14,7 +14,22 @@ const ID_HELP =
 
 function formatHelp(prefix) {
   const p = prefix === "!" || prefix === "?" ? prefix : "?";
-  return ID_HELP.replace(/[!?]id\b/g, `${p}id`);
+  const cmd = `${p}id`;
+  return [
+    `**ID commands**`,
+    `• \`${cmd} add <number> [label]\` — save an ID with an optional label (max ${MAX_IDS} IDs).`,
+    `• \`${cmd} del\` — remove all saved IDs.`,
+    `• \`${cmd} del <id|label>\` — remove a specific saved ID.`,
+    `• \`${cmd} setdefault <id|label>\` — set which ID is returned by default.`,
+    `• \`${cmd}\` — show your default ID.`,
+    `• \`${cmd} all\` — list all saved IDs.`,
+    `• \`${cmd} <label>\` — show a labeled ID.`,
+    `• \`${cmd} @user\` — show a user’s default ID.`,
+    `• \`${cmd} @user all\` — list all IDs for a user.`,
+    `• \`${cmd} @user <label>\` — show a labeled ID for a user.`,
+    `Labels may use letters, numbers, underscores, or hyphens (1–20 chars).`,
+    `Reserved labels: ${Array.from(RESERVED_LABELS).join(", ")}.`,
+  ].join("\n");
 }
 
 function formatAddUsage(prefix) {
@@ -300,6 +315,13 @@ async function handleIdMessage({ message, rest, cmd }) {
 
   const entries = await loadEntries({ guildId: message.guild.id, userId: message.author.id });
   if (!raw) {
+    if (!entries.length) {
+      const prefix = cmd?.[0] === "!" || cmd?.[0] === "?" ? cmd[0] : "!";
+      await message.channel.send(
+        `${mention(message.author.id)} has not set an ID! Use \`${prefix}id add <id>\` to set it.`
+      );
+      return;
+    }
     const line = formatUserDefaultLine(mention(message.author.id), entries[0] || null);
     await message.channel.send(line);
     return;
