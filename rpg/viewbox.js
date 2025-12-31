@@ -2,9 +2,11 @@
 //
 // View a trainer's full Pokemon box (DM only).
 
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
+import { fetchFindMyIdMatches } from "./findmyid.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
 const VIEWBOX_URL = "https://www.tppcrpg.net/profile.php";
@@ -31,6 +33,7 @@ const VARIANT_LABELS = {
 };
 
 const userCooldowns = new Map(); // userId -> lastMs
+const VIEWBOX_CONFIRM_PREFIX = "viewbox_confirm:";
 
 function decodeGenderSymbols(s) {
   return String(s || "")
@@ -226,6 +229,95 @@ async function fetchViewboxEntries(client, id) {
   return parseViewboxEntries(html);
 }
 
+function buildConfirmButtons({ userId, id, filter }) {
+  const payload = `${userId}:${id}:${filter || "all"}`;
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`${VIEWBOX_CONFIRM_PREFIX}continue:${payload}`)
+        .setLabel("Continue")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`${VIEWBOX_CONFIRM_PREFIX}cancel:${payload}`)
+        .setLabel("Cancel")
+        .setStyle(ButtonStyle.Secondary)
+    ),
+  ];
+}
+
+async function disableInteractionButtons(interaction) {
+  const rows = interaction.message?.components || [];
+  if (!rows.length) {
+    await interaction.deferUpdate().catch(() => {});
+    return;
+  }
+
+  const disabledRows = rows.map((row) => {
+    const newRow = new ActionRowBuilder();
+    for (const component of row.components || []) {
+      const button = ButtonBuilder.from(component).setDisabled(true);
+      newRow.addComponents(button);
+    }
+    return newRow;
+  });
+
+  await interaction.update({ components: disabledRows }).catch(async () => {
+    await interaction.deferUpdate().catch(() => {});
+  });
+}
+
+async function replyEphemeral(interaction, options) {
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp({ ...options, ephemeral: true });
+    return;
+  }
+
+  await interaction.reply({ ...options, ephemeral: true });
+}
+
+async function sendViewboxResults({ interaction, id, filter, bypassCooldown, client }) {
+  const userId = interaction.user?.id;
+  const now = Date.now();
+  const last = userCooldowns.get(userId) || 0;
+  if (!bypassCooldown && now - last < COOLDOWN_MS) {
+    const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
+    await replyEphemeral(interaction, {
+      content: `⚠️ This command is on cooldown for another ${remaining}s!`,
+    });
+    return;
+  }
+
+  if (!bypassCooldown) {
+    userCooldowns.set(userId, now);
+  }
+
+  const rawEntries = await fetchViewboxEntries(client, id);
+  if (!rawEntries.length) {
+    await replyEphemeral(interaction, {
+      content: "❌ No Pokemon found for that trainer ID.",
+    });
+    return;
+  }
+
+  const filtered = applyFilter(rawEntries, filter);
+  if (!filtered.length) {
+    await replyEphemeral(interaction, {
+      content: "❌ No Pokemon found for that filter.",
+    });
+    return;
+  }
+
+  const collapsed = collapseEntries(filtered);
+  const sections = buildSections(collapsed, filter);
+  const blocks = buildSectionBlocks(sections);
+  const messages = combineBlocks(blocks, MAX_MESSAGE_LEN);
+  for (const msg of messages) {
+    await interaction.user.send(msg);
+  }
+
+  await replyEphemeral(interaction, { content: "✅ Sent your box results via DM." });
+}
+
 export function registerViewbox(register) {
   let client = null;
   const getClient = () => {
@@ -243,6 +335,47 @@ export function registerViewbox(register) {
     { hideFromHelp: true, category: "Info" }
   );
 
+  register.component(VIEWBOX_CONFIRM_PREFIX, async ({ interaction }) => {
+    const customId = String(interaction.customId || "");
+    const parts = customId.split(":");
+    const action = parts[1] || "";
+    const userId = parts[2] || "";
+    const id = parts[3] || "";
+    const filter = parts[4] || "all";
+
+    if (!interaction.user || interaction.user.id !== userId) {
+      await interaction.reply({ content: "This confirmation isn't for you.", ephemeral: true });
+      return;
+    }
+
+    if (action === "cancel") {
+      await disableInteractionButtons(interaction);
+      return;
+    }
+
+    if (action !== "continue") {
+      await interaction.deferUpdate().catch(() => {});
+      return;
+    }
+
+    await disableInteractionButtons(interaction);
+
+    const bypassCooldown = isAdminOrPrivileged({
+      member: interaction.member,
+      author: interaction.user,
+      guildId: interaction.guildId,
+    });
+
+    try {
+      await sendViewboxResults({ interaction, id, filter, bypassCooldown, client: getClient() });
+    } catch (err) {
+      console.error("[rpg] viewbox failed:", err);
+      await replyEphemeral(interaction, {
+        content: "❌ Failed to fetch the trainer box. Please try again later.",
+      });
+    }
+  });
+
   register.slash(
     {
       name: "viewbox",
@@ -252,7 +385,13 @@ export function registerViewbox(register) {
           type: 3, // STRING
           name: "id",
           description: "Trainer ID",
-          required: true,
+          required: false,
+        },
+        {
+          type: 3, // STRING
+          name: "name",
+          description: "Trainer name to search for",
+          required: false,
         },
         {
           type: 3, // STRING
@@ -266,6 +405,7 @@ export function registerViewbox(register) {
     async ({ interaction }) => {
       const userId = interaction.user?.id;
       const id = String(interaction.options?.getString?.("id") || "").trim();
+      const name = String(interaction.options?.getString?.("name") || "").trim();
       const filter = String(interaction.options?.getString?.("filter") || "all");
       const bypassCooldown = isAdminOrPrivileged({
         member: interaction.member,
@@ -273,8 +413,8 @@ export function registerViewbox(register) {
         guildId: interaction.guildId,
       });
 
-      if (!id) {
-        await interaction.reply({ content: "Please provide a trainer ID.", ephemeral: true });
+      if (!id && !name) {
+        await interaction.reply({ content: "Please provide a trainer ID or name.", ephemeral: true });
         return;
       }
 
@@ -295,38 +435,42 @@ export function registerViewbox(register) {
         return;
       }
 
-      if (!bypassCooldown) {
-        userCooldowns.set(userId, now);
-      }
-
       try {
-        const rawEntries = await fetchViewboxEntries(getClient(), id);
-        if (!rawEntries.length) {
+        if (id) {
+          await sendViewboxResults({
+            interaction,
+            id,
+            filter,
+            bypassCooldown,
+            client: getClient(),
+          });
+          return;
+        }
+
+        const matches = await fetchFindMyIdMatches(getClient(), name);
+        if (!matches.length) {
           await interaction.reply({
-            content: "❌ No Pokemon found for that trainer ID.",
+            content: `❌ No trainer matches found for "${name}".`,
             ephemeral: true,
           });
           return;
         }
 
-        const filtered = applyFilter(rawEntries, filter);
-        if (!filtered.length) {
+        if (matches.length > 1) {
+          const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
           await interaction.reply({
-            content: "❌ No Pokemon found for that filter.",
+            content: `⚠️ Multiple trainer matches found for "${name}". Please use a trainer ID.\n${lines.join("\n")}`,
             ephemeral: true,
           });
           return;
         }
 
-        const collapsed = collapseEntries(filtered);
-        const sections = buildSections(collapsed, filter);
-        const blocks = buildSectionBlocks(sections);
-        const messages = combineBlocks(blocks, MAX_MESSAGE_LEN);
-        for (const msg of messages) {
-          await interaction.user.send(msg);
-        }
-
-        await interaction.reply({ content: "✅ Sent your box results via DM.", ephemeral: true });
+        const match = matches[0];
+        await interaction.reply({
+          content: `✅ Located ID ${match.id} for entered username "${name}". Proceed with retrieving box contents?`,
+          components: buildConfirmButtons({ userId, id: match.id, filter }),
+          ephemeral: true,
+        });
       } catch (err) {
         console.error("[rpg] viewbox failed:", err);
         await interaction.reply({
@@ -343,4 +487,5 @@ export const __testables = {
   applyFilter,
   collapseEntries,
   buildSections,
+  buildConfirmButtons,
 };

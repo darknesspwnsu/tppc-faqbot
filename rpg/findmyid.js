@@ -127,4 +127,6 @@ export function registerFindMyId(register) {
   );
 }
 
+export { fetchFindMyIdMatches };
+
 export const __testables = { parseFindMyIdMatches, parseIdFromHref };
