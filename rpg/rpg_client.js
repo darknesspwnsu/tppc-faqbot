@@ -170,6 +170,43 @@ export class RpgClient {
 
     throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
+
+  async fetchForm(pathOrUrl, form) {
+    await this.login();
+    const body = typeof form === "string" ? form : form?.toString?.() ?? "";
+    const res = await this._fetch(pathOrUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (res.ok) return await res.text();
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers?.get?.("location");
+      if (location && /login\.php/i.test(location)) {
+        await this.login({ force: true });
+        const retry = await this._fetch(pathOrUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+        });
+        if (!retry.ok) {
+          throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+        }
+        return await retry.text();
+      }
+
+      if (location) {
+        const next = await this._fetch(location, { method: "GET" });
+        if (!next.ok) {
+          throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
+        }
+        return await next.text();
+      }
+    }
+
+    throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
+  }
 }
 
 export const __testables = { parseCookiePair, getSetCookiesFromResponse };

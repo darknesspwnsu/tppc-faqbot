@@ -4,10 +4,12 @@
 
 import { registerLeaderboard } from "./leaderboard.js";
 import { registerPowerPlant } from "./powerplant.js";
+import { registerFindMyId } from "./findmyid.js";
 
 const RPG_MODULES = [
   { id: "leaderboard", register: registerLeaderboard },
   { id: "powerplant", register: registerPowerPlant },
+  { id: "findmyid", register: registerFindMyId },
 ];
 
 export function registerRpg(register) {
