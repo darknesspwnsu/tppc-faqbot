@@ -1014,3 +1014,6 @@ export async function handleRarityInteraction(interaction) {
 
   return false;
 }
+
+// Reusable name normalization + suggestions (shared with RPG lookups).
+export { normalizeKey, normalizeQueryVariants, getSuggestionsFromIndex };

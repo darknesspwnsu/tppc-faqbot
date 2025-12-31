@@ -5,6 +5,7 @@
 import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
+import { findPokedexEntry } from "./pokedex.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 
 const CHALLENGES = {
@@ -51,6 +52,8 @@ const CHALLENGES = {
     ttlMs: 5 * 60_000,
   },
 };
+
+const POKEMON_TTL_MS = 5 * 60_000;
 
 const ALIASES = new Map([
   ["ssanne", "ssanne"],
@@ -281,6 +284,30 @@ function parseTrainerRanks(html) {
   return out;
 }
 
+function parsePokemonRanks(html) {
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
+  const out = [];
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < 5) continue;
+    const rank = getText(cells[0]);
+    if (isHeaderRank(rank)) continue;
+    const { trainerId, name } = parseTrainerCell(cells[1]);
+    out.push({
+      rank,
+      trainer: name,
+      trainerId,
+      pokemon: getText(cells[2]),
+      level: getText(cells[3]),
+      number: getText(cells[4]),
+    });
+  }
+  return out;
+}
+
 function renderTopRows(challengeKey, rows, limit = 5) {
   const out = [];
   const top = rows.filter((row) => !isHeaderRow(row)).slice(0, limit);
@@ -304,6 +331,10 @@ function renderTopRows(challengeKey, rows, limit = 5) {
     } else if (challengeKey === "trainers") {
       out.push(
         `#${row.rank} — ${row.trainer} (${row.faction}) • Lv ${row.level} • ID ${row.number}`
+      );
+    } else if (challengeKey === "pokemon") {
+      out.push(
+        `#${row.rank} — ${row.trainer} • ${row.pokemon} Lv${row.level} • ID ${row.number}`
       );
     }
   }
@@ -339,6 +370,21 @@ async function getCachedOrFetch(challengeKey, client) {
   }
 
   return { challenge, rows: cached.payload.rows || [] };
+}
+
+async function getCachedPokemon({ cacheKey, lookupKey, client }) {
+  const cached = await getLeaderboard({ challenge: cacheKey });
+  const now = Date.now();
+  const stale = !cached?.updatedAt || now - cached.updatedAt > POKEMON_TTL_MS;
+  if (!cached || stale || !cached.payload?.rows?.length) {
+    const html = await client.fetchPage(
+      `https://www.tppcrpg.net/ranks_individual.php?f=${encodeURIComponent(lookupKey)}`
+    );
+    const rows = parsePokemonRanks(html);
+    await upsertLeaderboard({ challenge: cacheKey, payload: { rows } });
+    return rows;
+  }
+  return cached.payload.rows || [];
 }
 
 function scheduleTrainingChallenge(client) {
@@ -410,6 +456,7 @@ export function registerLeaderboard(register) {
             "• `!leaderboard roulette [weekly]` — Battle Roulette standings",
             "• `!leaderboard speedtower` — Speed Tower standings",
             "• `!leaderboard trainers [1-20]` — Top trainers by level",
+            "• `!leaderboard pokemon <name> [1-20]` — Top trainers for a Pokemon",
           ].join("\n")
         );
         return;
@@ -442,10 +489,48 @@ export function registerLeaderboard(register) {
         return;
       }
 
+      if (sub === "pokemon") {
+        const countRaw = parts[parts.length - 1];
+        const hasCount = countRaw && /^\d+$/.test(countRaw);
+        const count = hasCount ? Number(countRaw) : 5;
+        if (hasCount && (!Number.isInteger(count) || count < 1 || count > 20)) {
+          await message.reply("❌ `max_number` must be an integer between 1 and 20.");
+          return;
+        }
+
+        const nameTokens = parts.slice(1, hasCount ? -1 : undefined);
+        const nameRaw = nameTokens.join(" ").trim();
+        if (!nameRaw) {
+          await message.reply("Usage: `!leaderboard pokemon <name> [1-20]`");
+          return;
+        }
+
+        const { entry, suggestions } = await findPokedexEntry(nameRaw);
+        if (!entry) {
+          const suggestionLine =
+            suggestions.length > 0 ? `\nDid you mean: ${suggestions.join(", ")}?` : "";
+          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.${suggestionLine}`);
+          return;
+        }
+
+        const cacheKey = `pokemon:${entry.key}`;
+        const rows = await getCachedPokemon({ cacheKey, lookupKey: entry.key, client });
+        const lines = renderTopRows("pokemon", rows, count);
+        if (!lines.length) {
+          await message.reply(`No leaderboard entries found for ${entry.name}.`);
+          return;
+        }
+
+        await message.reply(
+          `🏆 **${entry.name}** (top ${Math.min(count, lines.length)})\n` + lines.join("\n")
+        );
+        return;
+      }
+
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
         );
         return;
       }
@@ -454,13 +539,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]`"
+          "Usage: `!leaderboard ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon <name> [1-20]`"
         );
         return;
       }
@@ -494,5 +579,6 @@ export const __testables = {
   parseRoulette,
   parseTrainingChallenge,
   parseTrainerRanks,
+  parsePokemonRanks,
   renderTopRows,
 };

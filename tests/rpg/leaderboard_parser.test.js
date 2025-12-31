@@ -8,6 +8,7 @@ const {
   parseRoulette,
   parseTrainingChallenge,
   parseTrainerRanks,
+  parsePokemonRanks,
   renderTopRows,
 } = __testables;
 
@@ -199,5 +200,26 @@ describe("rpg leaderboard parsing", () => {
       },
     ], 10);
     expect(lines[0]).toBe("#1 — GratzMatt Gym (Team Galactic) • Lv 22,207 • ID 3476575");
+  });
+
+  it("parses pokemon ranks", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr><th>Rank</th><th>Trainer Name</th><th>Pok&eacute;mon</th><th>Level</th><th>Number</th></tr>
+          <tr class="r1 Team TPPC"><td>889</td><td><a href="profile.php?id=85970">B O N E</a></td><td>GoldenCharmander</td><td>5,000</td><td><a href="battle.php?Battle=Trainer&Trainer=85970">85970</a></td></tr>
+        </tbody>
+      </table>
+    `;
+    const rows = parsePokemonRanks(html);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      rank: "889",
+      trainer: "B O N E",
+      trainerId: "85970",
+      pokemon: "GoldenCharmander",
+      level: "5,000",
+      number: "85970",
+    });
   });
 });
