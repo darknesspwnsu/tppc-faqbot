@@ -43,6 +43,10 @@ function mockInteraction(overrides = {}) {
   };
 }
 
+beforeEach(() => {
+  _test.resetState?.();
+});
+
 describe("pollcontest helpers", () => {
   beforeEach(() => {
     mockExecute.mockReset();
@@ -345,5 +349,103 @@ describe("pollcontest validation", () => {
         flags: expect.any(Number),
       })
     );
+  });
+
+  test("uses poll author for list header when tracking external poll", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const answers = new Map([
+      [0, { text: "Yes", voters: { fetch: vi.fn(async () => new Map()) } }],
+      [1, { text: "No", voters: { fetch: vi.fn(async () => new Map()) } }],
+    ]);
+
+    const channel = {
+      id: "c1",
+      isTextBased: () => true,
+      send: vi.fn(async () => {}),
+      messages: {
+        endPoll: vi.fn(async () => {}),
+        fetch: vi.fn(async () => ({
+          id: "123",
+          channelId: "c1",
+          author: { id: "author-1" },
+          poll: {
+            allowMultiselect: false,
+            expiresTimestamp: Date.now() - 1000,
+            question: { text: "Question?" },
+            answers,
+          },
+        })),
+      },
+      guild: {
+        members: {
+          fetch: vi.fn(async () => new Map()),
+          cache: new Map(),
+        },
+      },
+    };
+
+    const client = {
+      on: vi.fn(),
+      user: { id: "bot" },
+      channels: { fetch: vi.fn(async () => channel) },
+    };
+
+    const interaction = mockInteraction({
+      client,
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({
+            id: "123",
+            channelId: "c1",
+            author: { id: "author-1" },
+            poll: {
+              allowMultiselect: false,
+              expiresTimestamp: Date.now() - 1000,
+              question: { text: "Question?" },
+              answers,
+            },
+          })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    const reply = interaction.reply.mock.calls[0][0];
+    const startId = String(reply?.components?.[1]?.components?.[0]?.data?.custom_id || "");
+
+    const toggleInteraction = mockInteraction({
+      client,
+      isModalSubmit: () => false,
+      isButton: () => true,
+      isStringSelectMenu: () => false,
+      customId: startId.replace(":start:", ":toggle:lists:"),
+      update: vi.fn(async () => {}),
+    });
+    const componentHandler = handlers.get("component:pollcontest:")?.handler;
+    await componentHandler({ interaction: toggleInteraction });
+
+    const startInteraction = mockInteraction({
+      client,
+      isModalSubmit: () => false,
+      isButton: () => true,
+      isStringSelectMenu: () => false,
+      customId: startId,
+      channel,
+      update: vi.fn(async () => {}),
+    });
+    await componentHandler({ interaction: startInteraction });
+
+    const listMessage = channel.send.mock.calls
+      .map((call) => String(call[0] || ""))
+      .find((content) => content.includes("Poll started by:"));
+
+    expect(listMessage).toContain("Poll started by: <@author-1>");
   });
 });

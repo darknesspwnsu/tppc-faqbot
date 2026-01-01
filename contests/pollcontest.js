@@ -440,6 +440,11 @@ async function processPoll(messageId) {
     return;
   }
 
+  const botUserId = clientRef?.user?.id;
+  const authorId = message.author?.id || null;
+  const pollStarterId =
+    authorId && botUserId && authorId === botUserId && record.ownerId ? record.ownerId : authorId || record.ownerId;
+
   const answers = [...poll.answers.values()];
   const answerResults = [];
   for (let i = 0; i < answers.length; i += 1) {
@@ -515,8 +520,8 @@ async function processPoll(messageId) {
   if (shouldList && sendListsFirst) {
     try {
       if (listLines[listLines.length - 1] === "") listLines.pop();
-      if (record.ownerId) {
-        listLines.unshift(`Poll started by: ${formatMention({ id: record.ownerId })}`);
+      if (pollStarterId) {
+        listLines.unshift(`Poll started by: ${formatMention({ id: pollStarterId })}`);
       }
       await sendChunked({
         send: (content) => channel.send(content),
@@ -541,8 +546,8 @@ async function processPoll(messageId) {
   if (shouldList && !sendListsFirst) {
     try {
       if (listLines[listLines.length - 1] === "") listLines.pop();
-      if (record.ownerId) {
-        listLines.unshift(`Poll started by: ${formatMention({ id: record.ownerId })}`);
+      if (pollStarterId) {
+        listLines.unshift(`Poll started by: ${formatMention({ id: pollStarterId })}`);
       }
       await sendChunked({
         send: (content) => channel.send(content),
@@ -1127,4 +1132,11 @@ export function registerPollContest(register) {
 
 export const _test = {
   resolveWinnersOnly,
+  resetState() {
+    activePolls.clear();
+    pendingConfigs.clear();
+    clientRef = null;
+    pollHooksInstalled = false;
+    booted = false;
+  },
 };
