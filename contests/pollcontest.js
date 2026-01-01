@@ -102,7 +102,38 @@ function clearPollTimer(messageId) {
       clearTimeout(existing.timeout);
     } catch {}
   }
+  if (existing?.watch) {
+    try {
+      clearInterval(existing.watch);
+    } catch {}
+  }
   activePolls.delete(messageId);
+}
+
+async function checkPollStatus(messageId) {
+  const record = activePolls.get(messageId);
+  if (!record || !clientRef) return;
+
+  try {
+    const channel = await clientRef.channels.fetch(record.channelId);
+    if (!channel?.isTextBased?.()) return;
+    const message = await channel.messages.fetch(record.messageId);
+    const poll = message?.poll;
+    if (!poll) return;
+
+    const ended =
+      poll.resultsFinalized ||
+      (Number.isFinite(poll.expiresTimestamp) && poll.expiresTimestamp <= Date.now());
+    if (ended) {
+      await processPoll(messageId);
+    }
+  } catch (err) {
+    if (err?.code === 10008 || err?.status === 404) {
+      await deletePollRecord(messageId);
+      clearPollTimer(messageId);
+      return;
+    }
+  }
 }
 
 function schedulePoll(record) {
@@ -111,10 +142,14 @@ function schedulePoll(record) {
 
   const delayMs = Math.max(0, Number(record.endsAtMs) - Date.now() + 2000);
   const timeout = setTimeout(() => processPoll(msgId), delayMs);
+  const watch = setInterval(() => {
+    void checkPollStatus(msgId);
+  }, 10_000);
 
   activePolls.set(msgId, {
     ...record,
     timeout,
+    watch,
   });
 }
 
@@ -216,7 +251,7 @@ function buildConfigView(config, note = "") {
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`pollcontest:start:${config.token}`)
-      .setLabel("Start poll")
+      .setLabel(config.pollMessageId ? "Track poll" : "Start poll")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`pollcontest:cancel:${config.token}`)
