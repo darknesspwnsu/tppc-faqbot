@@ -146,6 +146,38 @@ describe("rarity.js", () => {
     expect(payload.content).toContain("Did you mean");
   });
 
+  it("registerRarity supports help and history timeframes", async () => {
+    const { registerRarity } = await loadRarityModule();
+    const register = { expose: vi.fn() };
+
+    registerRarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rarityCall = register.expose.mock.calls.find((call) => call[0].name === "rarity");
+    const handler = rarityCall[0].handler;
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "help", cmd: "!rarity" });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("Usage: `!rarity <pokemon>`")
+    );
+
+    await handler({ message, rest: "Pikachu 7d", cmd: "!rarity" });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [
+          expect.objectContaining({
+            title: "Pikachu — Rarity History (7 days)",
+          }),
+        ],
+      })
+    );
+  });
+
   it("registerLevel4Rarity returns usage when no query is provided", async () => {
     const { registerLevel4Rarity } = await loadRarityModule();
     const register = vi.fn();
@@ -188,6 +220,21 @@ describe("rarity.js", () => {
 
     const res = await handleRarityInteraction(interaction);
     expect(res).toEqual({ cmd: "?rarity", rest: "Pikachu" });
+  });
+
+  it("handleRarityInteraction preserves extras for rarity retries", async () => {
+    const { handleRarityInteraction } = await loadRarityModule();
+
+    const interaction = {
+      isButton: () => true,
+      customId: "rarity_retry:?rarity:Pikachu:7d",
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+      message: { components: [] },
+    };
+
+    const res = await handleRarityInteraction(interaction);
+    expect(res).toEqual({ cmd: "?rarity", rest: "Pikachu 7d" });
   });
 
   it("registerRarityHistory fetches API data and formats output", async () => {

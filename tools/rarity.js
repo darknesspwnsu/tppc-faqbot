@@ -467,6 +467,89 @@ async function disableInteractionButtons(interaction) {
   });
 }
 
+async function replyRarityHelp(message, cmd) {
+  const lines = [
+    `Usage: \`${cmd} <pokemon>\``,
+    `History: \`${cmd} <pokemon> <timeframe>\` (e.g. 7d, 2 weeks, 3m, 1 year; min unit: days)`,
+  ];
+  await message.reply(lines.join("\n"));
+}
+
+async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
+  if (!rarityNorm) await refresh();
+
+  const hit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
+  if (!hit) {
+    const suggestions = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
+    if (suggestions.length) {
+      await message.reply({
+        content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
+        components: buildDidYouMeanButtons(cmd, suggestions, timeframe),
+      });
+    }
+    return;
+  }
+
+  const apiPokemon = hit.name.toLowerCase();
+  const url = `https://tppc.electa.buzz/api/v1/rarity?pokemon=${encodeURIComponent(
+    apiPokemon
+  )}&timeframe=${encodeURIComponent(timeframe)}`;
+  console.log(`[${cmd}] Fetching ${url}`);
+
+  let payload;
+  try {
+    payload = await fetchText(url);
+  } catch (e) {
+    await message.reply(`Couldn’t fetch rarity history for \`${hit.name}\`.`);
+    return;
+  }
+
+  let data;
+  try {
+    const parsed = JSON.parse(payload);
+    if (parsed?.status !== "success") {
+      throw new Error(parsed?.message || "API returned error");
+    }
+    data = parsed?.data;
+  } catch (e) {
+    await message.reply(`No rarity history found for \`${hit.name}\`.`);
+    return;
+  }
+
+  const changes = data?.changes || {};
+  const historical = data?.historical || {};
+  const title = `${hit.name} — Rarity History (${formatTimeframeLabel(timeframe)})`;
+
+  await message.reply({
+    embeds: [
+      {
+        title,
+        url: historyUrlFromPokemonName(hit.name),
+        description: `Timeframe: **${formatTimeframeLabel(
+          historical.timeframe || timeframe
+        )}**`,
+        color: 0xed8b2d,
+        fields: [
+          { name: "Total", value: `${fmt(data?.total)} (${fmtDelta(changes.total)})`, inline: false },
+          { name: "♂", value: `${fmt(data?.male)} (${fmtDelta(changes.male)})`, inline: true },
+          { name: "♀", value: `${fmt(data?.female)} (${fmtDelta(changes.female)})`, inline: true },
+          {
+            name: "(?)",
+            value: `${fmt(data?.ungendered)} (${fmtDelta(changes.ungendered)})`,
+            inline: true,
+          },
+          {
+            name: "G",
+            value: `${fmt(data?.genderless)} (${fmtDelta(changes.genderless)})`,
+            inline: true,
+          },
+        ],
+        footer: { text: `Last update: ${data?.last_update || "unknown"}` },
+      },
+    ],
+  });
+}
+
 /* --------------------------------- exports -------------------------------- */
 
 export function registerRarity(register) {
@@ -478,12 +561,19 @@ export function registerRarity(register) {
     logicalId: "rarity.main",
     name: "rarity",
     handler: async ({ message, rest, cmd }) => {
-      const qRaw = String(rest ?? "").trim();
-      if (!qRaw) {
-        await message.reply(`Usage: \`${cmd} <pokemon>\``);
+      const raw = String(rest ?? "").trim();
+      if (!raw || raw.toLowerCase() === "help") {
+        await replyRarityHelp(message, cmd);
         return;
       }
 
+      const { pokemon: historyPokemon, timeframe } = parseRarityHistoryArgs(raw);
+      if (historyPokemon && timeframe) {
+        await handleRarityHistory({ message, cmd, qRaw: historyPokemon, timeframe });
+        return;
+      }
+
+      const qRaw = raw;
       const r = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
 
       if (!r) {
@@ -520,7 +610,7 @@ export function registerRarity(register) {
         ]
       });
     },
-    help: "?rarity <pokemon> — shows rarity statistics"
+    help: "?rarity <pokemon> — shows rarity statistics (add <timeframe> for history)"
   });
 
   // Rarity reload should be OFF wherever rarity.main is OFF
@@ -709,80 +799,7 @@ export function registerLevel4Rarity(register) {
         );
         return;
       }
-
-      // Ensure base rarity is loaded so we can canonicalize the name + reuse suggestions
-      if (!rarityNorm) await refresh();
-
-      const hit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
-      if (!hit) {
-        const suggestions = getSuggestionsFromIndex(rarityNorm, qRaw, 5);
-        if (suggestions.length) {
-          await message.reply({
-            content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-            components: buildDidYouMeanButtons("!rh", suggestions, timeframe),
-          });
-        }
-        return;
-      }
-
-      const apiPokemon = hit.name.toLowerCase();
-      const url = `https://tppc.electa.buzz/api/v1/rarity?pokemon=${encodeURIComponent(
-        apiPokemon
-      )}&timeframe=${encodeURIComponent(timeframe)}`;
-      console.log(`[!rh] Fetching ${url}`);
-
-      let payload;
-      try {
-        payload = await fetchText(url);
-      } catch (e) {
-        await message.reply(`Couldn’t fetch rarity history for \`${hit.name}\`.`);
-        return;
-      }
-
-      let data;
-      try {
-        const parsed = JSON.parse(payload);
-        if (parsed?.status !== "success") {
-          throw new Error(parsed?.message || "API returned error");
-        }
-        data = parsed?.data;
-      } catch (e) {
-        await message.reply(`No rarity history found for \`${hit.name}\`.`);
-        return;
-      }
-
-      const changes = data?.changes || {};
-      const historical = data?.historical || {};
-      const title = `${hit.name} — Rarity History (${formatTimeframeLabel(timeframe)})`;
-
-      await message.reply({
-        embeds: [
-          {
-            title,
-            url: historyUrlFromPokemonName(hit.name),
-            description: `Timeframe: **${formatTimeframeLabel(
-              historical.timeframe || timeframe
-            )}**`,
-            color: 0xed8b2d,
-            fields: [
-              { name: "Total", value: `${fmt(data?.total)} (${fmtDelta(changes.total)})`, inline: false },
-              { name: "♂", value: `${fmt(data?.male)} (${fmtDelta(changes.male)})`, inline: true },
-              { name: "♀", value: `${fmt(data?.female)} (${fmtDelta(changes.female)})`, inline: true },
-              {
-                name: "(?)",
-                value: `${fmt(data?.ungendered)} (${fmtDelta(changes.ungendered)})`,
-                inline: true,
-              },
-              {
-                name: "G",
-                value: `${fmt(data?.genderless)} (${fmtDelta(changes.genderless)})`,
-                inline: true,
-              },
-            ],
-            footer: { text: `Last update: ${data?.last_update || "unknown"}` },
-          },
-        ],
-      });
+      await handleRarityHistory({ message, cmd: "!rh", qRaw, timeframe });
     },
     "!rh <pokemon> <timeframe> — shows rarity history (timeframe: d/w/m/y)",
     { aliases: ["!rarityhistory"] }
@@ -802,8 +819,14 @@ export async function handleRarityInteraction(interaction) {
   await disableInteractionButtons(interaction);
 
   // Rarity main (supports both prefixes; actual cmd used is encoded in the button customId)
-  if (cmdKey === "?rarity") return { cmd: "?rarity", rest: mon };
-  if (cmdKey === "!rarity") return { cmd: "!rarity", rest: mon };
+  if (cmdKey === "?rarity") {
+    const rest = extra ? `${mon} ${extra}` : mon;
+    return { cmd: "?rarity", rest };
+  }
+  if (cmdKey === "!rarity") {
+    const rest = extra ? `${mon} ${extra}` : mon;
+    return { cmd: "!rarity", rest };
+  }
 
   // L4 (supports both prefixes; actual cmd used is encoded in the button customId)
   if (cmdKey === "!l4") return { cmd: "!l4", rest: mon };
