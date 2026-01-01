@@ -74,6 +74,7 @@ function makeHelpText() {
     "**Options (slash):**",
     "• `time` — round time limit in seconds (default 20)",
     "• `rounds` — number of rounds (default 1)",
+    "• `uniquewinners` — winners can only win one round",
     "• `join` / `max` — reaction join options",
     "",
     "**Play:**",
@@ -93,6 +94,7 @@ function makeRulesText() {
     "Players race to type the correct answer.",
     "",
     "• First correct answer wins the round.",
+    "• Unique winners mode: a player can only win once.",
     "• The game ends after the configured number of rounds.",
   ].join("\n");
 }
@@ -179,6 +181,9 @@ async function finalizeRound(st, channel, winnerId) {
 
   if (winnerId) {
     st.scores.set(winnerId, (st.scores.get(winnerId) || 0) + 1);
+    if (st.uniqueWinners) {
+      st.roundWinners.add(winnerId);
+    }
   }
 
   st.roundResults.push({
@@ -212,7 +217,17 @@ async function finalizeRound(st, channel, winnerId) {
   });
 }
 
-function buildStartState({ guildId, channelId, creatorId, players, timeLimitSec, roundsTarget, wordList, client }) {
+function buildStartState({
+  guildId,
+  channelId,
+  creatorId,
+  players,
+  timeLimitSec,
+  roundsTarget,
+  wordList,
+  client,
+  uniqueWinners,
+}) {
   const scores = new Map();
   for (const id of players) scores.set(id, 0);
 
@@ -235,6 +250,8 @@ function buildStartState({ guildId, channelId, creatorId, players, timeLimitSec,
     roundResults: [],
     currentWord: null,
     currentScramble: null,
+    uniqueWinners: Boolean(uniqueWinners),
+    roundWinners: new Set(),
   };
 }
 
@@ -277,6 +294,7 @@ export function registerPokemonUnscramble(register) {
         { type: 4, name: "rounds", description: "Number of rounds (1–50).", required: false },
         { type: 4, name: "join", description: "Join window seconds (5–120).", required: false },
         { type: 4, name: "max", description: "Max players (1–50).", required: false },
+        { type: 5, name: "uniquewinners", description: "Winners can only win one round.", required: false },
       ],
     },
     async ({ interaction }) => {
@@ -305,6 +323,7 @@ export function registerPokemonUnscramble(register) {
       const roundsOpt = interaction.options?.getInteger?.("rounds");
       const joinOpt = interaction.options?.getInteger?.("join");
       const maxOpt = interaction.options?.getInteger?.("max");
+      const uniqueOpt = interaction.options?.getBoolean?.("uniquewinners");
 
       const timeLimitSec = Number.isFinite(timeOpt) ? timeOpt : DEFAULT_TIME_SEC;
       if (!(timeLimitSec >= 5 && timeLimitSec <= 120)) {
@@ -346,6 +365,7 @@ export function registerPokemonUnscramble(register) {
           roundsTarget: targets.roundsTarget,
           joinSeconds: joinCheck.joinSeconds ?? DEFAULT_JOIN_SEC,
           maxPlayers: joinCheck.maxPlayers ?? null,
+          uniqueWinners: Boolean(uniqueOpt),
         },
       });
 
@@ -483,6 +503,20 @@ export function registerPokemonUnscramble(register) {
     }
 
     const players = [...entrants].filter(Boolean);
+    if (pending.opts.uniqueWinners && players.length <= pending.opts.roundsTarget) {
+      await channel.send("❌ Unique winners mode needs more players than rounds.");
+      if (acknowledged) {
+        try {
+          await interaction.editReply({ content: "❌ Unique winners mode needs more players than rounds." });
+        } catch {}
+      } else {
+        await interaction.reply({
+          flags: MessageFlags.Ephemeral,
+          content: "❌ Unique winners mode needs more players than rounds.",
+        });
+      }
+      return;
+    }
     const res = manager.tryStart(
       { guildId: pending.guildId },
       buildStartState({
@@ -494,6 +528,7 @@ export function registerPokemonUnscramble(register) {
         roundsTarget: pending.opts.roundsTarget,
         wordList,
         client: interaction.client,
+        uniqueWinners: pending.opts.uniqueWinners,
       })
     );
 
@@ -514,7 +549,8 @@ export function registerPokemonUnscramble(register) {
       `✅ **Pokemon Unscramble started!**\n` +
         `Players: ${players.map(mention).join(", ")}\n` +
         `Rounds: **${pending.opts.roundsTarget}**\n` +
-        `Time limit: **${pending.opts.timeLimitSec}s**`
+        `Time limit: **${pending.opts.timeLimitSec}s**\n` +
+        `Unique winners: **${pending.opts.uniqueWinners ? "on" : "off"}**`
     );
 
     await startRound(res.state, channel);
@@ -539,6 +575,7 @@ export function registerPokemonUnscramble(register) {
 
     const uid = message.author.id;
     if (!st.players.includes(uid)) return;
+    if (st.uniqueWinners && st.roundWinners?.has(uid)) return;
 
     const guess = normalizeGuess(message.content);
     if (!guess) return;
