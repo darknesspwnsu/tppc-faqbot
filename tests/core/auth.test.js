@@ -38,6 +38,28 @@ function makeMessage({
   };
 }
 
+function makeInteraction({
+  guildId = "g1",
+  userId = "u1",
+  admin = false,
+  manageGuild = false,
+} = {}) {
+  return {
+    guildId,
+    user: { id: userId },
+    member: {
+      user: { id: userId },
+      permissions: {
+        has: (flag) => {
+          if (admin && flag === PermissionsBitField.Flags.Administrator) return true;
+          if (manageGuild && flag === PermissionsBitField.Flags.ManageGuild) return true;
+          return false;
+        },
+      },
+    },
+  };
+}
+
 afterEach(() => {
   process.env = { ...originalEnv };
   vi.clearAllMocks();
@@ -66,6 +88,12 @@ describe("auth.js", () => {
 
     const other = makeMessage({ guildId: "g1", authorId: "u3" });
     expect(isAdminOrPrivileged(other)).toBe(false);
+
+    const interaction = makeInteraction({ guildId: "g1", userId: "u1" });
+    expect(isAdminOrPrivileged(interaction)).toBe(true);
+
+    const otherInteraction = makeInteraction({ guildId: "g1", userId: "u3" });
+    expect(isAdminOrPrivileged(otherInteraction)).toBe(false);
   });
 
   it("handles missing privileged_users.json by treating list as empty", async () => {

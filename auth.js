@@ -25,8 +25,8 @@ function isAdmin(message) {
 }
 
 function isPrivileged(message) {
-  const gid = message.guildId;
-  const uid = message.author?.id;
+  const gid = message.guildId || message.guild?.id;
+  const uid = message.user?.id || message.member?.user?.id || message.author?.id;
   if (!gid || !uid) return false;
 
   const list = PRIVILEGED_USERS[gid];
