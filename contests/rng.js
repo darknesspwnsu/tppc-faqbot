@@ -126,14 +126,14 @@ export function registerRng(register) {
     const n = Number(m[1]);
     const sides = Number(m[2]);
 
-    if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 0) {
+    if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 1) {
       await message.channel.send("Invalid format. Please use a format like `1d100`");
       return;
     }
 
-    if (noRepeat && n > (sides + 1)) {
+    if (noRepeat && n > sides) {
       await message.channel.send(
-        `Impossible with norepeat: you asked for ${n} unique rolls but range is only 0..${sides} (${sides + 1} unique values).`
+        `Impossible with norepeat: you asked for ${n} unique rolls but range is only 1..${sides} (${sides} unique values).`
       );
       return;
     }
@@ -142,12 +142,12 @@ export function registerRng(register) {
     let rolls;
 
     if (!noRepeat) {
-      rolls = Array.from({ length: n }, () => randIntInclusive(0, sides));
+      rolls = Array.from({ length: n }, () => randIntInclusive(1, sides));
     } else {
-      const rangeSize = sides + 1;
+      const rangeSize = sides;
 
       if (n > rangeSize * 0.6) {
-        const arr = Array.from({ length: rangeSize }, (_, i) => i);
+        const arr = Array.from({ length: rangeSize }, (_, i) => i + 1);
         for (let i = 0; i < n; i++) {
           const j = randIntInclusive(i, rangeSize - 1);
           const tmp = arr[i];
@@ -157,7 +157,7 @@ export function registerRng(register) {
         rolls = arr.slice(0, n);
       } else {
         const seen = new Set();
-        while (seen.size < n) seen.add(randIntInclusive(0, sides));
+        while (seen.size < n) seen.add(randIntInclusive(1, sides));
         rolls = Array.from(seen);
       }
     }
@@ -179,7 +179,7 @@ export function registerRng(register) {
     logicalId: "rng.roll",
     name: "roll",
     handler: handleRoll,
-    help: "?roll NdM — rolls N numbers from 0..M (example: ?roll 1d100)",
+    help: "?roll NdM — rolls N numbers from 1..M (example: ?roll 1d100)",
   });
 
   // ------------------------------ ?choose / !choose (exposed per guild) ------------------------------
