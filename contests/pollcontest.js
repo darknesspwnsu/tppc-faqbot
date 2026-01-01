@@ -258,6 +258,37 @@ async function installPollHooks(client) {
       console.error("[pollcontest] cleanup failed after message delete:", err);
     }
   });
+
+  client.on("messageUpdate", async (oldMessage, newMessage) => {
+    const msgId = String(newMessage?.id || oldMessage?.id || "");
+    if (!msgId || !activePolls.has(msgId)) return;
+
+    let message = newMessage;
+    if (message?.partial && message?.fetch) {
+      try {
+        message = await message.fetch();
+      } catch {
+        message = null;
+      }
+    }
+
+    if (!message?.poll && message?.channel?.messages?.fetch) {
+      try {
+        message = await message.channel.messages.fetch(msgId);
+      } catch {
+        message = null;
+      }
+    }
+
+    const poll = message?.poll;
+    if (!poll) return;
+    const ended =
+      poll.resultsFinalized ||
+      (Number.isFinite(poll.expiresTimestamp) && poll.expiresTimestamp <= Date.now());
+    if (ended) {
+      await processPoll(msgId);
+    }
+  });
 }
 
 async function boot(client) {
@@ -591,6 +622,14 @@ export function registerPollContest(register) {
         if (!poll) {
           await interaction.reply({
             content: "Could not find a poll with that message ID in this channel.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        if (String(message.channelId || "") !== String(interaction.channelId || "")) {
+          await interaction.reply({
+            content: "That poll is not in this channel.",
             flags: MessageFlags.Ephemeral,
           });
           return;

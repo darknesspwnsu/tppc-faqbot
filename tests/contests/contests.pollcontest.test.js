@@ -176,6 +176,46 @@ describe("pollcontest validation", () => {
     );
   });
 
+  test("rejects poll_id when poll is in another channel", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const answers = new Map([
+      [0, { text: "A" }],
+      [1, { text: "B" }],
+    ]);
+
+    const interaction = mockInteraction({
+      options: {
+        getString: vi.fn(() => "123"),
+      },
+      channel: {
+        messages: {
+          fetch: vi.fn(async () => ({
+            id: "123",
+            channelId: "other-channel",
+            author: { id: "u2" },
+            poll: {
+              allowMultiselect: false,
+              expiresTimestamp: Date.now() + 60_000,
+              answers,
+            },
+          })),
+        },
+      },
+    });
+
+    const handler = handlers.get("/pollcontest")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "That poll is not in this channel.",
+        flags: expect.any(Number),
+      })
+    );
+  });
+
   test("rejects poll_id when poll was started by bot", async () => {
     const { handlers, register } = buildRegister();
     registerPollContest(register);
@@ -196,6 +236,7 @@ describe("pollcontest validation", () => {
         messages: {
           fetch: vi.fn(async () => ({
             id: "123",
+            channelId: "c1",
             author: { id: "bot" },
             poll: {
               allowMultiselect: false,
@@ -243,6 +284,7 @@ describe("pollcontest validation", () => {
         messages: {
           fetch: vi.fn(async () => ({
             id: "123",
+            channelId: "c1",
             author: { id: "bot" },
             poll: {
               allowMultiselect: false,
@@ -282,6 +324,7 @@ describe("pollcontest validation", () => {
         messages: {
           fetch: vi.fn(async () => ({
             id: "123",
+            channelId: "c1",
             author: { id: "other" },
             poll: {
               allowMultiselect: false,
