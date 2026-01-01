@@ -149,6 +149,18 @@ function addWhisper(state, phrase, ownerId, prize) {
   return { ok: true };
 }
 
+export function removeWhisper(state, phrase, ownerId) {
+  const p = norm(phrase);
+  if (!p) return { ok: false, reason: "empty" };
+
+  const key = phraseKey(p);
+  const idx = state.items.findIndex((x) => x.ownerId === ownerId && phraseKey(x.phrase) === key);
+  if (idx === -1) return { ok: false, reason: "missing" };
+
+  state.items.splice(idx, 1);
+  return { ok: true };
+}
+
 function listWhispersForUser(state, ownerId) {
   return state.items.filter((x) => x.ownerId === ownerId);
 }
@@ -173,6 +185,16 @@ export function registerWhispers(register) {
           description: "Optional prize text to show when someone finds the phrase",
           required: false,
         },
+        {
+          type: 3, // STRING
+          name: "mode",
+          description: "Add or delete a phrase (default: add)",
+          required: false,
+          choices: [
+            { name: "add", value: "add" },
+            { name: "delete", value: "delete" },
+          ],
+        },
       ],
     },
     async ({ interaction }) => {
@@ -182,6 +204,7 @@ export function registerWhispers(register) {
         return;
       }
 
+      const mode = norm(interaction.options?.getString?.("mode")) || "add";
       const phrase = norm(interaction.options?.getString?.("phrase"));
       const prize = norm(interaction.options?.getString?.("prize"));
       const ownerId = interaction.user?.id;
@@ -192,6 +215,29 @@ export function registerWhispers(register) {
       }
 
       const state = await ensureGuildLoaded(guildId);
+
+      if (mode === "delete") {
+        const res = removeWhisper(state, phrase, ownerId);
+        if (!res.ok && res.reason === "missing") {
+          await interaction.reply({
+            content: `You are not listening for: "${phrase}"`,
+            ephemeral: true,
+          });
+          return;
+        }
+        if (!res.ok) {
+          await interaction.reply({ content: "Invalid phrase.", ephemeral: true });
+          return;
+        }
+
+        await trySaveGuildToDb(guildId);
+
+        await interaction.reply({
+          content: `🗑️ Removed whisper: "${phrase}"`,
+          ephemeral: true,
+        });
+        return;
+      }
 
       const res = addWhisper(state, phrase, ownerId, prize);
       if (!res.ok && res.reason === "exists") {
