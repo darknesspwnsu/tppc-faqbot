@@ -15,7 +15,6 @@ import {
   getSuggestionsFromIndex,
   normalizeKey,
   normalizeQueryVariants,
-  queryVariantPrefix,
 } from "../shared/pokename_utils.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
@@ -67,143 +66,59 @@ function fetchText(url) {
   });
 }
 
-/* -------------------------------- history --------------------------------- */
+/* ---------------------------- rarity history api --------------------------- */
 
-function historySlugFromName(name) {
-  // Site expects "+" literal in the path, which ends up URL-encoded as "%2B"
-  // Example: "Vulpix (Alola)" -> "Vulpix+%28Alola%29" (browser shows %2B for +)
-  const plus = String(name ?? "").trim().replace(/\s+/g, "+");
-  return encodeURIComponent(plus);
+function parseRarityHistoryArgs(raw) {
+  const input = String(raw ?? "").trim();
+  if (!input) return { pokemon: "", timeframe: "" };
+
+  const m = input.match(
+    /^(.*\S)\s+(\d+)\s*(d|day|days|w|wk|week|weeks|m|mth|month|months|y|yr|year|years)?$/i
+  );
+  if (!m) return { pokemon: input, timeframe: "" };
+
+  const pokemon = m[1].trim();
+  const amount = Number(m[2]);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { pokemon, timeframe: "" };
+  }
+
+  const unitRaw = String(m[3] || "d").toLowerCase();
+  if (unitRaw.startsWith("y")) {
+    return { pokemon, timeframe: `${amount * 12}m` };
+  }
+
+  const unit = unitRaw.startsWith("d") ? "d" : unitRaw.startsWith("w") ? "w" : "m";
+  return { pokemon, timeframe: `${amount}${unit}` };
 }
 
 function historyUrlFromPokemonName(name) {
-  return `https://tppc.electa.buzz/history/${historySlugFromName(name)}`;
+  const compact = String(name ?? "").trim().replace(/\s+/g, "");
+  return `https://tppc.electa.buzz/history/${encodeURIComponent(compact.toLowerCase())}`;
 }
 
-function stripTags(s) {
-  return String(s ?? "")
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parseLeadingInt(s) {
-  const m = String(s ?? "").trim().match(/^(\d+)/);
-  return m ? Number(m[1]) : 0;
-}
-
-function parseHistoryTable(html, limit = 120) {
-  const tbody = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i)?.[1];
-  if (!tbody) return [];
-
-  const rows = [];
-  const trRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
-  let tr;
-
-  while ((tr = trRe.exec(tbody))) {
-    const trHtml = tr[1];
-    const tds = [...trHtml.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
-      stripTags(m[1])
-    );
-    if (tds.length < 6) continue;
-
-    const dateText = tds[0];
-    if (!dateText || dateText === "-") continue; // skip the baseline row
-
-    rows.push({
-      dateText,
-      total: parseLeadingInt(tds[5]),
-    });
-
-    if (rows.length >= limit) break;
-  }
-
-  // Page is newest->oldest; chart is nicer oldest->newest
-  rows.reverse();
-  return rows;
-}
-
-function shortenDateLabel(s) {
-  // "December 25, 2025" → "Dec 2025"
-  // Also handles already-short formats gracefully.
-  const str = String(s ?? "").trim();
-
-  // Full format: Month Day, Year
-  let m = str.match(/^([A-Za-z]+)\s+\d{1,2},\s*(\d{4})$/);
-  if (m) return `${m[1].slice(0, 3)} ${m[2]}`;
-
-  // If it ever comes through as "Dec 25, 2025"
-  m = str.match(/^([A-Za-z]{3})\s+\d{1,2},\s*(\d{4})$/);
-  if (m) return `${m[1]} ${m[2]}`;
-
-  // Fallback: if we can spot a year anywhere, prefer "Mon YYYY"
-  m = str.match(/^([A-Za-z]{3,})\b.*\b(\d{4})\b/);
-  if (m) return `${m[1].slice(0, 3)} ${m[2]}`;
-
-  return str;
-}
-
-function buildChartConfig({ title, labels, data }) {
-  return {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: title,
-          data,
-          borderColor: "#7dd3fc",
-          backgroundColor: "rgba(125, 211, 252, 0.15)",
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.15,
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        legend: { display: false },
-        title: { display: false },
-      },
-      scales: {
-        x: {
-          ticks: { maxTicksLimit: 8, font: { size: 11 } },
-          grid: { color: "rgba(255,255,255,0.08)" },
-        },
-        y: {
-          ticks: { font: { size: 11 } },
-          grid: { color: "rgba(255,255,255,0.08)" },
-        },
-      },
-    },
+function formatTimeframeLabel(value) {
+  const match = String(value || "")
+    .trim()
+    .match(/^(\d+)\s*([dwmy])$/i);
+  if (!match) return value;
+  const count = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  const labels = {
+    d: "day",
+    w: "week",
+    m: "month",
+    y: "year",
   };
+  const label = labels[unit];
+  if (!label || !Number.isFinite(count)) return value;
+  return `${count} ${label}${count === 1 ? "" : "s"}`;
 }
 
-async function quickChartUrl(chartConfig) {
-  // Node 20+ has global fetch. This returns a hosted image URL.
-  const res = await fetch("https://quickchart.io/chart/create", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chart: chartConfig,
-      width: 900,
-      height: 420,
-      backgroundColor: "transparent",
-      format: "png",
-    }),
-  });
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`QuickChart create failed: ${res.status} ${txt}`.trim());
-  }
-
-  const data = await res.json();
-  return data.url;
+function fmtDelta(n) {
+  const v = Number(n) || 0;
+  if (v === 0) return "0";
+  return `${v > 0 ? "+" : ""}${fmt(v)}`;
 }
 
 /* ------------------------- time: TPPC banner -> Date ------------------------ */
@@ -787,9 +702,11 @@ export function registerLevel4Rarity(register) {
   register(
     "!rh",
     async ({ message, rest }) => {
-      const qRaw = String(rest ?? "").trim();
-      if (!qRaw) {
-        await message.reply("Usage: `!rh <pokemon>`");
+      const { pokemon: qRaw, timeframe } = parseRarityHistoryArgs(rest);
+      if (!qRaw || !timeframe) {
+        await message.reply(
+          "Usage: `!rh <pokemon> <timeframe>` (e.g. 7d, 2 weeks, 3m, 1 year; min unit: days)"
+        );
         return;
       }
 
@@ -802,70 +719,72 @@ export function registerLevel4Rarity(register) {
         if (suggestions.length) {
           await message.reply({
             content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-            components: buildDidYouMeanButtons("!rh", suggestions),
+            components: buildDidYouMeanButtons("!rh", suggestions, timeframe),
           });
         }
         return;
       }
 
-      const url = historyUrlFromPokemonName(hit.name);
+      const apiPokemon = hit.name.toLowerCase();
+      const url = `https://tppc.electa.buzz/api/v1/rarity?pokemon=${encodeURIComponent(
+        apiPokemon
+      )}&timeframe=${encodeURIComponent(timeframe)}`;
       console.log(`[!rh] Fetching ${url}`);
 
-      let html;
+      let payload;
       try {
-        html = await fetchText(url);
+        payload = await fetchText(url);
       } catch (e) {
-        await message.reply(`Couldn’t fetch history page for \`${hit.name}\`.`);
+        await message.reply(`Couldn’t fetch rarity history for \`${hit.name}\`.`);
         return;
       }
 
-      const rows = parseHistoryTable(html, 120);
-      if (!rows.length) {
-        await message.reply(`No history rows found for \`${hit.name}\`.`);
-        return;
-      }
-
-      // Keep chart readable: last N points
-      const MAX_POINTS = 60;
-      const sliced = rows.length > MAX_POINTS ? rows.slice(-MAX_POINTS) : rows;
-
-      const labels = sliced.map((r) => shortenDateLabel(r.dateText));
-      const totals = sliced.map((r) => r.total);
-
-      const chartCfg = buildChartConfig({
-        title: `${hit.name} total`,
-        labels,
-        data: totals,
-      });
-
-      let chartUrl;
+      let data;
       try {
-        chartUrl = await quickChartUrl(chartCfg);
+        const parsed = JSON.parse(payload);
+        if (parsed?.status !== "success") {
+          throw new Error(parsed?.message || "API returned error");
+        }
+        data = parsed?.data;
       } catch (e) {
-        await message.reply("Chart generation failed (QuickChart). Try again later.");
+        await message.reply(`No rarity history found for \`${hit.name}\`.`);
         return;
       }
 
-      const last = sliced[sliced.length - 1];
-      const prev = sliced[sliced.length - 2];
-      const delta = prev ? last.total - prev.total : 0;
+      const changes = data?.changes || {};
+      const historical = data?.historical || {};
+      const title = `${hit.name} — Rarity History (${formatTimeframeLabel(timeframe)})`;
 
-      await message.channel.send({
+      await message.reply({
         embeds: [
           {
-            title: `${hit.name} — Rarity History (Total)`,
-            url,
-            description:
-              `Showing ${sliced.length} points (oldest → newest)\n` +
-              `**Current total:** ${fmt(last.total)} (${delta >= 0 ? "+" : ""}${fmt(delta)})`,
+            title,
+            url: historyUrlFromPokemonName(hit.name),
+            description: `Timeframe: **${formatTimeframeLabel(
+              historical.timeframe || timeframe
+            )}**`,
             color: 0xed8b2d,
-            image: { url: chartUrl },
-            footer: { text: "Source: tppc.electa.buzz history" },
+            fields: [
+              { name: "Total", value: `${fmt(data?.total)} (${fmtDelta(changes.total)})`, inline: false },
+              { name: "♂", value: `${fmt(data?.male)} (${fmtDelta(changes.male)})`, inline: true },
+              { name: "♀", value: `${fmt(data?.female)} (${fmtDelta(changes.female)})`, inline: true },
+              {
+                name: "(?)",
+                value: `${fmt(data?.ungendered)} (${fmtDelta(changes.ungendered)})`,
+                inline: true,
+              },
+              {
+                name: "G",
+                value: `${fmt(data?.genderless)} (${fmtDelta(changes.genderless)})`,
+                inline: true,
+              },
+            ],
+            footer: { text: `Last update: ${data?.last_update || "unknown"}` },
           },
         ],
       });
     },
-    "!rh <pokemon> — plots rarity history (Total) from tppc.electa.buzz",
+    "!rh <pokemon> <timeframe> — shows rarity history (timeframe: d/w/m/y)",
     { aliases: ["!rarityhistory"] }
   );
 }
@@ -893,7 +812,10 @@ export async function handleRarityInteraction(interaction) {
   if (cmdKey === "!rc_left") return { cmd: "!rc", rest: `"${mon}" "${extra}"` };
   if (cmdKey === "!rc_right") return { cmd: "!rc", rest: `"${extra}" "${mon}"` };
 
-  if (cmdKey === "!rh") return { cmd: "!rh", rest: mon };
+  if (cmdKey === "!rh") {
+    const rest = extra ? `${mon} ${extra}` : mon;
+    return { cmd: "!rh", rest };
+  }
 
   return false;
 }

@@ -16,6 +16,21 @@ const L4_JSON = JSON.stringify({
   },
 });
 
+const RARITY_HISTORY_JSON = JSON.stringify({
+  status: "success",
+  data: {
+    name: "Pikachu",
+    last_update: "5 minutes",
+    male: 4,
+    female: 3,
+    ungendered: 2,
+    genderless: 1,
+    total: 10,
+    historical: { timeframe: "7d" },
+    changes: { male: 1, female: 0, ungendered: -1, genderless: 0, total: 0 },
+  },
+});
+
 const isAdminOrPrivileged = vi.fn(() => true);
 
 vi.mock("../../auth.js", () => ({ isAdminOrPrivileged }));
@@ -25,7 +40,13 @@ const httpGet = vi.fn((url, cb) => {
   res.statusCode = 200;
   res.setEncoding = vi.fn();
 
-  const payload = String(url).includes("l4") ? L4_JSON : RARITY_JSON;
+  const urlStr = String(url);
+  let payload = RARITY_JSON;
+  if (urlStr.includes("api/v1/rarity")) {
+    payload = RARITY_HISTORY_JSON;
+  } else if (urlStr.includes("l4")) {
+    payload = L4_JSON;
+  }
   process.nextTick(() => {
     cb(res);
     res.emit("data", payload);
@@ -88,6 +109,7 @@ beforeEach(() => {
     RARITY_JSON_URL: "http://example.test/rarity.json",
     RARITY4_JSON_URL: "http://example.test/l4_rarity.json",
   };
+  httpGet.mockClear();
   vi.spyOn(global, "setTimeout").mockImplementation(() => 0);
 });
 
@@ -166,5 +188,101 @@ describe("rarity.js", () => {
 
     const res = await handleRarityInteraction(interaction);
     expect(res).toEqual({ cmd: "?rarity", rest: "Pikachu" });
+  });
+
+  it("registerRarityHistory fetches API data and formats output", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rhCall = register.mock.calls.find((call) => call[0] === "!rh");
+    const handler = rhCall[1];
+
+    const message = { reply: vi.fn(async () => ({})) };
+    await handler({ message, rest: "Pikachu 7d" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [
+          expect.objectContaining({
+            title: "Pikachu — Rarity History (7 days)",
+            fields: expect.arrayContaining([
+              expect.objectContaining({ name: "Total", value: "10 (0)" }),
+              expect.objectContaining({ name: "♂", value: "4 (+1)" }),
+            ]),
+          }),
+        ],
+      })
+    );
+  });
+
+  it("registerRarityHistory keeps timeframe on did-you-mean retries", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rhCall = register.mock.calls.find((call) => call[0] === "!rh");
+    const handler = rhCall[1];
+
+    const message = { reply: vi.fn(async () => ({})) };
+    await handler({ message, rest: "Pikac 7d" });
+
+    const payload = message.reply.mock.calls[0][0];
+    const button = payload.components[0].components[0].data;
+    expect(button.customId).toContain("rarity_retry:!rh:Pikachu:7d");
+  });
+
+  it("registerRarityHistory maps retry buttons back to timeframe", async () => {
+    const { handleRarityInteraction } = await loadRarityModule();
+
+    const interaction = {
+      isButton: () => true,
+      customId: "rarity_retry:!rh:Pikachu:7d",
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+      message: {
+        components: [
+          {
+            components: [
+              {
+                type: 2,
+                custom_id: "rarity_retry:!rh:Pikachu:7d",
+                label: "Pikachu",
+                style: 2,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const res = await handleRarityInteraction(interaction);
+    expect(res).toEqual({ cmd: "!rh", rest: "Pikachu 7d" });
+  });
+
+  it("registerRarityHistory accepts years and converts to months", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rhCall = register.mock.calls.find((call) => call[0] === "!rh");
+    const handler = rhCall[1];
+
+    const message = { reply: vi.fn(async () => ({})) };
+    await handler({ message, rest: "Pikachu 1 year" });
+
+    const apiCall = httpGet.mock.calls.find((call) =>
+      String(call[0]).includes("api/v1/rarity")
+    );
+    expect(String(apiCall[0])).toContain("timeframe=12m");
   });
 });
