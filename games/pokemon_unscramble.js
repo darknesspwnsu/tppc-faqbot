@@ -255,6 +255,12 @@ function buildStartState({
   };
 }
 
+function shouldIgnoreGuess(st, userId) {
+  if (!st.players.includes(userId)) return true;
+  if (st.uniqueWinners && st.roundWinners?.has(userId)) return true;
+  return false;
+}
+
 
 export function registerPokemonUnscramble(register) {
   makeGameQoL(register, {
@@ -574,7 +580,7 @@ export function registerPokemonUnscramble(register) {
     if (!st.roundActive) return;
 
     const uid = message.author.id;
-    if (!st.players.includes(uid)) return;
+    if (shouldIgnoreGuess(st, uid)) return;
     if (st.uniqueWinners && st.roundWinners?.has(uid)) return;
 
     const guess = normalizeGuess(message.content);
@@ -607,4 +613,6 @@ export const __testables = {
   scrambleWord,
   validateTargets,
   parseWordList,
+  buildStartState,
+  shouldIgnoreGuess,
 };
