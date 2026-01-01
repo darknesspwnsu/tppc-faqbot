@@ -255,6 +255,12 @@ function buildStartState({
   };
 }
 
+function isMessageInGameChannel(st, message) {
+  const channelId = message?.channelId || message?.channel?.id;
+  if (!st?.channelId) return true;
+  return st.channelId === channelId;
+}
+
 function shouldIgnoreGuess(st, userId) {
   if (!st.players.includes(userId)) return true;
   if (st.uniqueWinners && st.roundWinners?.has(userId)) return true;
@@ -576,7 +582,7 @@ export function registerPokemonUnscramble(register) {
     const st = manager.getState({ message });
     if (!st) return;
 
-    if (!manager.isSameChannel({ message }, st)) return;
+    if (!isMessageInGameChannel(st, message)) return;
     if (!st.roundActive) return;
 
     const uid = message.author.id;
@@ -614,5 +620,6 @@ export const __testables = {
   validateTargets,
   parseWordList,
   buildStartState,
+  isMessageInGameChannel,
   shouldIgnoreGuess,
 };

@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { __testables } from "../../games/hangman.js";
 
-const { normalizeWord, isLetterGuess, uniqueLettersNeeded, prettyMask, hangmanStage } = __testables;
+const { normalizeWord, isLetterGuess, uniqueLettersNeeded, prettyMask, hangmanStage, isMessageInGameChannel } =
+  __testables;
 
 describe("hangman helpers", () => {
   it("normalizeWord strips punctuation and normalizes spaces", () => {
@@ -39,5 +40,11 @@ describe("hangman helpers", () => {
     expect(typeof s0).toBe("string");
     expect(typeof s7).toBe("string");
     expect(s7).toBe(s99);
+  });
+
+  it("isMessageInGameChannel ignores off-channel messages", () => {
+    const st = { channelId: "c1" };
+    expect(isMessageInGameChannel(st, { channelId: "c1" })).toBe(true);
+    expect(isMessageInGameChannel(st, { channelId: "c2" })).toBe(false);
   });
 });

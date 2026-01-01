@@ -125,6 +125,12 @@ function hangmanStage(mistakes) {
   return stages[idx];
 }
 
+function isMessageInGameChannel(st, message) {
+  const channelId = message?.channelId || message?.channel?.id;
+  if (!st?.channelId) return true;
+  return st.channelId === channelId;
+}
+
 function buildStatus(st) {
   const guessed = [...st.guessed].sort().map((c) => c.toUpperCase()).join(", ") || "(none)";
   const remaining = Math.max(0, st.maxMistakes - st.mistakes);
@@ -493,7 +499,7 @@ export function registerHangman(register) {
     const st = manager.getState({ message });
     if (!st) return;
 
-    if (!manager.isSameChannel({ message }, st)) return;
+    if (!isMessageInGameChannel(st, message)) return;
 
     const uid = message.author.id;
     if (!st.turnPlayerId || uid !== st.turnPlayerId) return;
@@ -516,4 +522,5 @@ export const __testables = {
   uniqueLettersNeeded,
   prettyMask,
   hangmanStage,
+  isMessageInGameChannel,
 };
