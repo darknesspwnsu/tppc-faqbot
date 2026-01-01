@@ -4,7 +4,9 @@ vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => true),
 }));
 
-import { collectEntrantsByReactions, registerReactionContests } from "../../contests/reaction_contests.js";
+import { isAdminOrPrivileged } from "../../auth.js";
+import * as reactionContests from "../../contests/reaction_contests.js";
+const { collectEntrantsByReactions, registerReactionContests } = reactionContests;
 
 function mockClient() {
   const handlers = new Map();
@@ -41,11 +43,13 @@ function mockMessage(joinMsg, client) {
   };
 }
 
+const sharedClient = mockClient();
+reactionContests.installReactionHooks(sharedClient);
+
 describe("collectEntrantsByReactions", () => {
   test("collects entrants and honors maxEntrants", async () => {
-    const client = mockClient();
     const joinMsg = mockJoinMessage();
-    const message = mockMessage(joinMsg, client);
+    const message = mockMessage(joinMsg, sharedClient);
 
     const p = collectEntrantsByReactions({
       message,
@@ -59,7 +63,7 @@ describe("collectEntrantsByReactions", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    const add = client.__handlers.get("messageReactionAdd");
+    const add = sharedClient.__handlers.get("messageReactionAdd");
     expect(add).toBeTypeOf("function");
 
     await add({ message: { id: "m1", guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
@@ -70,9 +74,8 @@ describe("collectEntrantsByReactions", () => {
   });
 
   test("blocks conteststart when a collector is already active in the channel", async () => {
-    const client = mockClient();
     const joinMsg = mockJoinMessage();
-    const message = mockMessage(joinMsg, client);
+    const message = mockMessage(joinMsg, sharedClient);
     message.author = { id: "host" };
 
     const promise = collectEntrantsByReactions({
@@ -101,7 +104,7 @@ describe("collectEntrantsByReactions", () => {
       guildId: "1",
       channelId: "2",
       author: { id: "host" },
-      client,
+      client: sharedClient,
       channel,
       reply,
     };
@@ -111,5 +114,114 @@ describe("collectEntrantsByReactions", () => {
 
     await cancel({ message: msg });
     await promise;
+  });
+});
+
+describe("conteststart validation and outputs", () => {
+  test("rejects invalid time formats", async () => {
+    const register = vi.fn();
+    const handlers = new Map();
+    register.mockImplementation((cmd, fn) => handlers.set(cmd, fn));
+    registerReactionContests(register);
+
+    const conteststart = handlers.get("!conteststart");
+    const reply = vi.fn(async () => {});
+
+    const spy = vi.spyOn(reactionContests, "collectEntrantsByReactions");
+
+    await conteststart({ message: { guildId: "1", reply }, rest: "30" });
+
+    expect(reply).toHaveBeenCalledTimes(1);
+    expect(reply.mock.calls[0][0]).toContain("Invalid time");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test("reports when winners exceed entrants", async () => {
+    const register = vi.fn();
+    const handlers = new Map();
+    register.mockImplementation((cmd, fn) => handlers.set(cmd, fn));
+    registerReactionContests(register);
+
+    const conteststart = handlers.get("!conteststart");
+    vi.useFakeTimers();
+
+    const joinMsg = mockJoinMessage();
+    const send = vi.fn().mockResolvedValue(joinMsg);
+    const message = {
+      guildId: "1",
+      channelId: "2",
+      author: { id: "host" },
+      client: sharedClient,
+      channel: { send },
+      reply: vi.fn(async () => {}),
+      guild: {
+        members: {
+          fetch: vi.fn(async () =>
+            new Map([
+              ["u1", { displayName: "Alpha" }],
+              ["u2", { displayName: "Beta" }],
+            ])
+          ),
+        },
+      },
+    };
+
+    const startPromise = conteststart({ message, rest: "choose 1sec winners=3" });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u2", bot: false });
+
+    vi.advanceTimersByTime(1000);
+    await startPromise;
+
+    expect(send.mock.calls.some((call) => call[0]?.includes("Not enough entrants"))).toBe(true);
+    vi.useRealTimers();
+  });
+
+  test("prevents cancel by non-owner without privileges", async () => {
+    isAdminOrPrivileged.mockReturnValue(false);
+    vi.useFakeTimers();
+
+    const joinMsg = mockJoinMessage();
+    const message = mockMessage(joinMsg, sharedClient);
+    message.author = { id: "host" };
+
+    const promise = collectEntrantsByReactions({
+      message,
+      promptText: "join",
+      durationMs: 1000,
+      maxEntrants: 2,
+      emoji: "👍",
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const handlers = new Map();
+    const register = (cmd, fn) => handlers.set(cmd, fn);
+    registerReactionContests(register);
+
+    const cancel = handlers.get("!cancelcontest");
+    const reply = vi.fn(async () => {});
+
+    const msg = {
+      guildId: "1",
+      channelId: "2",
+      author: { id: "not-host" },
+      client: sharedClient,
+      reply,
+    };
+
+    await cancel({ message: msg });
+    expect(reply).toHaveBeenCalledTimes(1);
+    expect(reply.mock.calls[0][0]).toContain("only the contest host");
+
+    vi.advanceTimersByTime(1000);
+    await promise;
+    vi.useRealTimers();
   });
 });
