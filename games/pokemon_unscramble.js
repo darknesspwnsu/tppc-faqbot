@@ -534,7 +534,7 @@ export function registerPokemonUnscramble(register) {
     const st = manager.getState({ message });
     if (!st) return;
 
-    if (!(await requireSameChannel({ message }, st, manager))) return;
+    if (!manager.isSameChannel({ message }, st)) return;
     if (!st.roundActive) return;
 
     const uid = message.author.id;

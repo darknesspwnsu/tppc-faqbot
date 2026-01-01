@@ -493,7 +493,7 @@ export function registerHangman(register) {
     const st = manager.getState({ message });
     if (!st) return;
 
-    if (!(await requireSameChannel({ message }, st, manager))) return;
+    if (!manager.isSameChannel({ message }, st)) return;
 
     const uid = message.author.id;
     if (!st.turnPlayerId || uid !== st.turnPlayerId) return;
