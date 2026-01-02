@@ -608,6 +608,21 @@ export function registerPollContest(register) {
     boot(message.client);
   });
 
+  register(
+    "!pollcontest",
+    async ({ message, rest }) => {
+      const arg = String(rest || "").trim().toLowerCase();
+      if (arg !== "help") return;
+      await message.reply(
+        "Use `/pollcontest create` to start a poll contest (modal), " +
+          "or `/pollcontest create poll_id:<messageId>` to track an existing poll. " +
+          "Manage with `/pollcontest cancel message_id:<id>` or `/pollcontest untrack message_id:<id>`."
+      );
+    },
+    "!pollcontest help — show /pollcontest usage",
+    { hideFromHelp: true }
+  );
+
   register.slash(
     {
       name: "pollcontest",

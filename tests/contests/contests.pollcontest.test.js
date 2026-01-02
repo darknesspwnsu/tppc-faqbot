@@ -459,3 +459,27 @@ describe("pollcontest validation", () => {
     expect(listMessage).toContain("Poll started by: <@author-1>");
   });
 });
+
+describe("pollcontest bang help", () => {
+  test("responds to !pollcontest help", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const reply = vi.fn(async () => {});
+    const handler = handlers.get("!pollcontest")?.handler;
+    await handler({ message: { reply }, rest: "help" });
+
+    expect(reply).toHaveBeenCalledWith(expect.stringContaining("/pollcontest create"));
+  });
+
+  test("ignores !pollcontest without help arg", async () => {
+    const { handlers, register } = buildRegister();
+    registerPollContest(register);
+
+    const reply = vi.fn(async () => {});
+    const handler = handlers.get("!pollcontest")?.handler;
+    await handler({ message: { reply }, rest: "" });
+
+    expect(reply).not.toHaveBeenCalled();
+  });
+});
