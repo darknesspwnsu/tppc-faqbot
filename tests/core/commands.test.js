@@ -6,9 +6,17 @@ vi.mock("../../auth.js", () => ({
 
 vi.mock("../../configs/command_exposure.js", () => ({
   DEFAULT_EXPOSURE: "bang",
+  DEFAULT_SLASH_EXPOSURE: "on",
+  DEFAULT_BANG_COMMAND_EXPOSURE: "on",
   COMMAND_EXPOSURE_BY_GUILD: {
     g1: { ping: "q" },
     g2: { ping: "off" },
+  },
+  BANG_COMMAND_EXPOSURE_BY_GUILD: {
+    g1: { bangoff: "off" },
+  },
+  SLASH_EXPOSURE_BY_GUILD: {
+    g1: { slashoff: "off" },
   },
   COMMAND_CHANNEL_POLICY_BY_GUILD: {
     g3: { ping: { allow: ["c-allowed"], silent: false } },
@@ -162,6 +170,20 @@ describe("commands registry", () => {
     errSpy.mockRestore();
   });
 
+  it("dispatchMessage blocks bang commands disabled in the guild", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register("!bangoff", handler, "!bangoff — test");
+    });
+
+    const reg = buildCommandRegistry({});
+    const msg = makeMessage({ guildId: "g1", content: "!bangoff" });
+    await reg.dispatchMessage(msg);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(msg.reply).toHaveBeenCalledWith("This command isn’t allowed in this server.");
+  });
+
   it("dispatchInteraction logs errors from slash handlers without throwing", async () => {
     const handler = vi.fn(async () => {
       throw new Error("slash boom");
@@ -202,6 +224,43 @@ describe("commands registry", () => {
 
     await reg.dispatchInteraction(interaction);
     expect(autoHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispatchInteraction blocks slash commands disabled in the guild", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.slash({ name: "slashoff", description: "test" }, handler);
+    });
+
+    const reg = buildCommandRegistry({});
+    const interaction = {
+      commandName: "slashoff",
+      guildId: "g1",
+      isChatInputCommand: () => true,
+      reply: vi.fn(async () => {}),
+    };
+
+    await reg.dispatchInteraction(interaction);
+    expect(handler).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "This command isn’t allowed in this server.",
+        ephemeral: true,
+      })
+    );
+  });
+
+  it("helpModel hides slash commands disabled in the guild", () => {
+    registerTrades.mockImplementation((register) => {
+      register.slash({ name: "slashoff", description: "test" }, async () => {});
+      register.slash({ name: "slashion", description: "ok" }, async () => {});
+    });
+
+    const reg = buildCommandRegistry({});
+    const pages = reg.helpModel("g1");
+    const flat = pages.flatMap((p) => p.lines);
+    expect(flat.some((line) => line.includes("/slashoff"))).toBe(false);
+    expect(flat.some((line) => line.includes("/slashion"))).toBe(true);
   });
 
   it("falls back to component handler when rarity retry throws", async () => {

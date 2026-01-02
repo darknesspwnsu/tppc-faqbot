@@ -2,11 +2,17 @@ import { describe, it, expect } from "vitest";
 
 import {
   DEFAULT_EXPOSURE,
+  DEFAULT_SLASH_EXPOSURE,
+  DEFAULT_BANG_COMMAND_EXPOSURE,
   COMMAND_EXPOSURE_BY_GUILD,
   COMMAND_CHANNEL_POLICY_BY_GUILD,
+  BANG_COMMAND_EXPOSURE_BY_GUILD,
+  SLASH_EXPOSURE_BY_GUILD,
 } from "../../configs/command_exposure.js";
 
 const VALID_EXPOSURES = new Set(["bang", "q", "off"]);
+const VALID_SLASH_EXPOSURES = new Set(["on", "off"]);
+const VALID_BANG_COMMAND_EXPOSURES = new Set(["on", "off"]);
 
 function isStringArray(value) {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
@@ -15,6 +21,14 @@ function isStringArray(value) {
 describe("command_exposure config", () => {
   it("uses a valid DEFAULT_EXPOSURE", () => {
     expect(VALID_EXPOSURES.has(DEFAULT_EXPOSURE)).toBe(true);
+  });
+
+  it("uses a valid DEFAULT_SLASH_EXPOSURE", () => {
+    expect(VALID_SLASH_EXPOSURES.has(DEFAULT_SLASH_EXPOSURE)).toBe(true);
+  });
+
+  it("uses a valid DEFAULT_BANG_COMMAND_EXPOSURE", () => {
+    expect(VALID_BANG_COMMAND_EXPOSURES.has(DEFAULT_BANG_COMMAND_EXPOSURE)).toBe(true);
   });
 
   it("uses only valid exposure values per guild", () => {
@@ -42,6 +56,26 @@ describe("command_exposure config", () => {
         if ("allow" in policy) expect(isStringArray(policy.allow)).toBe(true);
         if ("deny" in policy) expect(isStringArray(policy.deny)).toBe(true);
         if ("silent" in policy) expect(typeof policy.silent === "boolean").toBe(true);
+      }
+    }
+  });
+
+  it("uses only valid slash exposure values per guild", () => {
+    for (const [guildId, mappings] of Object.entries(SLASH_EXPOSURE_BY_GUILD)) {
+      expect(typeof guildId).toBe("string");
+      for (const [commandName, exposure] of Object.entries(mappings || {})) {
+        expect(typeof commandName).toBe("string");
+        expect(VALID_SLASH_EXPOSURES.has(exposure)).toBe(true);
+      }
+    }
+  });
+
+  it("uses only valid bang command exposure values per guild", () => {
+    for (const [guildId, mappings] of Object.entries(BANG_COMMAND_EXPOSURE_BY_GUILD)) {
+      expect(typeof guildId).toBe("string");
+      for (const [commandName, exposure] of Object.entries(mappings || {})) {
+        expect(typeof commandName).toBe("string");
+        expect(VALID_BANG_COMMAND_EXPOSURES.has(exposure)).toBe(true);
       }
     }
   });

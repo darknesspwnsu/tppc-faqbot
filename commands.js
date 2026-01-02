@@ -42,8 +42,12 @@ import { handleLeaderboardInteraction } from "./rpg/leaderboard.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import {
   DEFAULT_EXPOSURE,
+  DEFAULT_SLASH_EXPOSURE,
+  DEFAULT_BANG_COMMAND_EXPOSURE,
   COMMAND_EXPOSURE_BY_GUILD,
   COMMAND_CHANNEL_POLICY_BY_GUILD,
+  BANG_COMMAND_EXPOSURE_BY_GUILD,
+  SLASH_EXPOSURE_BY_GUILD,
 } from "./configs/command_exposure.js";
 
 
@@ -53,6 +57,20 @@ const VALID_EXPOSURES = new Set(["bang", "q", "off"]);
 if (!VALID_EXPOSURES.has(DEFAULT_EXPOSURE)) {
   console.warn(
     `[COMMANDS] Invalid DEFAULT_EXPOSURE="${DEFAULT_EXPOSURE}" (expected bang|q|off). Using "bang".`
+  );
+}
+
+const VALID_SLASH_EXPOSURES = new Set(["on", "off"]);
+if (!VALID_SLASH_EXPOSURES.has(DEFAULT_SLASH_EXPOSURE)) {
+  console.warn(
+    `[COMMANDS] Invalid DEFAULT_SLASH_EXPOSURE="${DEFAULT_SLASH_EXPOSURE}" (expected on|off). Using "on".`
+  );
+}
+
+const VALID_BANG_COMMAND_EXPOSURES = new Set(["on", "off"]);
+if (!VALID_BANG_COMMAND_EXPOSURES.has(DEFAULT_BANG_COMMAND_EXPOSURE)) {
+  console.warn(
+    `[COMMANDS] Invalid DEFAULT_BANG_COMMAND_EXPOSURE="${DEFAULT_BANG_COMMAND_EXPOSURE}" (expected on|off). Using "on".`
   );
 }
 
@@ -89,6 +107,7 @@ export function buildCommandRegistry({ client } = {}) {
     }
 
     const entry = {
+      name: key,
       handler,
       help,
       admin: Boolean(opts.admin),
@@ -119,6 +138,18 @@ export function buildCommandRegistry({ client } = {}) {
     const g = COMMAND_EXPOSURE_BY_GUILD[String(guildId)];
     const exp = g?.[logicalId] ?? DEFAULT_EXPOSURE;
     return VALID_EXPOSURES.has(exp) ? exp : "bang";
+  }
+
+  function slashExposureFor(guildId, commandName) {
+    const g = SLASH_EXPOSURE_BY_GUILD?.[String(guildId)];
+    const exp = g?.[String(commandName)] ?? DEFAULT_SLASH_EXPOSURE;
+    return VALID_SLASH_EXPOSURES.has(exp) ? exp : "on";
+  }
+
+  function bangCommandExposureFor(guildId, commandName) {
+    const g = BANG_COMMAND_EXPOSURE_BY_GUILD?.[String(guildId)];
+    const exp = g?.[String(commandName)] ?? DEFAULT_BANG_COMMAND_EXPOSURE;
+    return VALID_BANG_COMMAND_EXPOSURES.has(exp) ? exp : "on";
   }
 
   function channelPolicyFor(guildId, logicalId) {
@@ -360,6 +391,10 @@ export function buildCommandRegistry({ client } = {}) {
         line = line.replace(re, displayCmd);
       }
 
+      if (!entry.exposeMeta && gid && bangCommandExposureFor(gid, entry.name) === "off") {
+        continue;
+      }
+
       pushLine(cat, line, Boolean(admin));
     }
 
@@ -370,6 +405,7 @@ export function buildCommandRegistry({ client } = {}) {
       const name = String(def?.name || "").trim();
       const desc = String(def?.description || "").trim();
       if (!name || !desc) continue;
+      if (gid && slashExposureFor(gid, name) === "off") continue;
 
       const admin = Boolean(meta?.admin);
       const hideFromHelp = Boolean(meta?.hideFromHelp);
@@ -484,6 +520,14 @@ export function buildCommandRegistry({ client } = {}) {
     const entry = bang.get(cmd);
     if (!entry?.handler) return;
 
+    if (cmd.startsWith("!") && !entry.exposeMeta) {
+      const base = cmd.slice(1);
+      if (message.guildId && bangCommandExposureFor(message.guildId, base) === "off") {
+        await message.reply("This command isn’t allowed in this server.");
+        return;
+      }
+    }
+
     try {
       await entry.handler({ message, cmd, rest });
     } catch (err) {
@@ -496,6 +540,10 @@ export function buildCommandRegistry({ client } = {}) {
       const key = String(interaction.commandName).toLowerCase();
       const entry = slash.get(key);
       if (!entry?.autocomplete) return;
+      if (interaction.guildId && slashExposureFor(interaction.guildId, key) === "off") {
+        await interaction.respond([]);
+        return;
+      }
       try {
         await entry.autocomplete({ interaction });
       } catch (err) {
@@ -509,6 +557,13 @@ export function buildCommandRegistry({ client } = {}) {
       const key = String(interaction.commandName).toLowerCase();
       const entry = slash.get(key);
       if (!entry?.handler) return;
+      if (interaction.guildId && slashExposureFor(interaction.guildId, key) === "off") {
+        await interaction.reply({
+          content: "This command isn’t allowed in this server.",
+          ephemeral: true,
+        });
+        return;
+      }
       try {
         await entry.handler({ interaction });
       } catch (err) {
