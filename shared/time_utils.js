@@ -8,6 +8,7 @@
  *  - "10s", "10sec", "10seconds"
  *  - "5m", "5min", "5minutes"
  *  - "2h", "2hr", "2hours"
+ *  - "1d", "1day", "1days"
  *
  * Returns:
  *  - number (seconds) on success
@@ -20,7 +21,7 @@ export function parseDurationSeconds(raw, def) {
   if (/^\d+$/.test(s)) return Number(s);
 
   const m = s.match(
-    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours)$/
+    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)$/
   );
   if (!m) return null;
 
@@ -29,6 +30,7 @@ export function parseDurationSeconds(raw, def) {
   if (u.startsWith("s")) return v;
   if (u.startsWith("m")) return v * 60;
   if (u.startsWith("h")) return v * 3600;
+  if (u.startsWith("d")) return v * 86400;
   return null;
 }
 

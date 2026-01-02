@@ -186,6 +186,24 @@ describe("commands registry", () => {
     errSpy.mockRestore();
   });
 
+  it("dispatchInteraction routes autocomplete interactions", async () => {
+    const autoHandler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.slash({ name: "auto", description: "test" }, async () => {}, {
+        autocomplete: autoHandler,
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const interaction = {
+      commandName: "auto",
+      isAutocomplete: () => true,
+    };
+
+    await reg.dispatchInteraction(interaction);
+    expect(autoHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("falls back to component handler when rarity retry throws", async () => {
     handleRarityInteraction.mockImplementationOnce(async () => {
       throw new Error("rarity boom");

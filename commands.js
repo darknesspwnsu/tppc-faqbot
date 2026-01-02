@@ -233,6 +233,7 @@ export function buildCommandRegistry({ client } = {}) {
     slash.set(key, {
       def,
       handler,
+      autocomplete: typeof opts.autocomplete === "function" ? opts.autocomplete : null,
       meta: {
         admin: Boolean(opts.admin),
         category: opts.category || "Other",
@@ -491,6 +492,18 @@ export function buildCommandRegistry({ client } = {}) {
   }
 
   async function dispatchInteraction(interaction) {
+    if (interaction.isAutocomplete?.()) {
+      const key = String(interaction.commandName).toLowerCase();
+      const entry = slash.get(key);
+      if (!entry?.autocomplete) return;
+      try {
+        await entry.autocomplete({ interaction });
+      } catch (err) {
+        console.error("[COMMANDS] autocomplete handler error:", err);
+      }
+      return;
+    }
+
     // Slash commands
     if (interaction.isChatInputCommand?.()) {
       const key = String(interaction.commandName).toLowerCase();

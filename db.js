@@ -101,6 +101,26 @@ export async function initDb() {
       PRIMARY KEY (message_id)
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS giveaways (
+      message_id VARCHAR(32) NOT NULL,
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      host_id VARCHAR(32) NOT NULL,
+      prize TEXT NOT NULL,
+      description TEXT NOT NULL,
+      winners_count INT UNSIGNED NOT NULL,
+      ends_at_ms BIGINT UNSIGNED NOT NULL,
+      entrants_json LONGTEXT NOT NULL,
+      winners_json LONGTEXT NOT NULL,
+      ended_at_ms BIGINT UNSIGNED,
+      summary_message_id VARCHAR(32),
+      canceled TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id)
+    )
+  `);
 }
 
 /**

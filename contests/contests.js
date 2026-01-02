@@ -9,6 +9,7 @@ import { registerWhispers } from "./whispers.js";
 import { registerReading } from "./reading.js";
 import { registerForumList } from "./get_forum_list.js";
 import { registerPollContest } from "./pollcontest.js";
+import { registerGiveaway } from "./giveaway.js";
 
 const CONTEST_MODULES = [
   { id: "rng", register: registerRng },
@@ -17,6 +18,7 @@ const CONTEST_MODULES = [
   { id: "reading", register: registerReading },
   { id: "forum_list", register: registerForumList },
   { id: "pollcontest", register: registerPollContest },
+  { id: "giveaway", register: registerGiveaway },
 ];
 
 export function registerContests(register) {
