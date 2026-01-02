@@ -247,10 +247,10 @@ async function lookupForumTrainerIds(baseUrl, forumUsername) {
 }
 
 async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
-  if (!guildId || !member || !forumUsername) return;
+  if (!guildId || !member || !forumUsername) return true;
 
   const saved = await getSavedId({ guildId, userId: member.id }).catch(() => null);
-  if (saved != null) return;
+  if (saved != null) return true;
 
   const { ids, error } = await lookupForumTrainerIds(baseUrl, forumUsername);
 
@@ -276,8 +276,9 @@ async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
 
   try {
     await member.user.send({ content });
+    return true;
   } catch {
-    // ignore DM failures
+    return false;
   }
 }
 
@@ -702,6 +703,7 @@ export function registerVerifyMe(register) {
     }
 
     let outcomeLine = "";
+    let dmOk = true;
     if (action === "role") {
       const rid = String(roleId || "").trim();
       const allowed = (guildCfg.approvalRoles || []).some((r) => String(r?.id || "").trim() === rid);
@@ -718,7 +720,7 @@ export function registerVerifyMe(register) {
 
       const forumUsername = await getUserText({ guildId, userId: targetUserId, kind: K_VERIFIED }).catch(() => null);
       const baseUrl = process.env.FORUM_BASE_URL || "https://forums.tppc.info";
-      void dmIdSuggestion({ guildId, member: targetMember, forumUsername, baseUrl });
+      dmOk = await dmIdSuggestion({ guildId, member: targetMember, forumUsername, baseUrl });
     } else if (action === "reject") {
       outcomeLine = `❌ **Rejected** by ${interaction.user}.`;
     } else {
@@ -726,7 +728,8 @@ export function registerVerifyMe(register) {
       return;
     }
 
-    await interaction.reply({ ephemeral: true, content: "Done." });
+    const dmNote = dmOk ? "" : " ⚠️ I couldn't DM the user (their DMs might be closed).";
+    await interaction.reply({ ephemeral: true, content: `Done.${dmNote}` });
     await finalizeReviewMessage(interaction, outcomeLine);
   });
 }

@@ -77,4 +77,49 @@ describe("verifyme forum ID lookup", () => {
 
     errSpy.mockRestore();
   });
+
+  it("replies with a DM warning when the user cannot be messaged", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      text: async () => "",
+    }));
+
+    getSavedId.mockResolvedValueOnce(null);
+    getUserText.mockResolvedValueOnce("Darkness~");
+
+    const reg = makeRegister();
+    registerVerifyMe(reg);
+    const handler = reg.__components.get("vfy:");
+
+    const dm = vi.fn(async () => {
+      throw Object.assign(new Error("DMs closed"), { code: 50007 });
+    });
+    const targetMember = {
+      id: "target",
+      roles: { add: vi.fn(async () => {}) },
+      user: { send: dm },
+    };
+
+    const guild = {
+      members: {
+        fetch: vi.fn(async () => targetMember),
+      },
+    };
+
+    const interaction = {
+      guildId: "1332822580708511815",
+      guild,
+      member: { roles: { cache: new Map([["1333401501036711976", true]]) } },
+      customId: "vfy:1332822580708511815:target:role:1455432278548418713",
+      user: { id: "admin", toString: () => "<@admin>" },
+      message: { content: "review", edit: vi.fn(async () => {}) },
+      reply: vi.fn(async () => {}),
+    };
+
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledTimes(1);
+    expect(interaction.reply.mock.calls[0][0].content).toContain("couldn't DM the user");
+  });
 });
