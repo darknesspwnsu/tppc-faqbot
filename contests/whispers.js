@@ -1,8 +1,9 @@
 // contests/whispers.js
 //
 // Whisper phrases (slash only):
-// - /whisper phrase:<text> prize:<optional>
-// - /listwhispers
+// - /whisper add phrase:<text> prize:<optional> (case-insensitive)
+// - /whisper delete phrase:<text> (case-insensitive)
+// - /whisper list
 //
 // Behavior:
 // - Phrases are matched as whole words/phrases in public chat.
@@ -171,29 +172,44 @@ export function registerWhispers(register) {
   register.slash(
     {
       name: "whisper",
-      description: "Register a magic phrase to listen for (private to you)",
+      description: "Manage magic phrases you are listening for (private to you)",
       options: [
         {
-          type: 3, // STRING
-          name: "phrase",
-          description: "The phrase to listen for",
-          required: true,
-        },
-        {
-          type: 3, // STRING
-          name: "prize",
-          description: "Optional prize text to show when someone finds the phrase",
-          required: false,
-        },
-        {
-          type: 3, // STRING
-          name: "mode",
-          description: "Add or delete a phrase (default: add)",
-          required: false,
-          choices: [
-            { name: "add", value: "add" },
-            { name: "delete", value: "delete" },
+          type: 1, // SUB_COMMAND
+          name: "add",
+          description: "Add a phrase to listen for (case-insensitive)",
+          options: [
+            {
+              type: 3, // STRING
+              name: "phrase",
+              description: "The phrase to listen for (case-insensitive)",
+              required: true,
+            },
+            {
+              type: 3, // STRING
+              name: "prize",
+              description: "Optional prize text to show when someone finds the phrase",
+              required: false,
+            },
           ],
+        },
+        {
+          type: 1, // SUB_COMMAND
+          name: "delete",
+          description: "Delete a phrase you previously registered (case-insensitive)",
+          options: [
+            {
+              type: 3, // STRING
+              name: "phrase",
+              description: "The phrase to delete (case-insensitive)",
+              required: true,
+            },
+          ],
+        },
+        {
+          type: 1, // SUB_COMMAND
+          name: "list",
+          description: "List your active phrases",
         },
       ],
     },
@@ -204,17 +220,40 @@ export function registerWhispers(register) {
         return;
       }
 
-      const mode = norm(interaction.options?.getString?.("mode")) || "add";
+      const mode = norm(interaction.options?.getSubcommand?.()) || "add";
       const phrase = norm(interaction.options?.getString?.("phrase"));
       const prize = norm(interaction.options?.getString?.("prize"));
       const ownerId = interaction.user?.id;
+
+      const state = await ensureGuildLoaded(guildId);
+
+      if (mode === "list") {
+        const mine = listWhispersForUser(state, ownerId);
+        if (!mine.length) {
+          await interaction.reply({ content: "You have no active whispers in this server.", ephemeral: true });
+          return;
+        }
+
+        const lines = mine
+          .map((x, i) => {
+            const prizePart = x.prize ? ` — Prize: ${x.prize}` : "";
+            return `${i + 1}. "${x.phrase}"${prizePart}`;
+          })
+          .slice(0, 50);
+
+        const extra = mine.length > 50 ? `\n…plus ${mine.length - 50} more.` : "";
+
+        await interaction.reply({
+          content: `Your whispers in **${interaction.guild?.name ?? "this server"}**:\n${lines.join("\n")}${extra}`,
+          ephemeral: true,
+        });
+        return;
+      }
 
       if (!phrase) {
         await interaction.reply({ content: "Please provide a phrase.", ephemeral: true });
         return;
       }
-
-      const state = await ensureGuildLoaded(guildId);
 
       if (mode === "delete") {
         const res = removeWhisper(state, phrase, ownerId);
@@ -258,44 +297,7 @@ export function registerWhispers(register) {
         content:
           `✅ Listening for: "${phrase}"` +
           (prize ? `\nPrize: ${prize}` : "") +
-          `\nUse \`/listwhispers\` to see your phrases.`,
-        ephemeral: true,
-      });
-    }
-  );
-
-  register.slash(
-    {
-      name: "listwhispers",
-      description: "List the magic phrases you are listening for (private)",
-    },
-    async ({ interaction }) => {
-      const guildId = interaction.guild?.id;
-      if (!guildId) {
-        await interaction.reply({ content: "This command only works in a server.", ephemeral: true });
-        return;
-      }
-
-      const ownerId = interaction.user?.id;
-      const state = await ensureGuildLoaded(guildId);
-
-      const mine = listWhispersForUser(state, ownerId);
-      if (!mine.length) {
-        await interaction.reply({ content: "You have no active whispers in this server.", ephemeral: true });
-        return;
-      }
-
-      const lines = mine
-        .map((x, i) => {
-          const prizePart = x.prize ? ` — Prize: ${x.prize}` : "";
-          return `${i + 1}. "${x.phrase}"${prizePart}`;
-        })
-        .slice(0, 50);
-
-      const extra = mine.length > 50 ? `\n…plus ${mine.length - 50} more.` : "";
-
-      await interaction.reply({
-        content: `Your whispers in **${interaction.guild?.name ?? "this server"}**:\n${lines.join("\n")}${extra}`,
+          `\nUse \`/whisper list\` to see your phrases.`,
         ephemeral: true,
       });
     }
@@ -326,9 +328,9 @@ export function registerWhispers(register) {
           const ownerId = w.ownerId;
           const prize = norm(w.prize);
 
-        let msgOut =
-          `🎉 Congratulations, you have found the hidden phrase "${phrase}" set by ${mention(ownerId)}!`;
-        if (prize) msgOut += `\nYou have won: ${prize}`;
+          let msgOut =
+            `🎉 Congratulations, you have found the hidden phrase "${phrase}" set by ${mention(ownerId)}!`;
+          if (prize) msgOut += `\nYou have won: ${prize}`;
 
           await message.reply({
             content: msgOut,

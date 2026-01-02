@@ -22,10 +22,10 @@ function makeInteraction({ guildId, guildName, phrase, prize, mode, userId }) {
     guild: { id: guildId, name: guildName },
     user: { id: userId },
     options: {
+      getSubcommand: () => mode || "add",
       getString: (key) => {
         if (key === "phrase") return phrase;
         if (key === "prize") return prize;
-        if (key === "mode") return mode;
         return null;
       },
     },
@@ -51,7 +51,7 @@ describe("registerWhispers", () => {
       guildName: "Guild One",
       phrase: "secret",
       prize: "candy",
-      mode: null,
+      mode: "add",
       userId: "u1",
     });
 
@@ -95,11 +95,11 @@ describe("registerWhispers", () => {
     expect(setUserText).not.toHaveBeenCalled();
   });
 
-  test("listwhispers returns phrases for the user", async () => {
+  test("list returns phrases for the user", async () => {
     const register = makeRegister();
     registerWhispers(register);
 
-    const listSlash = register.calls.slash.find((call) => call.config.name === "listwhispers");
+    const listSlash = register.calls.slash.find((call) => call.config.name === "whisper");
 
     getUserText.mockResolvedValue(
       JSON.stringify([
@@ -112,6 +112,7 @@ describe("registerWhispers", () => {
       guild: { id: "g3", name: "Guild Three" },
       user: { id: "u3" },
       reply: vi.fn(async () => {}),
+      options: { getSubcommand: () => "list", getString: () => null },
     };
 
     await listSlash.handler({ interaction });
@@ -136,7 +137,7 @@ describe("registerWhispers", () => {
       guildName: "Guild Four",
       phrase: "hidden",
       prize: "prize",
-      mode: null,
+      mode: "add",
       userId: "u4",
     });
 
