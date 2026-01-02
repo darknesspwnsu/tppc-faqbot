@@ -360,8 +360,18 @@ async function sendViewboxResults({ interaction, id, filter, bypassCooldown, cli
   const sections = buildSections(collapsed, filter);
   const blocks = buildSectionBlocks(sections);
   const messages = combineBlocks(blocks, MAX_MESSAGE_LEN);
-  for (const msg of messages) {
-    await interaction.user.send(msg);
+  try {
+    for (const msg of messages) {
+      await interaction.user.send(msg);
+    }
+  } catch (err) {
+    if (err?.code === 50007) {
+      await replyEphemeral(interaction, {
+        content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
+      });
+      return;
+    }
+    throw err;
   }
 
   await replyEphemeral(interaction, { content: "✅ Sent your box results via DM." });

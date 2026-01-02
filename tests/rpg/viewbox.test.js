@@ -176,4 +176,26 @@ describe("rpg viewbox slash", () => {
       "viewbox_confirm:cancel:u1:999:all",
     ]);
   });
+
+  it("replies ephemerally when DMs are closed", async () => {
+    const register = makeRegister();
+    registerViewbox(register);
+    const handler = getSlashHandler(register, "viewbox");
+
+    const interaction = makeInteraction({ id: "123" });
+    interaction.user.send.mockRejectedValueOnce({ code: 50007 });
+
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      `<ul id="allPoke"><li class="N ">Abra (Level: 5)</li></ul>`
+    );
+
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledTimes(1);
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
+      })
+    );
+  });
 });
