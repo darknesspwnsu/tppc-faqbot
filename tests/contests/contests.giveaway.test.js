@@ -724,3 +724,27 @@ describe("giveaway reroll success", () => {
     );
   });
 });
+
+describe("giveaway bang help", () => {
+  test("responds to !giveaway help", async () => {
+    const { handlers, register } = buildRegister();
+    registerGiveaway(register);
+
+    const reply = vi.fn(async () => {});
+    const handler = handlers.get("!giveaway")?.handler;
+    await handler({ message: { reply }, rest: "help" });
+
+    expect(reply).toHaveBeenCalledWith(expect.stringContaining("/giveaway create"));
+  });
+
+  test("ignores !giveaway without help arg", async () => {
+    const { handlers, register } = buildRegister();
+    registerGiveaway(register);
+
+    const reply = vi.fn(async () => {});
+    const handler = handlers.get("!giveaway")?.handler;
+    await handler({ message: { reply }, rest: "" });
+
+    expect(reply).not.toHaveBeenCalled();
+  });
+});

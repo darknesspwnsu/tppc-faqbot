@@ -596,6 +596,21 @@ export function registerGiveaway(register) {
     boot(message.client);
   });
 
+  register(
+    "!giveaway",
+    async ({ message, rest }) => {
+      const arg = String(rest || "").trim().toLowerCase();
+      if (arg !== "help") return;
+      await message.reply(
+        "Use `/giveaway create` to start a giveaway (modal). " +
+          "Manage with `/giveaway list`, `/giveaway end message_id:<id>`, " +
+          "`/giveaway delete message_id:<id>`, or `/giveaway reroll message_id:<id>`."
+      );
+    },
+    "!giveaway help — show /giveaway usage",
+    { hideFromHelp: true }
+  );
+
   register.slash(
     {
       name: "giveaway",
