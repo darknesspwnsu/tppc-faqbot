@@ -5,7 +5,7 @@
 // - Modes: list | choose | elim
 // - Scope: guild + channel (bound to the start message)
 import { isAdminOrPrivileged } from "../auth.js";
-import { stripEmojisAndSymbols } from "./helpers.js";
+import { formatUsersWithIds } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
 
@@ -26,16 +26,6 @@ function parseDurationToMs(raw) {
   return sec * 1000;
 }
 
-function camelizeIfNeeded(name) {
-  if (!name) return "";
-  if (!name.includes(" ")) return name;
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => (w.charAt(0).toUpperCase() + w.slice(1)))
-    .join("");
-}
-
 function humanDuration(ms) {
   const totalSeconds = Math.round(ms / 1000);
   if (totalSeconds < 60) return `${totalSeconds} second${totalSeconds === 1 ? "" : "s"}`;
@@ -45,38 +35,6 @@ function humanDuration(ms) {
 
   const totalHours = Math.round(totalMinutes / 60);
   return `${totalHours} hour${totalHours === 1 ? "" : "s"}`;
-}
-
-async function buildNameList(_client, guild, userIds) {
-  const names = [];
-
-  let bulk = null;
-  try {
-    if (guild?.members?.fetch && Array.isArray(userIds) && userIds.length) {
-      bulk = await guild.members.fetch({ user: userIds });
-    }
-  } catch {}
-
-  for (const id of userIds) {
-    let member = bulk?.get?.(id) || guild?.members?.cache?.get?.(id) || null;
-    if (!member && guild?.members?.fetch) {
-      try {
-        member = await guild.members.fetch(id).catch(() => null);
-      } catch {}
-    }
-
-    let rawName =
-      member?.displayName ||
-      member?.user?.username ||
-      "";
-
-    rawName = stripEmojisAndSymbols(rawName);
-    const name = camelizeIfNeeded(rawName);
-
-    if (name) names.push(name);
-  }
-
-  return names;
 }
 
 function mention(id) {
@@ -454,31 +412,31 @@ export function registerReactionContests(register) {
       if (reason === "cancel") return;
 
       const ids = [...entrants];
-      const names = await buildNameList(message.client, message.guild, ids);
+      const display = await formatUsersWithIds({ guildId: message.guildId, userIds: ids });
 
-      if (!names.length) {
+      if (!display.length) {
         await message.channel.send("No one reacted...");
         return;
       }
 
       if (mode === "list") {
-        await message.channel.send(`━━━━━━━━━━━━━━\n${names.length} entrant(s):\n\n${names.join(" ")}`);
+        await message.channel.send(`━━━━━━━━━━━━━━\n${display.length} entrant(s):\n\n${display.join(" ")}`);
         return;
       }
 
       if (mode === "choose") {
-        if (winnerCount > names.length) {
+        if (winnerCount > display.length) {
           await message.channel.send(
-            `Not enough entrants to pick ${winnerCount} winners (only ${names.length}).`
+            `Not enough entrants to pick ${winnerCount} winners (only ${display.length}).`
           );
           return;
         }
 
-        const picks = winnerCount > 1 ? chooseMany(names, winnerCount) : [chooseOne(names)];
+        const picks = winnerCount > 1 ? chooseMany(display, winnerCount) : [chooseOne(display)];
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${names.length} entrant(s))`
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${display.length} entrant(s))`
         );
         return;
       }
@@ -487,12 +445,12 @@ export function registerReactionContests(register) {
       const delayMs = delaySec * 1000;
       const winnerSuffix = prize ? `Prize: **${prize}**` : "";
 
-      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${names.length}** entrant(s)…`);
+      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${display.length}** entrant(s)…`);
       const res = await runElimFromItems({
         message,
         delayMs,
         delaySec,
-        items: names,
+        items: display,
         winnerSuffix,
       });
       if (!res.ok) {
@@ -639,31 +597,31 @@ export function registerReactionContests(register) {
       if (reason === "cancel") return;
 
       const ids = [...entrants];
-      const names = await buildNameList(message.client, message.guild, ids);
+      const display = await formatUsersWithIds({ guildId: message.guildId, userIds: ids });
 
-      if (!names.length) {
+      if (!display.length) {
         await message.channel.send("No one reacted...");
         return;
       }
 
       if (mode === "list") {
-        await message.channel.send(`━━━━━━━━━━━━━━\n${names.length} entrant(s):\n\n${names.join(" ")}`);
+        await message.channel.send(`━━━━━━━━━━━━━━\n${display.length} entrant(s):\n\n${display.join(" ")}`);
         return;
       }
 
       if (mode === "choose") {
-        if (winnerCount > names.length) {
+        if (winnerCount > display.length) {
           await message.channel.send(
-            `Not enough entrants to pick ${winnerCount} winners (only ${names.length}).`
+            `Not enough entrants to pick ${winnerCount} winners (only ${display.length}).`
           );
           return;
         }
 
-        const picks = winnerCount > 1 ? chooseMany(names, winnerCount) : [chooseOne(names)];
+        const picks = winnerCount > 1 ? chooseMany(display, winnerCount) : [chooseOne(display)];
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${names.length} entrant(s))`
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${display.length} entrant(s))`
         );
         return;
       }
@@ -674,12 +632,12 @@ export function registerReactionContests(register) {
       const delayMs = delaySec * 1000;
       const winnerSuffix = prize ? `Prize: **${prize}**` : "";
 
-      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${names.length}** entrant(s)…`);
+      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${display.length}** entrant(s)…`);
       const res = await runElimFromItems({
         message,
         delayMs,
         delaySec,
-        items: names,
+        items: display,
         winnerSuffix,
       });
       if (!res.ok) {

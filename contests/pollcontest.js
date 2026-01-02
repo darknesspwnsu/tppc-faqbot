@@ -15,7 +15,7 @@ import {
 import { isAdminOrPrivileged } from "../auth.js";
 import { getDb } from "../db.js";
 import { chooseOne } from "./rng.js";
-import { sendChunked, stripEmojisAndSymbols } from "./helpers.js";
+import { formatUserWithId, sendChunked, stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 
 const MAX_DURATION_SECONDS = 24 * 60 * 60;
@@ -493,11 +493,12 @@ async function processPoll(messageId) {
 
     if (record.runChoose && !suppressChoose) {
       const winner = pickWinner(item.voters);
-      channelLines.push(
-        winner
-          ? `Winner: ${formatMention(winner)}`
-          : "Winner: (no votes)"
-      );
+      if (winner) {
+        const winnerLabel = await formatUserWithId({ guildId: record.guildId, userId: winner.id });
+        channelLines.push(`Winner: ${winnerLabel}`);
+      } else {
+        channelLines.push("Winner: (no votes)");
+      }
     }
 
     if (shouldList) {

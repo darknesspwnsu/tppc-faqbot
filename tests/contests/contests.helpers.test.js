@@ -1,5 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
 
+vi.mock("../../db.js", () => ({
+  getSavedId: vi.fn(async () => null),
+}));
+
 import {
   normalizeForMatch,
   includesWholePhrase,

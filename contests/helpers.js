@@ -3,6 +3,7 @@
 // Shared helpers for contest modules.
 
 import { isAdminOrPrivileged } from "../auth.js";
+import { getSavedId } from "../db.js";
 
 export function isAdminOrPrivilegedMessage(messageLike) {
   try {
@@ -86,4 +87,28 @@ export async function dmChunked(user, header, lines, limit = 1900) {
     }
   }
   if (cur) await dm.send(cur);
+}
+
+export async function formatUserWithId({ guildId, userId }) {
+  const gid = guildId ? String(guildId) : null;
+  const uid = userId ? String(userId) : null;
+  if (!uid) return "(unknown user) (no ID set)";
+
+  let saved = null;
+  if (gid) {
+    try {
+      saved = await getSavedId({ guildId: gid, userId: uid });
+    } catch {
+      saved = null;
+    }
+  }
+
+  const idLabel = saved ? String(saved) : "no ID set";
+  return `<@${uid}> (${idLabel})`;
+}
+
+export async function formatUsersWithIds({ guildId, userIds }) {
+  const ids = Array.isArray(userIds) ? userIds : [];
+  const out = await Promise.all(ids.map((id) => formatUserWithId({ guildId, userId: id })));
+  return out;
 }

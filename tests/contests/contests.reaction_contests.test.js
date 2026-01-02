@@ -4,6 +4,10 @@ vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => true),
 }));
 
+vi.mock("../../db.js", () => ({
+  getSavedId: vi.fn(async () => null),
+}));
+
 import { isAdminOrPrivileged } from "../../auth.js";
 import * as reactionContests from "../../contests/reaction_contests.js";
 import * as rng from "../../contests/rng.js";

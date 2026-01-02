@@ -19,7 +19,7 @@ import {
 import { isAdminOrPrivileged } from "../auth.js";
 import { getDb } from "../db.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
-import { stripEmojisAndSymbols } from "./helpers.js";
+import { stripEmojisAndSymbols, formatUserWithId, formatUsersWithIds } from "./helpers.js";
 
 const MAX_DURATION_SECONDS = 3 * 24 * 60 * 60;
 const MAX_WINNERS = 50;
@@ -169,14 +169,16 @@ async function fetchGiveawayRecord(messageId) {
   return rows?.[0] || null;
 }
 
-function buildGiveawayEmbed(record, { ended = false, canceled = false, winners = [] } = {}) {
+function buildGiveawayEmbed(record, { ended = false, canceled = false, winners = [], winnerLabels = null } = {}) {
   const entriesCount = record.entrants ? record.entrants.size : Number(record.entries || 0);
   const timeMs = ended || canceled ? record.endedAtMs || Date.now() : record.endsAtMs;
   const timeLabel = canceled ? "Cancelled" : ended ? "Ended" : "Ends";
   const winnersLine = ended
-    ? winners.length
-      ? winners.map((id) => mention(id)).join(", ")
-      : "No valid entries."
+    ? winnerLabels?.length
+      ? winnerLabels.join(", ")
+      : winners.length
+        ? winners.map((id) => mention(id)).join(", ")
+        : "No valid entries."
     : String(record.winnersCount);
 
   const metaLines = [
@@ -347,6 +349,7 @@ async function postSummary(channel, record, winners, endedAtMs) {
   const names = await buildNameList(guild, entrants);
   const winnerSet = new Set(winners.map((id) => String(id)));
 
+  const winnerLabels = await formatUsersWithIds({ guildId: record.guildId, userIds: winners });
   const lines = [
     "Giveaway Summary",
     "",
@@ -354,7 +357,7 @@ async function postSummary(channel, record, winners, endedAtMs) {
     `Hosted by: ${mention(record.hostId)}`,
     `Ended: ${formatTimestamp(endedAtMs, "F")} (${formatTimestamp(endedAtMs, "R")})`,
     `Entries: ${entrants.length}`,
-    `Winners: ${winners.length ? winners.map((id) => mention(id)).join(", ") : "None"}`,
+    `Winners: ${winnerLabels.length ? winnerLabels.join(", ") : "None"}`,
     "",
     "Entrants:",
   ];
@@ -417,6 +420,9 @@ async function finalizeGiveaway(messageId) {
   const endedAtMs = Date.now();
   record.endedAtMs = endedAtMs;
   record.winners = winners;
+  const winnerLabels = winners.length
+    ? await formatUsersWithIds({ guildId: record.guildId, userIds: winners })
+    : [];
 
   let channel = null;
   let giveawayMessage = null;
@@ -436,7 +442,7 @@ async function finalizeGiveaway(messageId) {
     const summaryMessage = await postSummary(channel, record, winners, endedAtMs);
     summaryMessageId = summaryMessage?.id || null;
     const summaryUrl = summaryMessage?.url || null;
-    const embed = buildGiveawayEmbed(record, { ended: true, winners });
+    const embed = buildGiveawayEmbed(record, { ended: true, winners, winnerLabels });
     const components = summaryUrl ? [buildSummaryRow(summaryUrl)] : [];
     await giveawayMessage.edit({ embeds: [embed], components });
   } catch (err) {
@@ -450,13 +456,13 @@ async function finalizeGiveaway(messageId) {
   });
 
   if (channel?.send) {
-      if (winners.length) {
-        await channel.send(
-          `Congratulations ${winners.map((id) => mention(id)).join(", ")}! You won the **${record.prize}**!`
-        );
-      } else {
-        await channel.send(`No valid entries for **${record.prize}**.`);
-      }
+    if (winners.length) {
+      await channel.send(
+        `Congratulations ${winnerLabels.join(", ")}! You won the **${record.prize}**!`
+      );
+    } else {
+      await channel.send(`No valid entries for **${record.prize}**.`);
+    }
   }
 }
 
@@ -526,15 +532,17 @@ async function rerollGiveaway(messageId) {
     if (!channel?.isTextBased?.()) throw new Error("Channel not text-based");
     const message = await channel.messages.fetch(record.message_id);
     const summaryUrl = message?.components?.[0]?.components?.[0]?.url || null;
-    const embed = buildGiveawayEmbed(giveawayState, { ended: true, winners });
+    const winnerLabels = winners.length
+      ? await formatUsersWithIds({ guildId: record.guild_id, userIds: winners })
+      : [];
+    const embed = buildGiveawayEmbed(giveawayState, { ended: true, winners, winnerLabels });
     const components = summaryUrl ? [buildSummaryRow(summaryUrl)] : [];
     await message.edit({ embeds: [embed], components });
     if (channel?.send) {
       if (winners.length) {
+        const hostLabel = await formatUserWithId({ guildId: record.guild_id, userId: giveawayState.hostId });
         await channel.send(
-          `${mention(giveawayState.hostId)} rerolled the giveaway. Congratulations ${winners
-            .map((id) => mention(id))
-            .join(", ")}!`
+          `${hostLabel} rerolled the giveaway. Congratulations ${winnerLabels.join(", ")}!`
         );
       } else {
         await channel.send(`No valid entries to reroll for **${giveawayState.prize}**.`);

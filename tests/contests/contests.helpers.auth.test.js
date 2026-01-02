@@ -4,6 +4,10 @@ vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(),
 }));
 
+vi.mock("../../db.js", () => ({
+  getSavedId: vi.fn(async () => null),
+}));
+
 import { isAdminOrPrivileged } from "../../auth.js";
 import { isAdminOrPrivilegedMessage } from "../../contests/helpers.js";
 

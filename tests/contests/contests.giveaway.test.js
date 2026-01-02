@@ -10,6 +10,7 @@ vi.mock("../../db.js", () => ({
   getDb: () => ({
     execute: mockExecute,
   }),
+  getSavedId: vi.fn(async () => null),
 }));
 
 import { registerGiveaway, _test } from "../../contests/giveaway.js";
