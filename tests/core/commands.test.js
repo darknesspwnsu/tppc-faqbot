@@ -7,13 +7,9 @@ vi.mock("../../auth.js", () => ({
 vi.mock("../../configs/command_exposure.js", () => ({
   DEFAULT_EXPOSURE: "bang",
   DEFAULT_SLASH_EXPOSURE: "on",
-  DEFAULT_BANG_COMMAND_EXPOSURE: "on",
   COMMAND_EXPOSURE_BY_GUILD: {
-    g1: { ping: "q" },
+    g1: { ping: "q", bangoff: "off" },
     g2: { ping: "off" },
-  },
-  BANG_COMMAND_EXPOSURE_BY_GUILD: {
-    g1: { bangoff: "off" },
   },
   SLASH_EXPOSURE_BY_GUILD: {
     g1: { slashoff: "off" },

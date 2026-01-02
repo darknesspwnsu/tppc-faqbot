@@ -9,7 +9,6 @@
 
 export const DEFAULT_EXPOSURE = "bang";
 export const DEFAULT_SLASH_EXPOSURE = "on";
-export const DEFAULT_BANG_COMMAND_EXPOSURE = "on";
 
 export const COMMAND_EXPOSURE_BY_GUILD = {
   // Unofficial: flip collisions to ?
@@ -33,18 +32,8 @@ export const COMMAND_EXPOSURE_BY_GUILD = {
     "trading.ft": "bang",
     "trading.id": "bang",
     "trading.lf": "bang",
+    "giveaway": "off",
   },
-};
-
-// Bang command exposure for non-exposed commands:
-//  - "on"  => bang command available
-//  - "off" => bang command disabled in that guild
-// Keys are bare command names (without "!").
-export const BANG_COMMAND_EXPOSURE_BY_GUILD = {
-  // Example:
-  // "123456789012345678": {
-  //   "giveaway": "off",
-  // },
 };
 
 // Slash command exposure:
@@ -55,6 +44,9 @@ export const SLASH_EXPOSURE_BY_GUILD = {
   // "123456789012345678": {
   //   "giveaway": "off",
   // },
+  "329934860388925442": {
+    giveaway: "off",
+  },
 };
 
 // Optional per-command channel policy.

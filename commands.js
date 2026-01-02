@@ -43,10 +43,8 @@ import { isAdminOrPrivileged } from "./auth.js";
 import {
   DEFAULT_EXPOSURE,
   DEFAULT_SLASH_EXPOSURE,
-  DEFAULT_BANG_COMMAND_EXPOSURE,
   COMMAND_EXPOSURE_BY_GUILD,
   COMMAND_CHANNEL_POLICY_BY_GUILD,
-  BANG_COMMAND_EXPOSURE_BY_GUILD,
   SLASH_EXPOSURE_BY_GUILD,
 } from "./configs/command_exposure.js";
 
@@ -67,12 +65,6 @@ if (!VALID_SLASH_EXPOSURES.has(DEFAULT_SLASH_EXPOSURE)) {
   );
 }
 
-const VALID_BANG_COMMAND_EXPOSURES = new Set(["on", "off"]);
-if (!VALID_BANG_COMMAND_EXPOSURES.has(DEFAULT_BANG_COMMAND_EXPOSURE)) {
-  console.warn(
-    `[COMMANDS] Invalid DEFAULT_BANG_COMMAND_EXPOSURE="${DEFAULT_BANG_COMMAND_EXPOSURE}" (expected on|off). Using "on".`
-  );
-}
 
 /* ------------------------------- registry core ------------------------------ */
 
@@ -146,11 +138,6 @@ export function buildCommandRegistry({ client } = {}) {
     return VALID_SLASH_EXPOSURES.has(exp) ? exp : "on";
   }
 
-  function bangCommandExposureFor(guildId, commandName) {
-    const g = BANG_COMMAND_EXPOSURE_BY_GUILD?.[String(guildId)];
-    const exp = g?.[String(commandName)] ?? DEFAULT_BANG_COMMAND_EXPOSURE;
-    return VALID_BANG_COMMAND_EXPOSURES.has(exp) ? exp : "on";
-  }
 
   function channelPolicyFor(guildId, logicalId) {
     const g = COMMAND_CHANNEL_POLICY_BY_GUILD?.[String(guildId)];
@@ -391,7 +378,8 @@ export function buildCommandRegistry({ client } = {}) {
         line = line.replace(re, displayCmd);
       }
 
-      if (!entry.exposeMeta && gid && bangCommandExposureFor(gid, entry.name) === "off") {
+      const baseName = entry.name.startsWith("!") ? entry.name.slice(1) : entry.name;
+      if (!entry.exposeMeta && gid && exposureFor(gid, baseName) === "off") {
         continue;
       }
 
@@ -522,7 +510,7 @@ export function buildCommandRegistry({ client } = {}) {
 
     if (cmd.startsWith("!") && !entry.exposeMeta) {
       const base = cmd.slice(1);
-      if (message.guildId && bangCommandExposureFor(message.guildId, base) === "off") {
+      if (message.guildId && exposureFor(message.guildId, base) === "off") {
         await message.reply("This command isn’t allowed in this server.");
         return;
       }
