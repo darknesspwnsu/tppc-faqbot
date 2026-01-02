@@ -15,6 +15,7 @@ This folder contains the interactive game modules registered in `games/games.js`
 | Exploding Voltorbs | `!ev` | Guild-scoped; announcements in start channel | Tag list or reaction join |
 | Hangman | `/hangman` | Guild-scoped, start channel bound | Slash start + reaction join |
 | Higher or Lower | `!higherorlower` / `!hol` | Guild-scoped, start channel bound | Host starts with rounds + optional range |
+| Mafia | `!mafia` | Guild-scoped, start channel bound | Reaction join (✅) |
 | RPS | `!rps` | Guild-scoped, start channel bound | Solo or tag opponent |
 | Safari Zone | `!sz` | Guild-scoped, channel-agnostic | Tag list or reaction join |
 

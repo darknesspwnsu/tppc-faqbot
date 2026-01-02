@@ -15,6 +15,7 @@ import { registerHangman } from "./hangman.js";
 import { registerDealOrNoDeal } from "./deal_or_no_deal.js";
 import { registerAuction } from "./auction.js";
 import { registerPokemonUnscramble } from "./pokemon_unscramble.js";
+import { registerMafia } from "./mafia.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -28,7 +29,8 @@ const GAME_MODULES = [
   { id: "hangman", register: registerHangman },
   { id: "deal_or_no_deal", register: registerDealOrNoDeal },
   { id: "auction", register: registerAuction },
-  { id: "pokemon_unscramble", register: registerPokemonUnscramble }
+  { id: "pokemon_unscramble", register: registerPokemonUnscramble },
+  { id: "mafia", register: registerMafia }
 ];
 
 export function registerGames(register) {
