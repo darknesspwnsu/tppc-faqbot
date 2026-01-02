@@ -311,10 +311,13 @@ async function resolveNight({ message, state }) {
     if (target?.alive) {
       const user = await message.client.users.fetch(state.detectiveId).catch(() => null);
       if (user) {
-        await dm(
+        const ok = await dm(
           user,
           `${mention(target.id)} is **${target.role === "mafia" ? "MAFIA" : "NOT Mafia"}**.`
         );
+        if (!ok) {
+          await channel.send("⚠️ Detective could not be reached via DM.");
+        }
       }
     }
   }
