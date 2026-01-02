@@ -1,6 +1,6 @@
 // contests/pollcontest.js
 //
-// /pollcontest - create a Discord poll contest and process results on close.
+// /pollcontest create|cancel|untrack - manage a Discord poll contest and process results on close.
 
 import {
   ActionRowBuilder,
@@ -611,13 +611,46 @@ export function registerPollContest(register) {
   register.slash(
     {
       name: "pollcontest",
-      description: "Create a poll contest and process results",
+      description: "Create or manage poll contests",
       options: [
         {
-          type: 3, // STRING
-          name: "poll_id",
-          description: "Use an existing poll message ID instead of creating a new poll",
-          required: false,
+          type: 1, // SUB_COMMAND
+          name: "create",
+          description: "Create a poll contest and process results",
+          options: [
+            {
+              type: 3, // STRING
+              name: "poll_id",
+              description: "Use an existing poll message ID instead of creating a new poll",
+              required: false,
+            },
+          ],
+        },
+        {
+          type: 1, // SUB_COMMAND
+          name: "cancel",
+          description: "Cancel a poll contest by message ID",
+          options: [
+            {
+              type: 3, // STRING
+              name: "message_id",
+              description: "Message ID of the poll to cancel",
+              required: true,
+            },
+          ],
+        },
+        {
+          type: 1, // SUB_COMMAND
+          name: "untrack",
+          description: "Stop tracking a poll contest by message ID",
+          options: [
+            {
+              type: 3, // STRING
+              name: "message_id",
+              description: "Message ID of the poll to untrack",
+              required: true,
+            },
+          ],
         },
       ],
     },
@@ -633,161 +666,220 @@ export function registerPollContest(register) {
         return;
       }
 
-      if (!isAdminOrPrivileged(interaction)) {
-        await interaction.reply({
-          content: "You do not have permission to run this command.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
+      const sub = interaction.options?.getSubcommand?.() || "";
 
-      const pollId = String(interaction.options?.getString?.("poll_id") || "").trim();
-      if (pollId) {
-        if (!interaction.channel?.messages?.fetch) {
+      if (sub === "create") {
+        if (!isAdminOrPrivileged(interaction)) {
           await interaction.reply({
-            content: "Could not access this channel.",
+            content: "You do not have permission to run this command.",
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        let message = null;
-        try {
-          message = await interaction.channel.messages.fetch(pollId);
-        } catch {
-          message = null;
-        }
-
-        const poll = message?.poll || null;
-        if (!poll) {
-          await interaction.reply({
-            content: "Could not find a poll with that message ID in this channel.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        if (String(message.channelId || "") !== String(interaction.channelId || "")) {
-          await interaction.reply({
-            content: "That poll is not in this channel.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const botId = interaction.client?.user?.id;
-        const messageId = String(message.id);
-        if (botId && String(message.author?.id) === String(botId)) {
-          const allowed = await isPollUntracked(messageId);
-          if (!allowed) {
+        const pollId = String(interaction.options?.getString?.("poll_id") || "").trim();
+        if (pollId) {
+          if (!interaction.channel?.messages?.fetch) {
             await interaction.reply({
-              content: "That poll was started by Spectreon and is already tracked.",
+              content: "Could not access this channel.",
               flags: MessageFlags.Ephemeral,
             });
             return;
           }
-        }
 
-        if (poll.allowMultiselect) {
+          let message = null;
+          try {
+            message = await interaction.channel.messages.fetch(pollId);
+          } catch {
+            message = null;
+          }
+
+          const poll = message?.poll || null;
+          if (!poll) {
+            await interaction.reply({
+              content: "Could not find a poll with that message ID in this channel.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          if (String(message.channelId || "") !== String(interaction.channelId || "")) {
+            await interaction.reply({
+              content: "That poll is not in this channel.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const botId = interaction.client?.user?.id;
+          const messageId = String(message.id);
+          if (botId && String(message.author?.id) === String(botId)) {
+            const allowed = await isPollUntracked(messageId);
+            if (!allowed) {
+              await interaction.reply({
+                content: "That poll was started by Spectreon and is already tracked.",
+                flags: MessageFlags.Ephemeral,
+              });
+              return;
+            }
+          }
+
+          if (poll.allowMultiselect) {
+            await interaction.reply({
+              content: "That poll allows multiple selections and is not supported.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const endsAtMs = Number(poll.expiresTimestamp);
+          if (!Number.isFinite(endsAtMs)) {
+            await interaction.reply({
+              content: "That poll does not have a valid expiry time.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const pollEnded = endsAtMs <= Date.now();
+
+          if (activePolls.has(messageId)) {
+            await interaction.reply({
+              content: "That poll is already being tracked.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const answers = [...poll.answers.values()].map((answer) => answer.text).filter(Boolean);
+          if (answers.length < 2) {
+            await interaction.reply({
+              content: "That poll must have at least two options.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          if (answers.length > 10) {
+            await interaction.reply({
+              content: "That poll has more than 10 options and is not supported.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const durationSeconds = Math.max(1, Math.floor((endsAtMs - Date.now()) / 1000));
+          const token = storePendingConfig({
+            question: poll.question?.text || "(untitled poll)",
+            options: answers,
+            durationSeconds,
+            runChoose: false,
+            getLists: false,
+            winnersOnly: false,
+            ownerId: interaction.user?.id,
+            guildId: interaction.guildId,
+            channelId: interaction.channelId,
+            pollMessageId: messageId,
+            pollEndsAtMs: endsAtMs,
+            pollEnded,
+          });
+
+          const config = { ...getPendingConfig(token), token };
           await interaction.reply({
-            content: "That poll allows multiple selections and is not supported.",
+            ...buildConfigView(
+              config,
+              pollEnded ? "Using existing poll (already ended)." : "Using existing poll."
+            ),
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        const endsAtMs = Number(poll.expiresTimestamp);
-        if (!Number.isFinite(endsAtMs)) {
-          await interaction.reply({
-            content: "That poll does not have a valid expiry time.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
+        const modal = new ModalBuilder()
+          .setCustomId(`pollcontest:modal:${interaction.id}`)
+          .setTitle("Create Poll Contest");
 
-        const pollEnded = endsAtMs <= Date.now();
+        const questionInput = new TextInputBuilder()
+          .setCustomId("question")
+          .setLabel("Question")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-        if (activePolls.has(messageId)) {
-          await interaction.reply({
-            content: "That poll is already being tracked.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
+        const optionsInput = new TextInputBuilder()
+          .setCustomId("options")
+          .setLabel("Options (one per line, 2–10)")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true);
 
-        const answers = [...poll.answers.values()].map((answer) => answer.text).filter(Boolean);
-        if (answers.length < 2) {
-          await interaction.reply({
-            content: "That poll must have at least two options.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
+        const durationInput = new TextInputBuilder()
+          .setCustomId("duration")
+          .setLabel("Duration (e.g. 10m, 2h, 30s)")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-        if (answers.length > 10) {
-          await interaction.reply({
-            content: "That poll has more than 10 options and is not supported.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(questionInput),
+          new ActionRowBuilder().addComponents(optionsInput),
+          new ActionRowBuilder().addComponents(durationInput)
+        );
 
-        const durationSeconds = Math.max(1, Math.floor((endsAtMs - Date.now()) / 1000));
-        const token = storePendingConfig({
-          question: poll.question?.text || "(untitled poll)",
-          options: answers,
-          durationSeconds,
-          runChoose: false,
-          getLists: false,
-          winnersOnly: false,
-          ownerId: interaction.user?.id,
-          guildId: interaction.guildId,
-          channelId: interaction.channelId,
-          pollMessageId: messageId,
-          pollEndsAtMs: endsAtMs,
-          pollEnded,
-        });
-
-        const config = { ...getPendingConfig(token), token };
-        await interaction.reply({
-          ...buildConfigView(
-            config,
-            pollEnded ? "Using existing poll (already ended)." : "Using existing poll."
-          ),
-          flags: MessageFlags.Ephemeral,
-        });
+        await interaction.showModal(modal);
         return;
       }
 
-      const modal = new ModalBuilder()
-        .setCustomId(`pollcontest:modal:${interaction.id}`)
-        .setTitle("Create Poll Contest");
+      if (sub === "cancel") {
+        const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
+        if (!messageId) {
+          await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
+          return;
+        }
 
-      const questionInput = new TextInputBuilder()
-        .setCustomId("question")
-        .setLabel("Question")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        const res = await cancelPollRecord({
+          messageId,
+          actorId: interaction.user?.id,
+          isAdmin: isAdminOrPrivileged(interaction),
+        });
 
-      const optionsInput = new TextInputBuilder()
-        .setCustomId("options")
-        .setLabel("Options (one per line, 2–10)")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true);
+        if (res.ok) {
+          await interaction.reply({ content: "✅ Poll cancelled.", ephemeral: true });
+          return;
+        }
 
-      const durationInput = new TextInputBuilder()
-        .setCustomId("duration")
-        .setLabel("Duration (e.g. 10m, 2h, 30s)")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        const content =
+          res.reason === "not_found"
+            ? "No active poll found for that message ID."
+            : "You can only cancel polls you created.";
+        await interaction.reply({ content, ephemeral: true });
+        return;
+      }
 
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(questionInput),
-        new ActionRowBuilder().addComponents(optionsInput),
-        new ActionRowBuilder().addComponents(durationInput)
-      );
+      if (sub === "untrack") {
+        const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
+        if (!messageId) {
+          await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
+          return;
+        }
 
-      await interaction.showModal(modal);
+        const existing = activePolls.get(messageId);
+        if (existing) {
+          clearPollTimer(messageId);
+        }
+
+        if (!existing) {
+          await interaction.reply({ content: "No tracked poll found for that message ID.", ephemeral: true });
+          return;
+        }
+
+        await deletePollRecord(messageId);
+        await markPollUntracked(messageId);
+        await interaction.reply({ content: "✅ Poll untracked.", ephemeral: true });
+        return;
+      }
+
+      await interaction.reply({
+        content: "Unknown pollcontest subcommand.",
+        flags: MessageFlags.Ephemeral,
+      });
     },
     { admin: true }
   );
@@ -886,7 +978,7 @@ export function registerPollContest(register) {
 
     if (!config) {
       await interaction.reply({
-        content: "This poll setup has expired. Please run /pollcontest again.",
+        content: "This poll setup has expired. Please run /pollcontest create again.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -999,98 +1091,6 @@ export function registerPollContest(register) {
     }
   });
 
-  register.slash(
-    {
-      name: "cancelpoll",
-      description: "Cancel a poll contest by message ID",
-      options: [
-        {
-          type: 3, // STRING
-          name: "message_id",
-          description: "Message ID of the poll to cancel",
-          required: true,
-        },
-      ],
-    },
-    async ({ interaction }) => {
-      ensureClient(interaction.client);
-      await boot(interaction.client);
-
-      if (!interaction.guildId) {
-        await interaction.reply({ content: "This command must be used in a server channel.", ephemeral: true });
-        return;
-      }
-
-      const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
-      if (!messageId) {
-        await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
-        return;
-      }
-
-      const res = await cancelPollRecord({
-        messageId,
-        actorId: interaction.user?.id,
-        isAdmin: isAdminOrPrivileged(interaction),
-      });
-
-      if (res.ok) {
-        await interaction.reply({ content: "✅ Poll cancelled.", ephemeral: true });
-        return;
-      }
-
-      const content =
-        res.reason === "not_found"
-          ? "No active poll found for that message ID."
-          : "You can only cancel polls you created.";
-      await interaction.reply({ content, ephemeral: true });
-    },
-    { admin: true }
-  );
-
-  register.slash(
-    {
-      name: "untrackpoll",
-      description: "Stop tracking a poll contest by message ID",
-      options: [
-        {
-          type: 3, // STRING
-          name: "message_id",
-          description: "Message ID of the poll to untrack",
-          required: true,
-        },
-      ],
-    },
-    async ({ interaction }) => {
-      ensureClient(interaction.client);
-      await boot(interaction.client);
-
-      if (!interaction.guildId) {
-        await interaction.reply({ content: "This command must be used in a server channel.", ephemeral: true });
-        return;
-      }
-
-      const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
-      if (!messageId) {
-        await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
-        return;
-      }
-
-      const existing = activePolls.get(messageId);
-      if (existing) {
-        clearPollTimer(messageId);
-      }
-
-      if (!existing) {
-        await interaction.reply({ content: "No tracked poll found for that message ID.", ephemeral: true });
-        return;
-      }
-
-      await deletePollRecord(messageId);
-      await markPollUntracked(messageId);
-      await interaction.reply({ content: "✅ Poll untracked.", ephemeral: true });
-    },
-    { admin: true }
-  );
 
   register(
     "!cancelpoll",

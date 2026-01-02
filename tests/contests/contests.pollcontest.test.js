@@ -39,6 +39,10 @@ function mockInteraction(overrides = {}) {
     client: { on: vi.fn() },
     showModal: vi.fn(async () => {}),
     reply: vi.fn(async () => {}),
+    options: {
+      getSubcommand: vi.fn(() => "create"),
+      getString: vi.fn(() => ""),
+    },
     ...overrides,
   };
 }
@@ -69,7 +73,7 @@ describe("pollcontest validation", () => {
     mockExecute.mockResolvedValue([[], []]);
   });
 
-  test("shows a modal for /pollcontest", async () => {
+  test("shows a modal for /pollcontest create", async () => {
     const { handlers, register } = buildRegister();
     registerPollContest(register);
 
@@ -160,6 +164,7 @@ describe("pollcontest validation", () => {
 
     const interaction = mockInteraction({
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
@@ -191,6 +196,7 @@ describe("pollcontest validation", () => {
 
     const interaction = mockInteraction({
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
@@ -234,6 +240,7 @@ describe("pollcontest validation", () => {
     const interaction = mockInteraction({
       client: { on: vi.fn(), user: { id: "bot" } },
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
@@ -282,6 +289,7 @@ describe("pollcontest validation", () => {
     const interaction = mockInteraction({
       client: { on: vi.fn(), user: { id: "bot" } },
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
@@ -322,6 +330,7 @@ describe("pollcontest validation", () => {
 
     const interaction = mockInteraction({
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
@@ -395,6 +404,7 @@ describe("pollcontest validation", () => {
     const interaction = mockInteraction({
       client,
       options: {
+        getSubcommand: vi.fn(() => "create"),
         getString: vi.fn(() => "123"),
       },
       channel: {
