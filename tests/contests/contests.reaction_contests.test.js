@@ -188,6 +188,47 @@ describe("conteststart validation and outputs", () => {
     vi.useRealTimers();
   });
 
+  test("includes prize for single-winner choose mode", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const conteststart = register.handlers.get("!conteststart");
+    vi.useFakeTimers();
+
+    const joinMsg = mockJoinMessage();
+    const send = vi.fn().mockResolvedValue(joinMsg);
+    const message = {
+      guildId: "1",
+      channelId: "2",
+      author: { id: "host" },
+      client: sharedClient,
+      channel: { send },
+      reply: vi.fn(async () => {}),
+      guild: {
+        members: {
+          fetch: vi.fn(async () => new Map([["u1", { displayName: "Alpha" }]])),
+        },
+      },
+    };
+
+    const startPromise = conteststart({
+      message,
+      rest: "choose 1sec winners=1 prize=$$$ Shiny Klink!!!",
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
+
+    vi.advanceTimersByTime(1000);
+    await startPromise;
+
+    expect(send.mock.calls.some((call) => call[0]?.includes("Prize: **$$$ Shiny Klink!!!**"))).toBe(true);
+    vi.useRealTimers();
+  });
+
   test("prevents cancel by non-owner without privileges", async () => {
     isAdminOrPrivileged.mockReturnValue(false);
     vi.useFakeTimers();

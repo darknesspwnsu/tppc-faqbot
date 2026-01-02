@@ -149,11 +149,15 @@ function contestStartHelpText() {
     "**Winners (choose mode only):**",
     "• `winners=<n>` (default 1)",
     "",
+    "**Prize (choose 1 / elim only):**",
+    "• `prize=<text>` (text can include spaces/symbols)",
+    "",
     "**Examples:**",
     "• `!conteststart 2min`",
     "• `!conteststart list 1min 20`",
     "• `!conteststart choose 30sec`",
     "• `!conteststart choose 30sec winners=3`",
+    "• `!conteststart choose 30sec prize=$$$ Shiny Klink!!!`",
     "• `!conteststart elim 2min 10`",
     ""
   ].join("\n");
@@ -540,7 +544,15 @@ export function registerReactionContests(register) {
         return;
       }
 
-      const tokens = rest.trim().split(/\s+/).filter(Boolean);
+      let prize = "";
+      let restSansPrize = rest;
+      const prizeMatch = /(?:^|\s)prize=(.+)$/i.exec(rest);
+      if (prizeMatch) {
+        prize = prizeMatch[1].trim();
+        restSansPrize = rest.replace(prizeMatch[0], "").trim();
+      }
+
+      const tokens = restSansPrize.trim().split(/\s+/).filter(Boolean);
 
       let mode = "list";
       let timeTok = tokens[0] || "";
@@ -649,8 +661,9 @@ export function registerReactionContests(register) {
 
         const picks = winnerCount > 1 ? chooseMany(names, winnerCount) : [chooseOne(names)];
         const label = winnerCount > 1 ? "Winners" : "Winner";
+        const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**\n\n(From ${names.length} entrant(s))`
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${names.length} entrant(s))`
         );
         return;
       }
@@ -659,6 +672,7 @@ export function registerReactionContests(register) {
       // Default: 2 seconds between rounds (keeps it snappy)
       const delaySec = 2;
       const delayMs = delaySec * 1000;
+      const winnerSuffix = prize ? `Prize: **${prize}**` : "";
 
       await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${names.length}** entrant(s)…`);
       const res = await runElimFromItems({
@@ -666,6 +680,7 @@ export function registerReactionContests(register) {
         delayMs,
         delaySec,
         items: names,
+        winnerSuffix,
       });
       if (!res.ok) {
         await message.channel.send(`❌ Could not start elimination: ${res.error}`);
