@@ -159,6 +159,30 @@ function contestStartHelpText() {
   ].join("\n");
 }
 
+function contestSlashHelpText() {
+  return [
+    "**/contest — Help**",
+    "",
+    "**Modes:**",
+    "• `list` (default) — prints a space-separated list of entrants",
+    "• `choose` — picks N winners (default 1)",
+    "• `elim` — runs elimination until 1 remains (2s between rounds)",
+    "",
+    "**Time:**",
+    "• `30sec`, `5min`, `1hour`",
+    "",
+    "**Quota (optional):**",
+    "• Ends early once N entrants have reacted",
+    "",
+    "**Winners (choose mode only):**",
+    "• Number of winners (default 1)",
+    "",
+    "**Prize (choose 1 / elim only):**",
+    "• Prize text shown alongside the winner",
+    ""
+  ].join("\n");
+}
+
 export function installReactionHooks(client) {
   if (reactionHooksInstalled) return;
   reactionHooksInstalled = true;
@@ -289,6 +313,190 @@ async function cancelCollector({ messageId, canceledById }) {
  * - list: prints space-separated usernames
  */
 export function registerReactionContests(register) {
+  register.slash(
+    {
+      name: "contest",
+      description: "Start a reaction contest (same as !conteststart)",
+      options: [
+        {
+          type: 3, // STRING
+          name: "mode",
+          description: "Contest mode",
+          required: false,
+          choices: [
+            { name: "list", value: "list" },
+            { name: "choose", value: "choose" },
+            { name: "elim", value: "elim" },
+          ],
+        },
+        {
+          type: 3, // STRING
+          name: "time",
+          description: "Duration (e.g., 30sec, 5min, 1hour)",
+          required: false,
+        },
+        {
+          type: 4, // INTEGER
+          name: "quota",
+          description: "End early once N entrants have reacted",
+          required: false,
+        },
+        {
+          type: 4, // INTEGER
+          name: "winners",
+          description: "Number of winners (choose mode only)",
+          required: false,
+        },
+        {
+          type: 3, // STRING
+          name: "prize",
+          description: "Prize text (choose one or elim only)",
+          required: false,
+        },
+      ],
+    },
+    async ({ interaction }) => {
+      if (!interaction.guildId || !interaction.channelId || !interaction.channel) {
+        await interaction.reply({ content: "This command only works in a server channel.", ephemeral: true });
+        return;
+      }
+
+      if (!canManageContest(interaction)) {
+        await interaction.reply({ content: "You do not have permission to run this command.", ephemeral: true });
+        return;
+      }
+
+      const mode = (interaction.options?.getString?.("mode") || "list").toLowerCase();
+      const timeTok = interaction.options?.getString?.("time") || "";
+      const maxEntrantsRaw = interaction.options?.getInteger?.("quota");
+      const winnersRaw = interaction.options?.getInteger?.("winners");
+      const prizeRaw = interaction.options?.getString?.("prize") || "";
+      const prize = prizeRaw.trim();
+
+      if (!timeTok) {
+        await interaction.reply({ content: contestSlashHelpText(), ephemeral: true });
+        return;
+      }
+
+      const ms = parseDurationToMs(timeTok);
+      if (!ms) {
+        await interaction.reply({
+          content: "Invalid time. Examples: `30sec`, `5min`, `1hour`. Use `/contest` to see help.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const existing = findCollectorForChannel(interaction.guildId, interaction.channelId);
+      if (existing) {
+        await interaction.reply({ content: "⚠️ A reaction contest is already running in this channel.", ephemeral: true });
+        return;
+      }
+
+      let maxEntrants = maxEntrantsRaw ?? null;
+      let winnerCount = Number.isInteger(winnersRaw) ? winnersRaw : 1;
+
+      if (maxEntrants != null) {
+        if (!Number.isInteger(maxEntrants) || maxEntrants <= 0 || maxEntrants > 1000) {
+          await interaction.reply({ content: "Invalid quota. Use a positive number (max 1000).", ephemeral: true });
+          return;
+        }
+      }
+
+      if (mode === "choose") {
+        if (!Number.isInteger(winnerCount) || winnerCount <= 0 || winnerCount > 1000) {
+          await interaction.reply({ content: "Invalid winners count. Use a positive integer (max 1000).", ephemeral: true });
+          return;
+        }
+      } else {
+        winnerCount = 1;
+      }
+
+      const MAX_MS = 24 * 60 * 60_000;
+      if (ms > MAX_MS) {
+        await interaction.reply({ content: "Time too large. Max is 24 hours.", ephemeral: true });
+        return;
+      }
+
+      const chooseLabel =
+        mode === "choose"
+          ? (winnerCount > 1 ? `choose ${winnerCount} winners` : "choose a winner")
+          : null;
+      const modeLabel = mode === "list" ? "list" : mode === "choose" ? chooseLabel : "run an elimination";
+      const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
+      const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}`;
+
+      await interaction.reply({
+        content: `✅ Contest started in <#${interaction.channelId}>.`,
+        ephemeral: true,
+      });
+
+      const message = {
+        client: interaction.client,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        channel: interaction.channel,
+        author: interaction.user,
+        guild: interaction.guild,
+      };
+
+      const { entrants, reason } = await collectEntrantsByReactions({
+        message,
+        promptText: prompt,
+        durationMs: ms,
+        maxEntrants,
+        emoji: "👍",
+      });
+      if (reason === "cancel") return;
+
+      const ids = [...entrants];
+      const names = await buildNameList(message.client, message.guild, ids);
+
+      if (!names.length) {
+        await message.channel.send("No one reacted...");
+        return;
+      }
+
+      if (mode === "list") {
+        await message.channel.send(`━━━━━━━━━━━━━━\n${names.length} entrant(s):\n\n${names.join(" ")}`);
+        return;
+      }
+
+      if (mode === "choose") {
+        if (winnerCount > names.length) {
+          await message.channel.send(
+            `Not enough entrants to pick ${winnerCount} winners (only ${names.length}).`
+          );
+          return;
+        }
+
+        const picks = winnerCount > 1 ? chooseMany(names, winnerCount) : [chooseOne(names)];
+        const label = winnerCount > 1 ? "Winners" : "Winner";
+        const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
+        await message.channel.send(
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${names.length} entrant(s))`
+        );
+        return;
+      }
+
+      const delaySec = 2;
+      const delayMs = delaySec * 1000;
+      const winnerSuffix = prize ? `Prize: **${prize}**` : "";
+
+      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${names.length}** entrant(s)…`);
+      const res = await runElimFromItems({
+        message,
+        delayMs,
+        delaySec,
+        items: names,
+        winnerSuffix,
+      });
+      if (!res.ok) {
+        await message.channel.send(`❌ Could not start elimination: ${res.error}`);
+      }
+    }
+  );
+
   register(
     "!cancelcontest",
     async ({ message }) => {

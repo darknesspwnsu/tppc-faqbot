@@ -47,7 +47,7 @@ export function chooseOne(arr) {
  * Shared elimination runner (so reaction_contests can reuse it).
  * items are strings (usernames, IDs, whatever you want to print).
  */
-export async function runElimFromItems({ message, delayMs, delaySec, items }) {
+export async function runElimFromItems({ message, delayMs, delaySec, items, winnerSuffix = "" }) {
   if (!message.guild) return { ok: false, error: "No guild." };
 
   const guildId = message.guildId;
@@ -70,7 +70,8 @@ export async function runElimFromItems({ message, delayMs, delaySec, items }) {
     activeElimByGuild.delete(guildId);
 
     if (remaining.length === 1) {
-      await message.channel.send(`${remaining[0]} wins!`);
+      const suffix = winnerSuffix ? ` ${winnerSuffix}` : "";
+      await message.channel.send(`${remaining[0]} wins!${suffix}`);
     } else {
       await message.channel.send("Elimination ended with no winner.");
     }

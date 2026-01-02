@@ -6,7 +6,18 @@ vi.mock("../../auth.js", () => ({
 
 import { isAdminOrPrivileged } from "../../auth.js";
 import * as reactionContests from "../../contests/reaction_contests.js";
+import * as rng from "../../contests/rng.js";
 const { collectEntrantsByReactions, registerReactionContests } = reactionContests;
+
+function createRegister() {
+  const handlers = new Map();
+  const slashHandlers = new Map();
+  const register = (cmd, fn) => handlers.set(cmd, fn);
+  register.slash = (config, fn) => slashHandlers.set(config.name, fn);
+  register.handlers = handlers;
+  register.slashHandlers = slashHandlers;
+  return register;
+}
 
 function mockClient() {
   const handlers = new Map();
@@ -89,12 +100,11 @@ describe("collectEntrantsByReactions", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    const handlers = new Map();
-    const register = (cmd, fn) => handlers.set(cmd, fn);
+    const register = createRegister();
     registerReactionContests(register);
 
-    const conteststart = handlers.get("!conteststart");
-    const cancel = handlers.get("!cancelcontest");
+    const conteststart = register.handlers.get("!conteststart");
+    const cancel = register.handlers.get("!cancelcontest");
     expect(conteststart).toBeTypeOf("function");
     expect(cancel).toBeTypeOf("function");
 
@@ -119,12 +129,10 @@ describe("collectEntrantsByReactions", () => {
 
 describe("conteststart validation and outputs", () => {
   test("rejects invalid time formats", async () => {
-    const register = vi.fn();
-    const handlers = new Map();
-    register.mockImplementation((cmd, fn) => handlers.set(cmd, fn));
+    const register = createRegister();
     registerReactionContests(register);
 
-    const conteststart = handlers.get("!conteststart");
+    const conteststart = register.handlers.get("!conteststart");
     const reply = vi.fn(async () => {});
 
     const spy = vi.spyOn(reactionContests, "collectEntrantsByReactions");
@@ -137,12 +145,10 @@ describe("conteststart validation and outputs", () => {
   });
 
   test("reports when winners exceed entrants", async () => {
-    const register = vi.fn();
-    const handlers = new Map();
-    register.mockImplementation((cmd, fn) => handlers.set(cmd, fn));
+    const register = createRegister();
     registerReactionContests(register);
 
-    const conteststart = handlers.get("!conteststart");
+    const conteststart = register.handlers.get("!conteststart");
     vi.useFakeTimers();
 
     const joinMsg = mockJoinMessage();
@@ -201,11 +207,10 @@ describe("conteststart validation and outputs", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    const handlers = new Map();
-    const register = (cmd, fn) => handlers.set(cmd, fn);
+    const register = createRegister();
     registerReactionContests(register);
 
-    const cancel = handlers.get("!cancelcontest");
+    const cancel = register.handlers.get("!cancelcontest");
     const reply = vi.fn(async () => {});
 
     const msg = {
@@ -223,5 +228,138 @@ describe("conteststart validation and outputs", () => {
     vi.advanceTimersByTime(1000);
     await promise;
     vi.useRealTimers();
+  });
+});
+
+describe("contest slash command", () => {
+  test("replies with help when time is missing", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const slash = register.slashHandlers.get("contest");
+    const reply = vi.fn(async () => {});
+
+    const interaction = {
+      guildId: "1",
+      channelId: "2",
+      channel: {},
+      user: { id: "u1" },
+      options: {
+        getString: vi.fn(() => null),
+        getInteger: vi.fn(() => null),
+      },
+      reply,
+    };
+
+    await slash({ interaction });
+    expect(reply).toHaveBeenCalledTimes(1);
+    expect(reply.mock.calls[0][0].content).toContain("/contest — Help");
+  });
+
+  test("includes prize line for choose mode with one winner", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const slash = register.slashHandlers.get("contest");
+    const reply = vi.fn(async () => {});
+    const joinMsg = mockJoinMessage();
+    const send = vi
+      .fn()
+      .mockImplementationOnce(async () => joinMsg)
+      .mockImplementation(async () => {});
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+
+    const interaction = {
+      guildId: "1",
+      channelId: "2",
+      channel: { send },
+      user: { id: "host" },
+      guild: {
+        members: {
+          fetch: vi.fn(async () => new Map([["u1", { displayName: "Alpha" }]])),
+        },
+      },
+      options: {
+        getString: vi.fn((name) => {
+          if (name === "mode") return "choose";
+          if (name === "time") return "1sec";
+          if (name === "prize") return "Gold";
+          return null;
+        }),
+        getInteger: vi.fn((name) => {
+          if (name === "quota") return 1;
+          if (name === "winners") return 1;
+          return null;
+        }),
+      },
+      reply,
+      client: sharedClient,
+    };
+
+    const run = slash({ interaction });
+    await Promise.resolve();
+    await Promise.resolve();
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
+    await run;
+
+    expect(reply).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][0]).toContain("Prize: **Gold**");
+  });
+
+  test("passes prize to elimination runner", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const slash = register.slashHandlers.get("contest");
+    const reply = vi.fn(async () => {});
+    const joinMsg = mockJoinMessage();
+    const send = vi
+      .fn()
+      .mockImplementationOnce(async () => joinMsg)
+      .mockImplementation(async () => {});
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+    const elimSpy = vi.spyOn(rng, "runElimFromItems").mockResolvedValue({ ok: true });
+
+    const interaction = {
+      guildId: "1",
+      channelId: "2",
+      channel: { send },
+      user: { id: "host" },
+      guild: {
+        members: {
+          fetch: vi.fn(async () =>
+            new Map([
+              ["u1", { displayName: "Alpha" }],
+              ["u2", { displayName: "Beta" }],
+            ])
+          ),
+        },
+      },
+      options: {
+        getString: vi.fn((name) => {
+          if (name === "mode") return "elim";
+          if (name === "time") return "1sec";
+          if (name === "prize") return "Bike";
+          return null;
+        }),
+        getInteger: vi.fn(() => null),
+      },
+      reply,
+      client: sharedClient,
+    };
+
+    const run = slash({ interaction });
+    await Promise.resolve();
+    await Promise.resolve();
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u1", bot: false });
+    await add({ message: { id: joinMsg.id, guildId: "1", partial: false }, partial: false }, { id: "u2", bot: false });
+    await run;
+
+    expect(elimSpy).toHaveBeenCalledTimes(1);
+    expect(elimSpy.mock.calls[0][0].winnerSuffix).toBe("Prize: **Bike**");
+    elimSpy.mockRestore();
   });
 });
