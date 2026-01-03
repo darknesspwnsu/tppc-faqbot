@@ -11,12 +11,123 @@ import {
   normalizeQueryVariants,
   queryVariantPrefix,
 } from "../shared/pokename_utils.js";
+import { parse } from "node-html-parser";
+import { RpgClient } from "./rpg_client.js";
+import { getPokedexEntry, upsertPokedexEntry } from "./storage.js";
 
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
+const POKEDEX_TTL_MS = 30 * 24 * 60 * 60_000;
 
 let pokedex = null; // { name: key }
 let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
+
+function getText(node) {
+  if (!node) return "";
+  return String(node.text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeSpriteUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("//")) return `https:${raw}`;
+  return raw;
+}
+
+function parseSpriteUrl(styleText) {
+  const text = String(styleText || "");
+  const urlIndex = text.indexOf("url(");
+  if (urlIndex < 0) return "";
+  let start = urlIndex + 4;
+  let end = text.indexOf(")", start);
+  if (end < 0) return "";
+  let url = text.slice(start, end).trim();
+  if ((url.startsWith("'") && url.endsWith("'")) || (url.startsWith("\"") && url.endsWith("\""))) {
+    url = url.slice(1, -1);
+  }
+  return normalizeSpriteUrl(url);
+}
+
+function parseStatsTable(table) {
+  const rows = table?.querySelectorAll?.("tr") || [];
+  let firstHeader = -1;
+  for (let i = 0; i < rows.length; i += 1) {
+    const ths = rows[i].querySelectorAll?.("th") || [];
+    const labels = ths.map((th) => getText(th).toLowerCase());
+    if (labels.includes("hp") && labels.includes("attack") && labels.includes("defense")) {
+      firstHeader = i;
+      break;
+    }
+  }
+  if (firstHeader < 0) return null;
+
+  const row1 = rows[firstHeader + 1];
+  const row2 = rows[firstHeader + 2];
+  const row3 = rows[firstHeader + 3];
+  if (!row1 || !row2 || !row3) return null;
+
+  const baseVals = (row1.querySelectorAll?.("td") || []).map((td) => getText(td));
+  const speedHeaders = (row2.querySelectorAll?.("th") || []).map((th) => getText(th).toLowerCase());
+  const speedVals = (row3.querySelectorAll?.("td") || []).map((td) => getText(td));
+  if (baseVals.length < 3 || speedVals.length < 3) return null;
+  if (!speedHeaders.includes("speed") || !speedHeaders.includes("spec attack") || !speedHeaders.includes("spec defense")) {
+    return null;
+  }
+
+  return {
+    hp: baseVals[0],
+    attack: baseVals[1],
+    defense: baseVals[2],
+    speed: speedVals[0],
+    spAttack: speedVals[1],
+    spDefense: speedVals[2],
+  };
+}
+
+function parseTypeTable(table) {
+  const rows = table?.querySelectorAll?.("tr") || [];
+  if (rows.length < 2) return null;
+  const headers = (rows[0].querySelectorAll?.("th") || []).map((th) => getText(th).toLowerCase());
+  if (!headers.includes("type 1") || !headers.includes("type 2")) return null;
+  const values = (rows[1].querySelectorAll?.("td") || []).map((td) => getText(td));
+  if (values.length < 4) return null;
+  return {
+    type1: values[0],
+    type2: values[1],
+    group1: values[2],
+    group2: values[3],
+  };
+}
+
+function parsePokedexEntryHtml(html) {
+  const root = parse(String(html || ""));
+  const title = getText(root.querySelector("h3"));
+  const tables = root.querySelectorAll("table");
+  let stats = null;
+  let types = null;
+  for (const table of tables) {
+    if (!stats) stats = parseStatsTable(table);
+    if (!types) types = parseTypeTable(table);
+    if (stats && types) break;
+  }
+
+  const sprites = {};
+  const box = root.querySelector("td.iBox");
+  const spriteNodes = box ? box.querySelectorAll("div") : [];
+  for (const node of spriteNodes) {
+    const url = parseSpriteUrl(node.getAttribute("style"));
+    if (!url) continue;
+    const labelNode = node.querySelector("p") || node.nextElementSibling;
+    const labelText = labelNode?.rawTagName === "p" ? getText(labelNode).toLowerCase() : "";
+    const labelBase = labelText.split(/\s+/)[0] || "";
+    if (labelBase && !sprites[labelBase]) sprites[labelBase] = url;
+    if (labelText && !sprites[labelText]) sprites[labelText] = url;
+    if (!labelBase && !Object.keys(sprites).length) sprites.normal = url;
+  }
+  return { title, stats, types, sprites };
+}
 
 function parsePokemonQuery(raw) {
   const q = String(raw || "").trim();
@@ -102,4 +213,172 @@ export async function findPokedexEntry(queryRaw) {
 
 export { parsePokemonQuery };
 
-export const __testables = { parsePokemonQuery };
+async function getCachedPokedexEntry({ cacheKey, url, client }) {
+  const cached = await getPokedexEntry({ entryKey: cacheKey });
+  const now = Date.now();
+  const stale = !cached?.updatedAt || now - cached.updatedAt > POKEDEX_TTL_MS;
+  const hasSprites = cached?.payload?.sprites && Object.keys(cached.payload.sprites).length > 0;
+  if (!cached || stale || !cached.payload || !hasSprites) {
+    const html = await client.fetchPage(url);
+    const payload = parsePokedexEntryHtml(html);
+    await upsertPokedexEntry({ entryKey: cacheKey, payload });
+    return { payload, updatedAt: Date.now() };
+  }
+  return { payload: cached.payload, updatedAt: cached.updatedAt || null };
+}
+
+function parseEntryKey(entryKey) {
+  const [idRaw, formRaw] = String(entryKey || "").split("-");
+  const id = idRaw ? Number(idRaw) : null;
+  const form = formRaw ? Number(formRaw) : 0;
+  return { id, form };
+}
+
+function pickSpriteUrl(sprites, variant) {
+  const key = String(variant || "normal").toLowerCase();
+  if (!sprites) return "";
+  if (sprites[key]) return sprites[key];
+  const fallback = Object.entries(sprites).find(([label]) => label.startsWith(key));
+  if (fallback?.[1]) return fallback[1];
+  if (sprites.normal) return sprites.normal;
+  const first = Object.values(sprites)[0];
+  return first || "";
+}
+
+function statsToFields(stats) {
+  if (!stats) return [{ name: "Stats", value: "Unknown" }];
+  return [
+    { name: "HP", value: String(stats.hp || "-"), inline: true },
+    { name: "Atk", value: String(stats.attack || "-"), inline: true },
+    { name: "Def", value: String(stats.defense || "-"), inline: true },
+    { name: "Spd", value: String(stats.speed || "-"), inline: true },
+    { name: "SpA", value: String(stats.spAttack || "-"), inline: true },
+    { name: "SpD", value: String(stats.spDefense || "-"), inline: true },
+  ];
+}
+
+function formatTypes(types) {
+  if (!types) return "Unknown";
+  const parts = [types.type1, types.type2].filter(Boolean);
+  return parts.length ? parts.join(" / ") : "Unknown";
+}
+
+function formatEggGroups(types) {
+  if (!types) return "Unknown";
+  const normalize = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (raw.toLowerCase() === "no eggs") return "None";
+    return raw;
+  };
+  const parts = [normalize(types.group1), normalize(types.group2)].filter(Boolean);
+  return parts.length ? parts.join(" / ") : "None";
+}
+
+function buildPokedexEmbed({ title, url, stats, types, spriteUrl, variant }) {
+  const embed = {
+    title: title || "Pokedex Entry",
+    url,
+    color: 0x2b2d31,
+    fields: [
+      ...statsToFields(stats),
+      { name: "Type", value: formatTypes(types), inline: true },
+      { name: "Egg Group", value: formatEggGroups(types), inline: true },
+    ],
+  };
+  if (spriteUrl) {
+    embed.thumbnail = { url: spriteUrl };
+  }
+  if (variant && variant !== "normal") {
+    embed.footer = { text: `Sprite: ${variant.charAt(0).toUpperCase() + variant.slice(1)}` };
+  }
+  return embed;
+}
+
+export function registerPokedex(register) {
+  const primaryCmd = "!pokedex";
+  let client = null;
+  const getClient = () => {
+    if (!client) client = new RpgClient();
+    return client;
+  };
+
+  register(
+    primaryCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
+        console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${primaryCmd}`);
+        await message.reply("❌ RPG credentials are not configured.");
+        return;
+      }
+
+      const nameRaw = String(rest || "").trim();
+      if (!nameRaw || nameRaw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${primaryCmd} <pokemon name>\``);
+        return;
+      }
+
+      let { base, variant } = parsePokemonQuery(nameRaw);
+      if (!variant) variant = "normal";
+      let lookup = base || nameRaw;
+      let result = await findPokedexEntry(lookup);
+      if (!result.entry && variant) {
+        const fallback = await findPokedexEntry(nameRaw);
+        if (fallback.entry || fallback.suggestions.length) {
+          result = fallback;
+          if (fallback.entry) {
+            variant = "normal";
+          }
+        }
+      }
+
+      const { entry, suggestions } = result;
+      if (!entry) {
+        if (suggestions.length) {
+          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean: ${suggestions.join(", ")}?`);
+        } else {
+          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+        }
+        return;
+      }
+
+      const { id, form } = parseEntryKey(entry.key);
+      if (!Number.isFinite(id)) {
+        await message.reply(`❌ Could not parse Pokedex entry for **${entry.name}**.`);
+        return;
+      }
+
+      const url = `https://www.tppcrpg.net/pokedex_entry.php?id=${id}&t=${Number.isFinite(form) ? form : 0}`;
+      const cacheKey = `pokedex:${entry.key}`;
+
+      try {
+        const { payload } = await getCachedPokedexEntry({ cacheKey, url, client: getClient() });
+        const title = payload?.title || entry.name;
+        const spriteUrl = pickSpriteUrl(payload?.sprites, variant);
+        const embed = buildPokedexEmbed({
+          title,
+          url,
+          stats: payload?.stats,
+          types: payload?.types,
+          spriteUrl,
+          variant,
+        });
+        await message.reply({ embeds: [embed] });
+      } catch (err) {
+        console.error("[rpg] pokedex fetch failed:", err);
+        await message.reply("❌ Failed to fetch pokedex entry. Please try again later.");
+      }
+    },
+    "!pokedex <pokemon> — show TPPC RPG pokedex details",
+    { helpTier: "primary", category: "RPG" }
+  );
+}
+
+export const __testables = {
+  parsePokemonQuery,
+  parsePokedexEntryHtml,
+  statsToFields,
+  formatTypes,
+  formatEggGroups,
+};

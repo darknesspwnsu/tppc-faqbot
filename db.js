@@ -80,6 +80,15 @@ export async function initDb() {
   `);
 
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS rpg_pokedex (
+      entry_key VARCHAR(32) NOT NULL,
+      payload   TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (entry_key)
+    )
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS poll_contests (
       message_id VARCHAR(32) NOT NULL,
       guild_id   VARCHAR(32) NOT NULL,

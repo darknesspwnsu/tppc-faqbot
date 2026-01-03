@@ -72,6 +72,7 @@ describe("db.js", () => {
       expect.arrayContaining([
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_ids/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_texts/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS rpg_pokedex/),
       ])
     );
   });

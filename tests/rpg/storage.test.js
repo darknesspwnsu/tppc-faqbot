@@ -74,4 +74,30 @@ describe("rpg/storage", () => {
       updatedAt: null,
     });
   });
+
+  it("upsertPokedexEntry persists payload JSON", async () => {
+    const { upsertPokedexEntry, execute } = await loadStorage();
+
+    await upsertPokedexEntry({ entryKey: "pokedex:001-0", payload: { title: "Bulbasaur" } });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO rpg_pokedex"),
+      ["pokedex:001-0", JSON.stringify({ title: "Bulbasaur" })]
+    );
+  });
+
+  it("getPokedexEntry returns parsed payload and timestamp", async () => {
+    const updatedAt = "2025-01-01T00:00:00.000Z";
+    const { getPokedexEntry } = await loadStorage({
+      rows: [{ entry_key: "pokedex:001-0", payload: "{\"title\":\"Bulbasaur\"}", updated_at: updatedAt }],
+    });
+
+    const result = await getPokedexEntry({ entryKey: "pokedex:001-0" });
+
+    expect(result).toEqual({
+      entryKey: "pokedex:001-0",
+      payload: { title: "Bulbasaur" },
+      updatedAt: new Date(updatedAt).getTime(),
+    });
+  });
 });

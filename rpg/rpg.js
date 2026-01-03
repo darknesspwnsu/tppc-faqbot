@@ -6,12 +6,14 @@ import { registerLeaderboard } from "./leaderboard.js";
 import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
 import { registerViewbox } from "./viewbox.js";
+import { registerPokedex } from "./pokedex.js";
 
 const RPG_MODULES = [
   { id: "leaderboard", register: registerLeaderboard },
   { id: "powerplant", register: registerPowerPlant },
   { id: "findmyid", register: registerFindMyId },
   { id: "viewbox", register: registerViewbox },
+  { id: "pokedex", register: registerPokedex },
 ];
 
 export function registerRpg(register) {
