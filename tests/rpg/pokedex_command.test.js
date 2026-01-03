@@ -123,6 +123,74 @@ describe("rpg pokedex command", () => {
     const replyArg = message.reply.mock.calls[0][0];
     expect(replyArg.embeds[0].title).toContain("Aegislash");
     expect(replyArg.embeds[0].thumbnail.url).toContain("shiny/681M-1.gif");
+    const hpField = replyArg.embeds[0].fields.find((f) => f.name === "HP");
+    expect(hpField.value).toContain("(+5)");
+  });
+
+  it("renders golden stat bonuses", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!pokedex");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#001 - Bulbasaur</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>45</td><td>49</td><td>49</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>45</td><td>65</td><td>65</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Grass</td><td>Poison</td><td>Monster</td><td>Grass</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/golden/001M.gif')\"><p>Golden &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Golden Bulbasaur" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    const hpField = replyArg.embeds[0].fields.find((f) => f.name === "HP");
+    expect(hpField.value).toContain("(+15)");
+  });
+
+  it("renders dark stat bonuses", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!pokedex");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#001 - Bulbasaur</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>45</td><td>49</td><td>49</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>45</td><td>65</td><td>65</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Grass</td><td>Poison</td><td>Monster</td><td>Grass</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/dark/001M.gif')\"><p>Dark &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Dark Bulbasaur" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    const hpField = replyArg.embeds[0].fields.find((f) => f.name === "HP");
+    expect(hpField.value).toContain("(+15/-4)");
   });
 
   it("refetches when cached payload is missing sprites", async () => {

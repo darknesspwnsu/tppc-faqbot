@@ -359,15 +359,21 @@ function pickSpriteUrl(sprites, variant) {
   return first || "";
 }
 
-function statsToFields(stats) {
+function statsToFields(stats, variant) {
   if (!stats) return [{ name: "Stats", value: "Unknown" }];
+  const modifier = statBonusLabel(variant);
+  const fmt = (value) => {
+    const raw = String(value || "-");
+    if (!modifier || raw === "-") return raw;
+    return `${raw}(${modifier})`;
+  };
   return [
-    { name: "HP", value: String(stats.hp || "-"), inline: true },
-    { name: "Atk", value: String(stats.attack || "-"), inline: true },
-    { name: "Def", value: String(stats.defense || "-"), inline: true },
-    { name: "Spd", value: String(stats.speed || "-"), inline: true },
-    { name: "SpA", value: String(stats.spAttack || "-"), inline: true },
-    { name: "SpD", value: String(stats.spDefense || "-"), inline: true },
+    { name: "HP", value: fmt(stats.hp), inline: true },
+    { name: "Atk", value: fmt(stats.attack), inline: true },
+    { name: "Def", value: fmt(stats.defense), inline: true },
+    { name: "Spd", value: fmt(stats.speed), inline: true },
+    { name: "SpA", value: fmt(stats.spAttack), inline: true },
+    { name: "SpD", value: fmt(stats.spDefense), inline: true },
   ];
 }
 
@@ -387,6 +393,14 @@ function formatEggGroups(types) {
   };
   const parts = [normalize(types.group1), normalize(types.group2)].filter(Boolean);
   return parts.length ? parts.join(" / ") : "None";
+}
+
+function statBonusLabel(variant) {
+  const key = String(variant || "normal").toLowerCase();
+  if (key === "shiny") return "+5";
+  if (key === "golden") return "+15";
+  if (key === "dark") return "+15/-4";
+  return "";
 }
 
 function sumBaseStats(stats) {
@@ -422,7 +436,7 @@ function buildPokedexEmbed({ title, url, stats, types, spriteUrl, variant }) {
     url,
     color: 0x2b2d31,
     fields: [
-      ...statsToFields(stats),
+      ...statsToFields(stats, variant),
       { name: "Type", value: formatTypes(types), inline: true },
       { name: "Egg Group", value: formatEggGroups(types), inline: true },
     ],
@@ -560,4 +574,5 @@ export const __testables = {
   sumBaseStats,
   formatEggTimeFromTotal,
   resolveBaseEvolutionName,
+  statBonusLabel,
 };
