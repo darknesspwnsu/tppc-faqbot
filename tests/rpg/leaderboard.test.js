@@ -164,6 +164,41 @@ describe("rpg leaderboard register", () => {
     expect(replyArg.content).toContain("Did you mean");
   });
 
+  it("accepts accented pokemon subcommand", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    pokedexMocks.parsePokemonQuery.mockReturnValue({ base: "mew", variant: "" });
+    pokedexMocks.findPokedexEntry.mockResolvedValue({
+      entry: { name: "Mew", key: "151-0" },
+      suggestions: [],
+    });
+    storageMocks.getLeaderboard.mockResolvedValueOnce({
+      challenge: "pokemon:151-0",
+      payload: {
+        rows: [
+          { rank: "1", trainer: "Ash", pokemon: "Mew", level: "5", number: "1" },
+        ],
+        pageCount: 1,
+      },
+      updatedAt: Date.now(),
+    });
+
+    const message = makeMessage();
+    await handler({ message, rest: "Pokémon Mew 1" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("🏆 **Mew**");
+    expect(body).toContain("Ash");
+  });
+
   it("filters pokemon leaderboard by variant", async () => {
     delete process.env.RPG_USERNAME;
     delete process.env.RPG_PASSWORD;

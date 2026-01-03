@@ -411,6 +411,13 @@ function formatCacheAge(updatedAtMs) {
   return `cached ${days}d ago`;
 }
 
+function normalizeCommandToken(token) {
+  return String(token ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 function appendCacheFootnote(text, updatedAtMs) {
   const note = formatCacheAge(updatedAtMs);
   return note ? `${text}\n_${note}_` : text;
@@ -615,7 +622,7 @@ export function registerLeaderboard(register) {
 
       const raw = String(rest || "").trim().toLowerCase();
       const parts = raw.split(/\s+/).filter(Boolean);
-      let sub = parts[0] || "";
+      let sub = normalizeCommandToken(parts[0] || "");
       if (sub === "poke") sub = "pokemon";
 
       if (!sub || sub === "help") {
