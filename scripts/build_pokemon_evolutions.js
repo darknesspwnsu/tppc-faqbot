@@ -182,6 +182,10 @@ async function main() {
   const unresolvedById = new Map();
   for (const [name, keyRaw] of Object.entries(pokedexRaw)) {
     const key = String(name).toLowerCase();
+    if (TPPC_BREEDING_OVERRIDES[key]) {
+      baseByName[key] = TPPC_BREEDING_OVERRIDES[key];
+      continue;
+    }
     if (MANUAL_BASE_OVERRIDES[key]) {
       baseByName[key] = MANUAL_BASE_OVERRIDES[key];
       continue;
@@ -317,4 +321,14 @@ const MANUAL_BASE_OVERRIDES = {
   "zygarde (10%)": "Zygarde (10%)",
   "zygarde (50%)": "Zygarde (50%)",
   "zygarde (complete)": "Zygarde (Complete)",
+};
+
+const TPPC_BREEDING_OVERRIDES = {
+  chimecho: "Chimecho",
+  chansey: "Chansey",
+  blissey: "Chansey",
+  "mr. mime": "Mr. Mime",
+  mrmime: "Mr. Mime",
+  mrrime: "Mr. Mime",
+  mantine: "Mantine",
 };
