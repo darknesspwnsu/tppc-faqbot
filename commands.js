@@ -39,6 +39,7 @@ import { registerVerification } from "./verification/verification.js";
 
 import { handleRarityInteraction } from "./tools/rarity.js";
 import { handleLeaderboardInteraction } from "./rpg/leaderboard.js";
+import { handlePokedexInteraction } from "./rpg/pokedex.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import {
   DEFAULT_EXPOSURE,
@@ -636,6 +637,36 @@ export function buildCommandRegistry({ client } = {}) {
           return;
         } catch (err) {
           console.error("[COMMANDS] leaderboard retry handler error:", err);
+        }
+      }
+
+      // Special-case pokedex "did you mean" buttons.
+      if (customId.startsWith("pokedex_retry:")) {
+        try {
+          const rerun = await handlePokedexInteraction(interaction);
+          if (rerun && rerun.cmd) {
+            const entry = bang.get(String(rerun.cmd).toLowerCase());
+            if (entry?.handler) {
+              const messageLike = {
+                guild: interaction.guild,
+                guildId: interaction.guildId,
+                channel: interaction.channel,
+                channelId: interaction.channelId,
+                author: interaction.user,
+                member: interaction.member,
+                reply: (payload) => interaction.followUp(payload),
+              };
+
+              await entry.handler({
+                message: messageLike,
+                cmd: rerun.cmd,
+                rest: rerun.rest ?? "",
+              });
+            }
+          }
+          return;
+        } catch (err) {
+          console.error("[COMMANDS] pokedex retry handler error:", err);
         }
       }
 

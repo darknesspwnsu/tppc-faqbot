@@ -5,6 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import {
   getSuggestionsFromIndex,
   normalizeKey,
@@ -450,6 +451,80 @@ function buildPokedexEmbed({ title, url, stats, types, spriteUrl, variant }) {
   return embed;
 }
 
+function formatVariantLabel(variant) {
+  if (!variant || variant === "normal") return "";
+  return variant[0].toUpperCase() + variant.slice(1);
+}
+
+function formatVariantName(variant, name) {
+  const prefix = formatVariantLabel(variant);
+  if (!prefix) return name;
+  const lower = String(name || "").toLowerCase();
+  if (lower.startsWith(prefix.toLowerCase())) return name;
+  return `${prefix}${name}`;
+}
+
+function buildPokedexSuggestions(suggestions, variant) {
+  return suggestions.map((name) => {
+    const label = formatVariantName(variant, name);
+    return { label, query: label };
+  });
+}
+
+function buildPokedexDidYouMeanButtons(suggestions) {
+  const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
+
+  const row = new ActionRowBuilder().addComponents(
+    suggestions.slice(0, 5).map(({ label, query }) =>
+      new ButtonBuilder()
+        .setCustomId(`pokedex_retry:${enc(query)}`)
+        .setLabel(label.length > 80 ? label.slice(0, 77) + "…" : label)
+        .setStyle(ButtonStyle.Secondary)
+    )
+  );
+
+  return [row];
+}
+
+async function disableInteractionButtons(interaction) {
+  const rows = interaction.message?.components || [];
+  if (!rows.length) {
+    await interaction.deferUpdate().catch(() => {});
+    return;
+  }
+
+  const disabledRows = rows.map((row) => {
+    const newRow = new ActionRowBuilder();
+    for (const component of row.components || []) {
+      let button = null;
+      if (typeof ButtonBuilder.from === "function") {
+        try {
+          button = ButtonBuilder.from(component);
+        } catch {}
+      }
+      if (!button || typeof button.setDisabled !== "function") {
+        const customId = component?.customId ?? component?.custom_id ?? "";
+        const label = component?.label ?? component?.data?.label ?? "";
+        const style = component?.style ?? component?.data?.style ?? ButtonStyle.Secondary;
+        button = new ButtonBuilder();
+        if (customId) button.setCustomId(customId);
+        if (label) button.setLabel(label);
+        if (style) button.setStyle(style);
+        if (component?.emoji) button.setEmoji(component.emoji);
+      }
+      if (typeof button.setDisabled === "function") {
+        button.setDisabled(true);
+      }
+      newRow.addComponents(button);
+    }
+    return newRow;
+  });
+
+  await interaction.update({ components: disabledRows }).catch(async () => {
+    await interaction.deferUpdate().catch(() => {});
+  });
+}
+
 export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
   let client = null;
@@ -491,7 +566,11 @@ export function registerPokedex(register) {
       const { entry, suggestions } = result;
       if (!entry) {
         if (suggestions.length) {
-          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean: ${suggestions.join(", ")}?`);
+          const refined = buildPokedexSuggestions(suggestions, variant);
+          await message.reply({
+            content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
+            components: buildPokedexDidYouMeanButtons(refined),
+          });
         } else {
           await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
         }
@@ -565,6 +644,18 @@ export function registerPokedex(register) {
   );
 }
 
+export async function handlePokedexInteraction(interaction) {
+  if (!interaction?.isButton?.()) return false;
+
+  const id = String(interaction.customId || "");
+  if (!id.startsWith("pokedex_retry:")) return false;
+
+  const rest = decodeURIComponent(id.slice("pokedex_retry:".length));
+  await disableInteractionButtons(interaction);
+
+  return { cmd: "!pokedex", rest };
+}
+
 export const __testables = {
   parsePokemonQuery,
   parsePokedexEntryHtml,
@@ -575,4 +666,6 @@ export const __testables = {
   formatEggTimeFromTotal,
   resolveBaseEvolutionName,
   statBonusLabel,
+  formatVariantName,
+  buildPokedexSuggestions,
 };

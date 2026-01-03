@@ -27,12 +27,17 @@ vi.mock("../../contests/contests.js", () => ({ registerContests: vi.fn() }));
 vi.mock("../../games/games.js", () => ({ registerGames: vi.fn() }));
 vi.mock("../../toybox.js", () => ({ registerToybox: vi.fn() }));
 vi.mock("../../tools/rarity.js", () => ({ handleRarityInteraction: vi.fn(async () => null) }));
+vi.mock("../../rpg/pokedex.js", () => ({
+  handlePokedexInteraction: vi.fn(async () => null),
+  registerPokedex: vi.fn(),
+}));
 
 import { buildCommandRegistry } from "../../commands.js";
 import { isAdminOrPrivileged } from "../../auth.js";
 import { registerInfo } from "../../info/info.js";
 import { registerTrades } from "../../trades/trades.js";
 import { handleRarityInteraction } from "../../tools/rarity.js";
+import { handlePokedexInteraction } from "../../rpg/pokedex.js";
 
 function makeMessage({ guildId = "g1", channelId = "c1", content = "" } = {}) {
   return {

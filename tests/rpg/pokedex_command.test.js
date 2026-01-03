@@ -47,7 +47,8 @@ vi.mock("../../rpg/rpg_client.js", () => ({
   },
 }));
 
-import { registerPokedex } from "../../rpg/pokedex.js";
+import { registerPokedex, handlePokedexInteraction } from "../../rpg/pokedex.js";
+import { ButtonBuilder, ButtonStyle } from "discord.js";
 
 function makeRegister() {
   const calls = [];
@@ -368,5 +369,53 @@ describe("rpg pokedex command", () => {
     const eggField = replyArg.embeds[0].fields.find((f) => f.name.startsWith("Egg Time"));
     expect(eggField.value).toContain("02:42:30 (normal)");
     expect(eggField.value).toContain("01:21:00 (Power Plant)");
+  });
+
+  it("offers did you mean buttons with variant labels", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!pokedex");
+
+    const message = makeMessage();
+    await handler({ message, rest: "d.bulbasor" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toContain("Did you mean");
+    const row = replyArg.components[0];
+    const button = row.components[0];
+    const label = button.data?.label ?? button.label;
+    const customId = button.data?.custom_id ?? button.customId;
+    expect(label).toBe("DarkBulbasaur");
+    expect(customId).toContain("pokedex_retry:DarkBulbasaur");
+  });
+});
+
+describe("rpg pokedex interaction", () => {
+  it("handles retry buttons and disables them", async () => {
+    const row = {
+      type: 1,
+      components: [
+        new ButtonBuilder()
+          .setCustomId("pokedex_retry:DarkBulbasaur")
+          .setLabel("DarkBulbasaur")
+          .setStyle(ButtonStyle.Secondary)
+          .toJSON(),
+      ],
+    };
+    const interaction = {
+      customId: "pokedex_retry:DarkBulbasaur",
+      message: { components: [row] },
+      isButton: () => true,
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+    };
+
+    const result = await handlePokedexInteraction(interaction);
+
+    expect(result).toEqual({ cmd: "!pokedex", rest: "DarkBulbasaur" });
+    expect(interaction.update).toHaveBeenCalledTimes(1);
+    const updated = interaction.update.mock.calls[0][0];
+    const updatedRow = updated.components[0].toJSON();
+    expect(updatedRow.components[0].disabled).toBe(true);
   });
 });
