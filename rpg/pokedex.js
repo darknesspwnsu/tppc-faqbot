@@ -25,6 +25,17 @@ let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
 let evolutionCache = null; // { baseByName }
 
+function hasRpgCredentials() {
+  return Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
+}
+
+async function ensureRpgCredentials(message, cmd) {
+  if (hasRpgCredentials()) return true;
+  console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${cmd}`);
+  await message.reply("❌ RPG credentials are not configured.");
+  return false;
+}
+
 function getText(node) {
   if (!node) return "";
   return String(node.text || "")
@@ -402,6 +413,76 @@ function buildPokedexDidYouMeanButtons(suggestions) {
   return [row];
 }
 
+async function resolvePokedexEntryQuery(nameRaw, variant, message) {
+  let lookup = nameRaw;
+  let result = await findPokedexEntry(lookup);
+  if (variant) {
+    const parsed = parsePokemonQuery(nameRaw);
+    lookup = parsed.base || nameRaw;
+    result = await findPokedexEntry(lookup);
+    if (!result.entry && variant) {
+      const fallback = await findPokedexEntry(nameRaw);
+      if (fallback.entry || fallback.suggestions.length) {
+        result = fallback;
+        if (fallback.entry) {
+          variant = "normal";
+        }
+      }
+    }
+  }
+
+  const { entry, suggestions } = result;
+  if (!entry) {
+    if (suggestions.length) {
+      const refined = buildPokedexSuggestions(suggestions, variant);
+      await message.reply({
+        content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
+        components: buildPokedexDidYouMeanButtons(refined),
+      });
+    } else {
+      await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+    }
+    return null;
+  }
+
+  return { entry, variant };
+}
+
+async function fetchPokedexPayload(entry, client) {
+  const { id, form } = parseEntryKey(entry.key);
+  if (!Number.isFinite(id)) {
+    return { error: `❌ Could not parse Pokedex entry for **${entry.name}**.` };
+  }
+  const url = `https://www.tppcrpg.net/pokedex_entry.php?id=${id}&t=${Number.isFinite(form) ? form : 0}`;
+  const cacheKey = `pokedex:${entry.key}`;
+  const { payload } = await getCachedPokedexEntry({ cacheKey, url, client });
+  return { payload, url };
+}
+
+async function fetchBasePayload(entry, payload, client) {
+  const baseByName = await loadEvolutionMap();
+  const baseName = resolveBaseEvolutionName(entry.name, baseByName);
+  const baseLookup = baseName || entry.name;
+  const baseResult = await findPokedexEntry(baseLookup);
+  const baseEntry = baseResult?.entry || null;
+  let basePayload = payload;
+  if (baseEntry && baseEntry.key !== entry.key) {
+    const { id: baseId, form: baseForm } = parseEntryKey(baseEntry.key);
+    if (Number.isFinite(baseId)) {
+      const baseUrl = `https://www.tppcrpg.net/pokedex_entry.php?id=${baseId}&t=${Number.isFinite(baseForm) ? baseForm : 0}`;
+      const baseCacheKey = `pokedex:${baseEntry.key}`;
+      const baseCached = await getCachedPokedexEntry({
+        cacheKey: baseCacheKey,
+        url: baseUrl,
+        client,
+      });
+      basePayload = baseCached?.payload || basePayload;
+    }
+  }
+
+  return { baseEntry, baseName, basePayload };
+}
+
 async function disableInteractionButtons(interaction) {
   const rows = interaction.message?.components || [];
   if (!rows.length) {
@@ -443,6 +524,8 @@ async function disableInteractionButtons(interaction) {
 
 export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
+  const statsCmd = "!stats";
+  const eggCmd = "!eggtime";
   let client = null;
   const getClient = () => {
     if (!client) client = new RpgClient();
@@ -453,11 +536,7 @@ export function registerPokedex(register) {
     primaryCmd,
     async ({ message, rest }) => {
       if (!message.guildId) return;
-      if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-        console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${primaryCmd}`);
-        await message.reply("❌ RPG credentials are not configured.");
-        return;
-      }
+      if (!(await ensureRpgCredentials(message, primaryCmd))) return;
 
       const nameRaw = String(rest || "").trim();
       if (!nameRaw || nameRaw.toLowerCase() === "help") {
@@ -465,45 +544,19 @@ export function registerPokedex(register) {
         return;
       }
 
-      let { base, variant } = parsePokemonQuery(nameRaw);
+      let { variant } = parsePokemonQuery(nameRaw);
       if (!variant) variant = "normal";
-      let lookup = base || nameRaw;
-      let result = await findPokedexEntry(lookup);
-      if (!result.entry && variant) {
-        const fallback = await findPokedexEntry(nameRaw);
-        if (fallback.entry || fallback.suggestions.length) {
-          result = fallback;
-          if (fallback.entry) {
-            variant = "normal";
-          }
-        }
-      }
-
-      const { entry, suggestions } = result;
-      if (!entry) {
-        if (suggestions.length) {
-          const refined = buildPokedexSuggestions(suggestions, variant);
-          await message.reply({
-            content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
-            components: buildPokedexDidYouMeanButtons(refined),
-          });
-        } else {
-          await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
-        }
-        return;
-      }
-
-      const { id, form } = parseEntryKey(entry.key);
-      if (!Number.isFinite(id)) {
-        await message.reply(`❌ Could not parse Pokedex entry for **${entry.name}**.`);
-        return;
-      }
-
-      const url = `https://www.tppcrpg.net/pokedex_entry.php?id=${id}&t=${Number.isFinite(form) ? form : 0}`;
-      const cacheKey = `pokedex:${entry.key}`;
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      if (!resolved) return;
+      const { entry } = resolved;
+      variant = resolved.variant;
 
       try {
-        const { payload } = await getCachedPokedexEntry({ cacheKey, url, client: getClient() });
+        const { payload, url, error } = await fetchPokedexPayload(entry, getClient());
+        if (error) {
+          await message.reply(error);
+          return;
+        }
         const title = payload?.title || entry.name;
         const spriteUrl = pickSpriteUrl(payload?.sprites, variant);
         const embed = buildPokedexEmbed({
@@ -515,27 +568,8 @@ export function registerPokedex(register) {
           variant,
         });
 
-        const baseByName = await loadEvolutionMap();
-        const baseName = resolveBaseEvolutionName(entry.name, baseByName);
-        const lookupName = baseName || entry.name;
-        const baseResult = await findPokedexEntry(lookupName);
-        const baseEntry = baseResult?.entry || null;
+        const { baseEntry, baseName, basePayload } = await fetchBasePayload(entry, payload, getClient());
         if (baseEntry) {
-          let basePayload = payload;
-          if (baseEntry.key !== entry.key) {
-            const { id: baseId, form: baseForm } = parseEntryKey(baseEntry.key);
-            if (Number.isFinite(baseId)) {
-              const baseUrl = `https://www.tppcrpg.net/pokedex_entry.php?id=${baseId}&t=${Number.isFinite(baseForm) ? baseForm : 0}`;
-              const baseCacheKey = `pokedex:${baseEntry.key}`;
-              const baseCached = await getCachedPokedexEntry({
-                cacheKey: baseCacheKey,
-                url: baseUrl,
-                client: getClient(),
-              });
-              basePayload = baseCached?.payload || basePayload;
-            }
-          }
-
           const total = sumBaseStats(basePayload?.stats);
           const eggTime = formatEggTimeFromTotal(total);
           const eggGroup = formatEggGroups(payload?.types);
@@ -557,6 +591,101 @@ export function registerPokedex(register) {
     },
     "!pokedex <pokemon> — show TPPC RPG pokedex details",
     { helpTier: "primary", category: "RPG" }
+  );
+
+  register(
+    statsCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!(await ensureRpgCredentials(message, statsCmd))) return;
+
+      const nameRaw = String(rest || "").trim();
+      if (!nameRaw || nameRaw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${statsCmd} <pokemon name>\``);
+        return;
+      }
+
+      let { variant } = parsePokemonQuery(nameRaw);
+      if (!variant) variant = "normal";
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      if (!resolved) return;
+      const { entry } = resolved;
+      variant = resolved.variant;
+
+      try {
+        const { payload, error } = await fetchPokedexPayload(entry, getClient());
+        if (error) {
+          await message.reply(error);
+          return;
+        }
+        const fields = statsToFields(payload?.stats, variant);
+        const total = sumBaseStats(payload?.stats);
+        const label = formatVariantName(variant, entry.name);
+        const lines = fields.map((field) => `${field.name}: ${field.value}`);
+        if (Number.isFinite(total)) lines.push(`Total: ${total}`);
+        await message.reply(`**${label}** stats:\n${lines.join("\n")}`);
+      } catch (err) {
+        console.error("[rpg] pokedex stats failed:", err);
+        await message.reply("❌ Failed to fetch stats. Please try again later.");
+      }
+    },
+    "!stats <pokemon> — show TPPC RPG base stats",
+    { helpTier: "primary", category: "RPG" }
+  );
+
+  register(
+    eggCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!(await ensureRpgCredentials(message, eggCmd))) return;
+
+      const nameRaw = String(rest || "").trim();
+      if (!nameRaw || nameRaw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${eggCmd} <pokemon name>\``);
+        return;
+      }
+
+      let { variant } = parsePokemonQuery(nameRaw);
+      if (!variant) variant = "normal";
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      if (!resolved) return;
+      const { entry } = resolved;
+
+      try {
+        const { payload, error } = await fetchPokedexPayload(entry, getClient());
+        if (error) {
+          await message.reply(error);
+          return;
+        }
+        const { baseEntry, baseName, basePayload } = await fetchBasePayload(entry, payload, getClient());
+        if (!baseEntry) {
+          await message.reply("❌ Could not resolve base evolution for egg time.");
+          return;
+        }
+        const total = sumBaseStats(basePayload?.stats);
+        const eggTime = formatEggTimeFromTotal(total);
+        const eggGroup = formatEggGroups(payload?.types);
+        if (eggGroup === "None") {
+          await message.reply("Cannot breed");
+          return;
+        }
+        if (!eggTime) {
+          await message.reply("Unknown egg time.");
+          return;
+        }
+        const baseLabel = baseName && baseName !== entry.name ? baseName : entry.name;
+        await message.reply(
+          `Breeding times for ${entry.name} (Base evolution: ${baseLabel})\n` +
+            `${eggTime.normal} (normal)\n` +
+            `${eggTime.pp} (Power Plant)`
+        );
+      } catch (err) {
+        console.error("[rpg] pokedex eggtime failed:", err);
+        await message.reply("❌ Failed to fetch egg time. Please try again later.");
+      }
+    },
+    "!eggtime <pokemon> — show TPPC RPG egg breeding time",
+    { helpTier: "primary", category: "RPG", aliases: ["!egg", "!eggtimes", "!breedtime", "!breedtimes"] }
   );
 }
 

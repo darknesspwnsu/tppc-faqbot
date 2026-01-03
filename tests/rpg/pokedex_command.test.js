@@ -410,6 +410,95 @@ describe("rpg pokedex command", () => {
     expect(label).toBe("DarkBulbasaur");
     expect(customId).toContain("pokedex_retry:DarkBulbasaur");
   });
+
+  it("returns stats as text with modifiers", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!stats");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#681 - Aegislash (Blade)</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>60</td><td>140</td><td>50</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>60</td><td>140</td><td>50</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Steel</td><td>Ghost</td><td>Mineral</td><td></td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/681M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/shiny/681M-1.gif')\"><p>Shiny &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Shiny Aegislash (Blade)" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Aegislash");
+    expect(replyArg).toContain("HP:");
+    expect(replyArg).toContain("(+5)");
+    expect(replyArg).toContain("Total: 500");
+  });
+
+  it("returns egg time as plain text", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!eggtime");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage
+      .mockResolvedValueOnce(
+        [
+          "<h3>#475 - Gallade</h3>",
+          "<table class=\"dex\">",
+          "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+          "<tr><td>68</td><td>125</td><td>65</td></tr>",
+          "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+          "<tr><td>80</td><td>65</td><td>115</td></tr>",
+          "</table>",
+          "<table>",
+          "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+          "<tr><td>Psychic</td><td>Fighting</td><td>Human-Like</td><td></td></tr>",
+          "</table>",
+          "<td class=\"w50 iBox\">",
+          "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/475M.gif')\"><p>Normal &#9794;</p></div>",
+          "</td>",
+        ].join("")
+      )
+      .mockResolvedValueOnce(
+        [
+          "<h3>#280 - Ralts</h3>",
+          "<table class=\"dex\">",
+          "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+          "<tr><td>28</td><td>25</td><td>25</td></tr>",
+          "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+          "<tr><td>40</td><td>45</td><td>35</td></tr>",
+          "</table>",
+          "<table>",
+          "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+          "<tr><td>Psychic</td><td>Fairy</td><td>Amorphous</td><td></td></tr>",
+          "</table>",
+          "<td class=\"w50 iBox\">",
+          "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/280M.gif')\"><p>Normal &#9794;</p></div>",
+          "</td>",
+        ].join("")
+      );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Gallade" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Breeding times for Gallade (Base evolution: Ralts)");
+    expect(replyArg).toContain("01:39:00 (normal)");
+    expect(replyArg).toContain("00:49:30 (Power Plant)");
+  });
 });
 
 describe("rpg pokedex interaction", () => {
