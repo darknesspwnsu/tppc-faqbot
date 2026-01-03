@@ -331,12 +331,27 @@ export function buildCommandRegistry({ client } = {}) {
     const byCat = new Map();
     const catOrder = [];
 
+    function formatCategoryName(name) {
+      const raw = String(name || "").trim();
+      if (!raw) return "Other";
+      const isAllCaps = raw === raw.toUpperCase();
+      if (!isAllCaps) return raw;
+      const lower = raw.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }
+
     function ensureCat(cat) {
-      if (!byCat.has(cat)) {
-        byCat.set(cat, { userLines: [], adminLines: [] });
-        catOrder.push(cat);
+      const key = String(cat || "Other").toLowerCase();
+      if (!byCat.has(key)) {
+        byCat.set(key, { userLines: [], adminLines: [], category: formatCategoryName(cat) });
+        catOrder.push(key);
+      } else {
+        const entry = byCat.get(key);
+        if (entry && entry.category === entry.category.toUpperCase() && cat !== cat.toUpperCase()) {
+          entry.category = String(cat || entry.category);
+        }
       }
-      return byCat.get(cat);
+      return byCat.get(key);
     }
 
     function pushLine(cat, line, isAdminLine) {
@@ -419,7 +434,7 @@ export function buildCommandRegistry({ client } = {}) {
     // - then "Admin:" + sorted admin lines (only if includeAdmin)
     // -------------------------
     return catOrder.map((cat) => {
-      const bucket = byCat.get(cat) || { userLines: [], adminLines: [] };
+      const bucket = byCat.get(cat) || { userLines: [], adminLines: [], category: cat };
       const userLines = (bucket.userLines || []).slice().sort();
       const adminLines = (bucket.adminLines || []).slice().sort();
 
@@ -429,7 +444,7 @@ export function buildCommandRegistry({ client } = {}) {
         lines.push(...adminLines);
       }
 
-      return { category: cat, lines };
+      return { category: bucket.category || cat, lines };
     });
   }
 
