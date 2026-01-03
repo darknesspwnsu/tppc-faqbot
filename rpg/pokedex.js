@@ -18,13 +18,12 @@ import { getPokedexEntry, upsertPokedexEntry } from "./storage.js";
 
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
 const POKEDEX_TTL_MS = 30 * 24 * 60 * 60_000;
-const EVOLUTION_URL = "https://coldsp33d.github.io/data/pokemon_evolution.json";
-const EVOLUTION_TTL_MS = 30 * 24 * 60 * 60_000;
+const EVOLUTION_PATH = path.resolve("data/pokemon_evolutions.json");
 
 let pokedex = null; // { name: key }
 let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
-let evolutionCache = null; // { index, updatedAtMs }
+let evolutionCache = null; // { baseByName }
 
 function getText(node) {
   if (!node) return "";
@@ -54,116 +53,33 @@ function parseSpriteUrl(styleText) {
   return normalizeSpriteUrl(url);
 }
 
-function normalizeEvolutionKey(raw) {
-  return normalizeKey(String(raw || "").replace(/\u2640/g, "f").replace(/\u2642/g, "m"));
-}
-
-function formatEvolutionName(name, form) {
-  let out = String(name || "").trim();
-  out = out.replace(/\u2640/g, "F").replace(/\u2642/g, "M");
-  if (form && form !== "Normal") out = `${out} (${form})`;
-  return out;
-}
-
-function buildEvolutionIndex(data) {
-  const names = data?.pokemon_name || {};
-  const forms = data?.form || {};
-  const evolutions = data?.evolutions || {};
-  const nameIndex = {};
-  const parentByName = {};
-  const parentByIndex = {};
-  const nameByIndex = {};
-  const formByIndex = {};
-
-  const setNameIndex = (key, idx) => {
-    if (!key) return;
-    if (nameIndex[key] == null) nameIndex[key] = String(idx);
-  };
-
-  for (const [idx, name] of Object.entries(names)) {
-    nameByIndex[idx] = name;
-    const form = forms?.[idx] || "Normal";
-    formByIndex[idx] = form;
-
-    setNameIndex(normalizeEvolutionKey(name), idx);
-    if (form && form !== "Normal") {
-      setNameIndex(normalizeEvolutionKey(`${name} (${form})`), idx);
-    }
-  }
-
-  for (const [parentIdx, list] of Object.entries(evolutions)) {
-    if (!Array.isArray(list)) continue;
-    for (const evo of list) {
-      const childName = evo?.pokemon_name;
-      if (!childName) continue;
-      const childForm = evo?.form || "Normal";
-      const key = normalizeEvolutionKey(
-        childForm && childForm !== "Normal" ? `${childName} (${childForm})` : childName
-      );
-      if (parentByName[key] == null) parentByName[key] = String(parentIdx);
-      const childIdx = nameIndex[key];
-      if (childIdx != null && parentByIndex[childIdx] == null) {
-        parentByIndex[childIdx] = String(parentIdx);
-      }
-    }
-  }
-
-  return { nameIndex, parentByName, parentByIndex, nameByIndex, formByIndex };
-}
-
-async function loadEvolutionIndex() {
-  const now = Date.now();
-  if (evolutionCache && now - evolutionCache.updatedAtMs < EVOLUTION_TTL_MS) {
-    return evolutionCache.index;
-  }
+async function loadEvolutionMap() {
+  if (evolutionCache?.baseByName) return evolutionCache.baseByName;
 
   try {
-    const res = await fetch(EVOLUTION_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const index = buildEvolutionIndex(data);
-    evolutionCache = { index, updatedAtMs: Date.now() };
-    return index;
+    const raw = await fs.readFile(EVOLUTION_PATH, "utf8");
+    const data = JSON.parse(raw);
+    const baseByName = data?.base_by_name || {};
+    evolutionCache = { baseByName };
+    return baseByName;
   } catch (err) {
-    console.warn("[rpg] failed to load evolution data:", err);
-    return evolutionCache?.index || null;
+    console.error("[rpg] failed to load evolution data:", err);
+    return evolutionCache?.baseByName || null;
   }
 }
 
-function buildEvolutionLookupCandidates(name) {
-  const raw = String(name || "").trim();
-  if (!raw) return [];
-  const noMega = raw.replace(/\s*\(mega[^)]*\)/gi, "").trim();
-  const noForm = raw.replace(/\s*\([^)]*\)/g, "").trim();
-  return Array.from(new Set([raw, noMega, noForm].filter(Boolean)));
-}
+function resolveBaseEvolutionName(name, baseByName) {
+  if (!name || !baseByName) return null;
+  const norm = normalizeKey(name);
+  if (norm && baseByName[norm]) return baseByName[norm];
 
-function resolveBaseEvolutionName(name, index) {
-  if (!index) return null;
-  const candidates = buildEvolutionLookupCandidates(name);
-  let idx = null;
-  for (const candidate of candidates) {
-    const key = normalizeEvolutionKey(candidate);
-    if (index.nameIndex[key] != null) {
-      idx = index.nameIndex[key];
-      break;
-    }
-    if (index.parentByName?.[key] != null) {
-      idx = index.parentByName[key];
-      break;
-    }
-  }
-  if (idx == null) return null;
-
-  const visited = new Set();
-  while (index.parentByIndex[idx] && !visited.has(idx)) {
-    visited.add(idx);
-    idx = index.parentByIndex[idx];
+  const { base } = parsePokemonQuery(name);
+  if (base) {
+    const baseNorm = normalizeKey(base);
+    if (baseNorm && baseByName[baseNorm]) return baseByName[baseNorm];
   }
 
-  const baseName = index.nameByIndex[idx] || "";
-  const form = index.formByIndex[idx] || "Normal";
-  return formatEvolutionName(baseName, form);
+  return name;
 }
 function parseStatsTable(table) {
   const rows = table?.querySelectorAll?.("tr") || [];
@@ -599,8 +515,8 @@ export function registerPokedex(register) {
           variant,
         });
 
-        const evoIndex = await loadEvolutionIndex();
-        const baseName = resolveBaseEvolutionName(entry.name, evoIndex);
+        const baseByName = await loadEvolutionMap();
+        const baseName = resolveBaseEvolutionName(entry.name, baseByName);
         const lookupName = baseName || entry.name;
         const baseResult = await findPokedexEntry(lookupName);
         const baseEntry = baseResult?.entry || null;
