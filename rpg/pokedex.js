@@ -617,7 +617,7 @@ export function registerPokedex(register) {
       }
     },
     "!pokedex <pokemon> — show TPPC RPG pokedex details",
-    { helpTier: "primary", category: "RPG" }
+    { helpTier: "primary", category: "RPG", aliases: ["!dex", "!pd"] }
   );
 
   register(
