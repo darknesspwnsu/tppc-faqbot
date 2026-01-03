@@ -17,10 +17,13 @@ import { getPokedexEntry, upsertPokedexEntry } from "./storage.js";
 
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
 const POKEDEX_TTL_MS = 30 * 24 * 60 * 60_000;
+const EVOLUTION_URL = "https://coldsp33d.github.io/data/pokemon_evolution.json";
+const EVOLUTION_TTL_MS = 30 * 24 * 60 * 60_000;
 
 let pokedex = null; // { name: key }
 let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
+let evolutionCache = null; // { index, updatedAtMs }
 
 function getText(node) {
   if (!node) return "";
@@ -50,6 +53,117 @@ function parseSpriteUrl(styleText) {
   return normalizeSpriteUrl(url);
 }
 
+function normalizeEvolutionKey(raw) {
+  return normalizeKey(String(raw || "").replace(/\u2640/g, "f").replace(/\u2642/g, "m"));
+}
+
+function formatEvolutionName(name, form) {
+  let out = String(name || "").trim();
+  out = out.replace(/\u2640/g, "F").replace(/\u2642/g, "M");
+  if (form && form !== "Normal") out = `${out} (${form})`;
+  return out;
+}
+
+function buildEvolutionIndex(data) {
+  const names = data?.pokemon_name || {};
+  const forms = data?.form || {};
+  const evolutions = data?.evolutions || {};
+  const nameIndex = {};
+  const parentByName = {};
+  const parentByIndex = {};
+  const nameByIndex = {};
+  const formByIndex = {};
+
+  const setNameIndex = (key, idx) => {
+    if (!key) return;
+    if (nameIndex[key] == null) nameIndex[key] = String(idx);
+  };
+
+  for (const [idx, name] of Object.entries(names)) {
+    nameByIndex[idx] = name;
+    const form = forms?.[idx] || "Normal";
+    formByIndex[idx] = form;
+
+    setNameIndex(normalizeEvolutionKey(name), idx);
+    if (form && form !== "Normal") {
+      setNameIndex(normalizeEvolutionKey(`${name} (${form})`), idx);
+    }
+  }
+
+  for (const [parentIdx, list] of Object.entries(evolutions)) {
+    if (!Array.isArray(list)) continue;
+    for (const evo of list) {
+      const childName = evo?.pokemon_name;
+      if (!childName) continue;
+      const childForm = evo?.form || "Normal";
+      const key = normalizeEvolutionKey(
+        childForm && childForm !== "Normal" ? `${childName} (${childForm})` : childName
+      );
+      if (parentByName[key] == null) parentByName[key] = String(parentIdx);
+      const childIdx = nameIndex[key];
+      if (childIdx != null && parentByIndex[childIdx] == null) {
+        parentByIndex[childIdx] = String(parentIdx);
+      }
+    }
+  }
+
+  return { nameIndex, parentByName, parentByIndex, nameByIndex, formByIndex };
+}
+
+async function loadEvolutionIndex() {
+  const now = Date.now();
+  if (evolutionCache && now - evolutionCache.updatedAtMs < EVOLUTION_TTL_MS) {
+    return evolutionCache.index;
+  }
+
+  try {
+    const res = await fetch(EVOLUTION_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const index = buildEvolutionIndex(data);
+    evolutionCache = { index, updatedAtMs: Date.now() };
+    return index;
+  } catch (err) {
+    console.warn("[rpg] failed to load evolution data:", err);
+    return evolutionCache?.index || null;
+  }
+}
+
+function buildEvolutionLookupCandidates(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return [];
+  const noMega = raw.replace(/\s*\(mega[^)]*\)/gi, "").trim();
+  const noForm = raw.replace(/\s*\([^)]*\)/g, "").trim();
+  return Array.from(new Set([raw, noMega, noForm].filter(Boolean)));
+}
+
+function resolveBaseEvolutionName(name, index) {
+  if (!index) return null;
+  const candidates = buildEvolutionLookupCandidates(name);
+  let idx = null;
+  for (const candidate of candidates) {
+    const key = normalizeEvolutionKey(candidate);
+    if (index.nameIndex[key] != null) {
+      idx = index.nameIndex[key];
+      break;
+    }
+    if (index.parentByName?.[key] != null) {
+      idx = index.parentByName[key];
+      break;
+    }
+  }
+  if (idx == null) return null;
+
+  const visited = new Set();
+  while (index.parentByIndex[idx] && !visited.has(idx)) {
+    visited.add(idx);
+    idx = index.parentByIndex[idx];
+  }
+
+  const baseName = index.nameByIndex[idx] || "";
+  const form = index.formByIndex[idx] || "Normal";
+  return formatEvolutionName(baseName, form);
+}
 function parseStatsTable(table) {
   const rows = table?.querySelectorAll?.("tr") || [];
   let firstHeader = -1;
@@ -275,6 +389,33 @@ function formatEggGroups(types) {
   return parts.length ? parts.join(" / ") : "None";
 }
 
+function sumBaseStats(stats) {
+  if (!stats) return null;
+  const values = [
+    stats.hp,
+    stats.attack,
+    stats.defense,
+    stats.spAttack,
+    stats.spDefense,
+    stats.speed,
+  ].map((v) => Number(v));
+  if (values.some((v) => !Number.isFinite(v))) return null;
+  return values.reduce((a, b) => a + b, 0);
+}
+
+function formatEggTimeFromTotal(total) {
+  if (!Number.isFinite(total) || total <= 0) return null;
+  const toHms = (sec) => {
+    const s = Math.max(0, Math.floor(sec));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    return [h, m, r].map((n) => String(n).padStart(2, "0")).join(":");
+  };
+  const normal = toHms(total * 30);
+  const pp = toHms(Math.floor(total / 2) * 30);
+  return { normal, pp };
+}
 function buildPokedexEmbed({ title, url, stats, types, spriteUrl, variant }) {
   const embed = {
     title: title || "Pokedex Entry",
@@ -364,6 +505,41 @@ export function registerPokedex(register) {
           spriteUrl,
           variant,
         });
+
+        const evoIndex = await loadEvolutionIndex();
+        const baseName = resolveBaseEvolutionName(entry.name, evoIndex);
+        const lookupName = baseName || entry.name;
+        const baseResult = await findPokedexEntry(lookupName);
+        const baseEntry = baseResult?.entry || null;
+        if (baseEntry) {
+          let basePayload = payload;
+          if (baseEntry.key !== entry.key) {
+            const { id: baseId, form: baseForm } = parseEntryKey(baseEntry.key);
+            if (Number.isFinite(baseId)) {
+              const baseUrl = `https://www.tppcrpg.net/pokedex_entry.php?id=${baseId}&t=${Number.isFinite(baseForm) ? baseForm : 0}`;
+              const baseCacheKey = `pokedex:${baseEntry.key}`;
+              const baseCached = await getCachedPokedexEntry({
+                cacheKey: baseCacheKey,
+                url: baseUrl,
+                client: getClient(),
+              });
+              basePayload = baseCached?.payload || basePayload;
+            }
+          }
+
+          const total = sumBaseStats(basePayload?.stats);
+          const eggTime = formatEggTimeFromTotal(total);
+          const eggGroup = formatEggGroups(payload?.types);
+          const canBreed = eggGroup !== "None";
+          let eggValue = !canBreed
+            ? "Cannot breed"
+            : eggTime
+              ? `${eggTime.normal} (normal)\n${eggTime.pp} (Power Plant)`
+              : "Unknown";
+          if (typeof eggValue !== "string") eggValue = String(eggValue);
+          const baseLabel = baseName && baseName !== entry.name ? ` (Base: ${baseName})` : "";
+          embed.fields.push({ name: `Egg Time${baseLabel}`, value: eggValue });
+        }
         await message.reply({ embeds: [embed] });
       } catch (err) {
         console.error("[rpg] pokedex fetch failed:", err);
@@ -381,4 +557,7 @@ export const __testables = {
   statsToFields,
   formatTypes,
   formatEggGroups,
+  sumBaseStats,
+  formatEggTimeFromTotal,
+  resolveBaseEvolutionName,
 };
