@@ -130,6 +130,35 @@ export async function initDb() {
       PRIMARY KEY (message_id)
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS notify_me (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      guild_id VARCHAR(32) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      phrase TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY notify_guild_idx (guild_id),
+      KEY notify_user_idx (user_id)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS reminders (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id VARCHAR(32) NOT NULL,
+      guild_id VARCHAR(32),
+      channel_id VARCHAR(32),
+      message_id VARCHAR(32),
+      phrase TEXT,
+      remind_at_ms BIGINT UNSIGNED NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY reminder_user_idx (user_id),
+      KEY reminder_time_idx (remind_at_ms)
+    )
+  `);
 }
 
 /**
