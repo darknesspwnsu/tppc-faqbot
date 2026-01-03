@@ -398,13 +398,14 @@ function buildPokedexSuggestions(suggestions, variant) {
   });
 }
 
-function buildPokedexDidYouMeanButtons(suggestions) {
+function buildPokedexDidYouMeanButtons(command, suggestions) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
+  const cmd = encodeURIComponent(String(command || "!pokedex"));
 
   const row = new ActionRowBuilder().addComponents(
     suggestions.slice(0, 5).map(({ label, query }) =>
       new ButtonBuilder()
-        .setCustomId(`pokedex_retry:${enc(query)}`)
+        .setCustomId(`pokedex_retry:${cmd}:${enc(query)}`)
         .setLabel(label.length > 80 ? label.slice(0, 77) + "…" : label)
         .setStyle(ButtonStyle.Secondary)
     )
@@ -413,7 +414,24 @@ function buildPokedexDidYouMeanButtons(suggestions) {
   return [row];
 }
 
-async function resolvePokedexEntryQuery(nameRaw, variant, message) {
+function hasExplicitVariant(raw) {
+  const lower = String(raw || "").trim().toLowerCase();
+  if (!lower) return false;
+  if (/^(shiny|dark|golden)\s+/.test(lower)) return true;
+  if (/^(shiny|dark|golden)[a-z0-9]/.test(lower)) return true;
+  return /^[sdg][.\s]/.test(lower);
+}
+
+async function resolvePokedexEntryQuery(nameRaw, variant, message, command) {
+  const explicitVariant = hasExplicitVariant(nameRaw);
+
+  if (variant && !explicitVariant) {
+    const direct = await findPokedexEntry(nameRaw);
+    if (direct.entry) {
+      return { entry: direct.entry, variant: "normal" };
+    }
+  }
+
   let lookup = nameRaw;
   let result = await findPokedexEntry(lookup);
   if (variant) {
@@ -431,13 +449,22 @@ async function resolvePokedexEntryQuery(nameRaw, variant, message) {
     }
   }
 
-  const { entry, suggestions } = result;
+  let { entry, suggestions } = result;
+  if (!entry && variant && !explicitVariant) {
+    const normalSuggestions = getSuggestionsFromIndex(pokedexNorm, nameRaw, 5, {
+      ignoreVariantPrefix: true,
+    });
+    if (normalSuggestions.length) {
+      suggestions = normalSuggestions;
+      variant = "normal";
+    }
+  }
   if (!entry) {
     if (suggestions.length) {
       const refined = buildPokedexSuggestions(suggestions, variant);
       await message.reply({
         content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
-        components: buildPokedexDidYouMeanButtons(refined),
+        components: buildPokedexDidYouMeanButtons(command, refined),
       });
     } else {
       await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
@@ -546,7 +573,7 @@ export function registerPokedex(register) {
 
       let { variant } = parsePokemonQuery(nameRaw);
       if (!variant) variant = "normal";
-      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message, primaryCmd);
       if (!resolved) return;
       const { entry } = resolved;
       variant = resolved.variant;
@@ -607,7 +634,7 @@ export function registerPokedex(register) {
 
       let { variant } = parsePokemonQuery(nameRaw);
       if (!variant) variant = "normal";
-      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message, statsCmd);
       if (!resolved) return;
       const { entry } = resolved;
       variant = resolved.variant;
@@ -635,7 +662,7 @@ export function registerPokedex(register) {
 
   register(
     eggCmd,
-    async ({ message, rest }) => {
+    async ({ message, rest, cmd }) => {
       if (!message.guildId) return;
       if (!(await ensureRpgCredentials(message, eggCmd))) return;
 
@@ -647,7 +674,7 @@ export function registerPokedex(register) {
 
       let { variant } = parsePokemonQuery(nameRaw);
       if (!variant) variant = "normal";
-      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message);
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message, cmd || eggCmd);
       if (!resolved) return;
       const { entry } = resolved;
 
@@ -675,7 +702,7 @@ export function registerPokedex(register) {
         }
         const baseLabel = baseName && baseName !== entry.name ? baseName : entry.name;
         await message.reply(
-          `Breeding times for ${entry.name} (Base evolution: ${baseLabel})\n` +
+          `Breeding times for **${entry.name}** (Base evolution: **${baseLabel}**)\n` +
             `${eggTime.normal} (normal)\n` +
             `${eggTime.pp} (Power Plant)`
         );
@@ -695,10 +722,12 @@ export async function handlePokedexInteraction(interaction) {
   const id = String(interaction.customId || "");
   if (!id.startsWith("pokedex_retry:")) return false;
 
-  const rest = decodeURIComponent(id.slice("pokedex_retry:".length));
+  const parts = id.split(":");
+  const cmd = decodeURIComponent(parts[1] || "!pokedex");
+  const rest = decodeURIComponent(parts.slice(2).join(":") || "");
   await disableInteractionButtons(interaction);
 
-  return { cmd: "!pokedex", rest };
+  return { cmd, rest };
 }
 
 export const __testables = {

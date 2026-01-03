@@ -408,7 +408,7 @@ describe("rpg pokedex command", () => {
     const label = button.data?.label ?? button.label;
     const customId = button.data?.custom_id ?? button.customId;
     expect(label).toBe("DarkBulbasaur");
-    expect(customId).toContain("pokedex_retry:DarkBulbasaur");
+    expect(customId).toContain("pokedex_retry:!pokedex:DarkBulbasaur");
   });
 
   it("returns stats as text with modifiers", async () => {
@@ -445,6 +445,22 @@ describe("rpg pokedex command", () => {
     expect(replyArg).toContain("HP:");
     expect(replyArg).toContain("(+5)");
     expect(replyArg).toContain("Total: 500");
+  });
+
+  it("suggests non-variant names when variant is implicit", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!eggtime");
+
+    const message = makeMessage();
+    await handler({ message, rest: "galllade" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toContain("Did you mean");
+    const row = replyArg.components[0];
+    const button = row.components[0];
+    const label = button.data?.label ?? button.label;
+    expect(label).toBe("Gallade");
   });
 
   it("returns egg time as plain text", async () => {
@@ -495,7 +511,7 @@ describe("rpg pokedex command", () => {
     await handler({ message, rest: "Gallade" });
 
     const replyArg = message.reply.mock.calls[0][0];
-    expect(replyArg).toContain("Breeding times for Gallade (Base evolution: Ralts)");
+    expect(replyArg).toContain("Breeding times for **Gallade** (Base evolution: **Ralts**)");
     expect(replyArg).toContain("01:39:00 (normal)");
     expect(replyArg).toContain("00:49:30 (Power Plant)");
   });
@@ -507,14 +523,14 @@ describe("rpg pokedex interaction", () => {
       type: 1,
       components: [
         new ButtonBuilder()
-          .setCustomId("pokedex_retry:DarkBulbasaur")
-          .setLabel("DarkBulbasaur")
-          .setStyle(ButtonStyle.Secondary)
-          .toJSON(),
+      .setCustomId("pokedex_retry:!pokedex:DarkBulbasaur")
+      .setLabel("DarkBulbasaur")
+      .setStyle(ButtonStyle.Secondary)
+      .toJSON(),
       ],
     };
     const interaction = {
-      customId: "pokedex_retry:DarkBulbasaur",
+      customId: "pokedex_retry:!pokedex:DarkBulbasaur",
       message: { components: [row] },
       isButton: () => true,
       update: vi.fn(async () => ({})),

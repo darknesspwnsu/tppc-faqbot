@@ -106,17 +106,17 @@ function diceCoeff(a, b) {
 const SUGGEST_MIN_SCORE = Number(process.env.RARITY_SUGGEST_MIN_SCORE ?? 0.55);
 const SUGGEST_MAX_LEN_DIFF = Number(process.env.RARITY_SUGGEST_MAX_LEN_DIFF ?? 12);
 
-function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5) {
+function getSuggestionsFromIndex(normIndex, queryRaw, limit = 5, opts = {}) {
   if (!normIndex) return [];
 
   const qKeys = normalizeQueryVariants(queryRaw);
   if (!qKeys.length) return [];
 
-  let pref = queryVariantPrefix(queryRaw);
+  let pref = opts.ignoreVariantPrefix ? "" : queryVariantPrefix(queryRaw);
 
   // If user used "gpichu"/"spichu"/"dpichu" and it doesn't directly exist,
   // treat it as variant intent for suggestions.
-  if (!pref) {
+  if (!pref && !opts.ignoreVariantPrefix) {
     const q = String(queryRaw ?? "").trim().toLowerCase();
     const mStuck = q.match(/^([sdg])([a-z0-9].+)$/);
     if (mStuck && !q.includes(".") && !q.includes(" ")) {
