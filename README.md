@@ -11,7 +11,7 @@ spam, or ambiguity.
 
 ## ✨ Core Philosophy
 
-- **Explicit commands only** (`!cmd` or `?cmd`)
+- **Explicit commands only** (`!cmd`, `?cmd`, or `/cmd`)
 - **One active game per guild**
 - **Deterministic behavior**
 - **Low-noise UX (silent ignores where configured)**
@@ -31,7 +31,8 @@ spam, or ambiguity.
 - Wiki lookups (local index, Cloudflare-safe)
 - FAQ system with fuzzy matching
 - Promo tracking (`!promo` / `!setpromo`)
-- RPG tools: leaderboards, power plant status, ID/box lookup
+- RPG tools: leaderboards, power plant status, ID/box lookup, pokedex + stats + egg time
+- Viewbox DMs with graceful failure handling when DMs are closed
 
 ---
 
@@ -39,6 +40,7 @@ spam, or ambiguity.
 - RNG tools: `roll`, `choose`, `elim`, `awesome`
 - Reaction-based contests (`choose` supports `winners=<n>`, default 1)
 - Whispers (hidden phrases + optional prizes)
+- Giveaways (button-based entries, reroll/end/delete/list, summary file)
 - Reading & forum list helpers
 - Contest helpers reused by games where applicable
 
@@ -65,6 +67,7 @@ Current games include:
 - **Hangman**
 - **Deal or No Deal**
 - **Auction**
+- **Mafia** (lightweight, host-driven)
 
 Only **primary game commands** appear in help to avoid clutter.
 
@@ -95,6 +98,8 @@ This prevents collisions with other bots **without breaking muscle memory**.
 > **Important:**  
 > A command is *never* exposed as both `!` and `?` at the same time.
 
+Slash command exposure can be controlled per guild in `configs/command_exposure.js`.
+
 ---
 
 ## 🗂 Project Structure
@@ -112,12 +117,14 @@ This prevents collisions with other bots **without breaking muscle memory**.
 ├── tools/                    # TPPC tools & promo system
 ├── trades/                   # FT / LF / ID commands
 ├── tools/rarity.js           # Rarity, comparisons, history
-├── rpg/                      # RPG utilities (leaderboards, power plant, viewbox)
+├── rpg/                      # RPG utilities (leaderboards, power plant, pokedex, viewbox)
+├── scripts/                  # One-off generators and tooling
 ├── contests/
 │   ├── contests.js           # Contest module registry
 │   ├── rng.js
 │   ├── reaction_contests.js
 │   ├── whispers.js
+│   ├── giveaway.js
 │   ├── helpers.js
 │   └── ...
 ├── games/
@@ -138,6 +145,8 @@ This prevents collisions with other bots **without breaking muscle memory**.
 │   └── pokename_utils.js
 ├── data/
 │   ├── wiki_data.json
+│   ├── pokedex_map.json
+│   ├── pokemon_evolutions.json
 │   └── privileged_users.json
 └── .env.example
 
@@ -196,6 +205,9 @@ The bot automatically creates required tables:
 
 * `user_ids` — TPPC IDs
 * `user_texts` — FT/LF lists, promos, whispers
+* `rpg_leaderboards` — cached RPG leaderboards
+* `rpg_pokedex` — cached pokedex payloads
+* `contests` / `contest_entries` — giveaways and contest state
 
 If DB is unavailable, some features safely degrade (e.g. promos fall back to memory).
 
