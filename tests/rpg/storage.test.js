@@ -86,6 +86,20 @@ describe("rpg/storage", () => {
     );
   });
 
+  it("upsertPokedexEntry strips gender symbols from JSON payload", async () => {
+    const { upsertPokedexEntry, execute } = await loadStorage();
+
+    await upsertPokedexEntry({
+      entryKey: "pokedex:002-0",
+      payload: { sprites: { "normal ♂": "url", "normal ♀": "url2" } },
+    });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO rpg_pokedex"),
+      ["pokedex:002-0", "{\"sprites\":{\"normal M\":\"url\",\"normal F\":\"url2\"}}"]
+    );
+  });
+
   it("getPokedexEntry returns parsed payload and timestamp", async () => {
     const updatedAt = "2025-01-01T00:00:00.000Z";
     const { getPokedexEntry } = await loadStorage({

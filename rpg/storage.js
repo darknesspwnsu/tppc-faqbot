@@ -4,6 +4,10 @@
 
 import { getDb } from "../db.js";
 
+function sanitizeJsonText(text) {
+  return String(text || "").replace(/\u2640/g, "F").replace(/\u2642/g, "M");
+}
+
 export async function upsertLeaderboard({ challenge, payload }) {
   const db = getDb();
   const text = JSON.stringify(payload ?? {});
@@ -42,7 +46,7 @@ export async function getLeaderboard({ challenge }) {
 
 export async function upsertPokedexEntry({ entryKey, payload }) {
   const db = getDb();
-  const text = JSON.stringify(payload ?? {});
+  const text = sanitizeJsonText(JSON.stringify(payload ?? {}));
   await db.execute(
     `
     INSERT INTO rpg_pokedex (entry_key, payload)
