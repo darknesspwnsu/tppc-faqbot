@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import fsSync from "node:fs";
 
 const storageMocks = vi.hoisted(() => ({
   getPokedexEntry: vi.fn(),
@@ -39,6 +40,27 @@ const evolutionMock = {
   },
 };
 vi.mock("../../rpg/storage.js", () => storageMocks);
+vi.mock("node:fs/promises", () => ({
+  default: {
+    readFile: vi.fn(async (filePath) => {
+      const path = String(filePath || "");
+      if (path.endsWith("data/pokemon_evolutions.json")) {
+        return JSON.stringify({
+          base_by_name: {
+            gallade: "Ralts",
+            ralts: "Ralts",
+            kingler: "Krabby",
+            krabby: "Krabby",
+          },
+        });
+      }
+      if (path.endsWith("data/pokedex_map.json")) {
+        return fsSync.readFileSync(path, "utf8");
+      }
+      return "";
+    }),
+  },
+}));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
     fetchPage(...args) {
