@@ -7,7 +7,7 @@ const isAdminOrPrivileged = vi.fn();
 
 vi.mock("../../db.js", () => ({ getUserTextRow, setUserText, getDb }));
 vi.mock("../../auth.js", () => ({ isAdminOrPrivileged }));
-vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn() } }));
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn(), incrementSchedulerRun: vi.fn() } }));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
     fetchPage() {

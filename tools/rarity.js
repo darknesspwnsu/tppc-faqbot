@@ -478,11 +478,11 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   setTimeout(async function tick() {
     try {
       await refreshFn();
-      void metrics.increment("scheduler.run", { name: label, status: "ok" });
+      void metrics.incrementSchedulerRun(label, "ok");
     } catch (err) {
       logger.error("rarity.refresh.error", { error: logger.serializeError(err) });
       console.error("[RARITY] Refresh failed:", err);
-      void metrics.increment("scheduler.run", { name: label, status: "error" });
+      void metrics.incrementSchedulerRun(label, "error");
     }
 
     const next = nextRunInEastern(DAILY_REFRESH_ET);

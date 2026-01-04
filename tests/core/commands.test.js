@@ -5,7 +5,7 @@ vi.mock("../../auth.js", () => ({
 }));
 
 vi.mock("../../shared/metrics.js", () => ({
-  metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn() },
+  metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn(), incrementSchedulerRun: vi.fn() },
 }));
 
 vi.mock("../../configs/command_exposure.js", () => ({
