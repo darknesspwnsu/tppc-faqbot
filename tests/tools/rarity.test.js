@@ -417,4 +417,36 @@ describe("rarity.js", () => {
       })
     );
   });
+
+  it("nextRunInEastern schedules same-day runs after offset conversion (standard time)", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-01-01T11:45:00Z")); // 06:45 ET
+
+    const runAt = __testables.nextRunInEastern("07:10");
+    expect(runAt.toISOString()).toBe("2026-01-01T12:10:00.000Z");
+  });
+
+  it("nextRunInEastern rolls to next day after target time (standard time)", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-01-01T12:15:00Z")); // 07:15 ET
+
+    const runAt = __testables.nextRunInEastern("07:10");
+    expect(runAt.toISOString()).toBe("2026-01-02T12:10:00.000Z");
+  });
+
+  it("nextRunInEastern respects daylight time offsets", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-06-01T10:45:00Z")); // 06:45 ET (DST)
+
+    const runAt = __testables.nextRunInEastern("07:10");
+    expect(runAt.toISOString()).toBe("2026-06-01T11:10:00.000Z");
+  });
+
+  it("nextRunInEastern handles DST fall-back dates", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-11-01T11:45:00Z")); // 06:45 ET
+
+    const runAt = __testables.nextRunInEastern("07:10");
+    expect(runAt.toISOString()).toBe("2026-11-01T12:10:00.000Z");
+  });
 });

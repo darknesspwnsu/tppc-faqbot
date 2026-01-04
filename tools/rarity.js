@@ -379,32 +379,76 @@ function parseHHMM(hhmm) {
   return { hour: Number(m[1]), minute: Number(m[2]) };
 }
 
+function getZonedDateParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+  };
+}
+
+function getTimeZoneOffset(date, timeZone) {
+  const parts = getZonedDateParts(date, timeZone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedTimeToUtc({ year, month, day, hour, minute, second = 0 }, timeZone) {
+  const baseUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let offset = getTimeZoneOffset(new Date(baseUtc), timeZone);
+  let utc = baseUtc - offset;
+  const offset2 = getTimeZoneOffset(new Date(utc), timeZone);
+  if (offset2 !== offset) {
+    utc = baseUtc - offset2;
+  }
+  return new Date(utc);
+}
+
 function nextRunInEastern(hhmm) {
   const { hour, minute } = parseHHMM(hhmm);
   const tz = "America/New_York";
 
   const now = new Date();
+  const parts = getZonedDateParts(now, tz);
 
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).formatToParts(now);
-
-  const get = (type) => parts.find((p) => p.type === type)?.value;
-  const y = Number(get("year"));
-  const mo = Number(get("month"));
-  const d = Number(get("day"));
-
-  const candidateUtc = new Date(Date.UTC(y, mo - 1, d, hour, minute, 0));
-
-  const nowInET = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(now));
-  const candInET = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(candidateUtc));
-
-  let runUtc = candidateUtc;
-  if (candInET <= nowInET) {
-    runUtc = new Date(Date.UTC(y, mo - 1, d + 1, hour, minute, 0));
+  let runUtc = zonedTimeToUtc(
+    { year: parts.year, month: parts.month, day: parts.day, hour, minute, second: 0 },
+    tz
+  );
+  if (runUtc.getTime() <= now.getTime()) {
+    runUtc = zonedTimeToUtc(
+      {
+        year: parts.year,
+        month: parts.month,
+        day: parts.day + 1,
+        hour,
+        minute,
+        second: 0,
+      },
+      tz
+    );
   }
   return runUtc;
 }
@@ -863,3 +907,10 @@ export async function handleRarityInteraction(interaction) {
 }
 
 // Reusable name normalization + suggestions (shared with RPG lookups).
+
+export const __testables = {
+  nextRunInEastern,
+  getZonedDateParts,
+  getTimeZoneOffset,
+  zonedTimeToUtc,
+};
