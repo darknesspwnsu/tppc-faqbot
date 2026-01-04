@@ -146,6 +146,57 @@ describe("commands registry", () => {
     expect(call[1]?.helpModel).toBe(reg.helpModel);
   });
 
+  it("helpModel moves admin commands to the Admin category", () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register("!usercmd", handler, "!usercmd — user", { category: "Info" });
+      register("!admincmd", handler, "!admincmd — admin", { category: "Info", admin: true });
+    });
+
+    isAdminOrPrivileged.mockReturnValue(true);
+    const reg = buildCommandRegistry({});
+
+    const pages = reg.helpModel("g1", makeMessage({ guildId: "g1" }));
+    const info = pages.find((page) => page.category === "Info");
+    const admin = pages.find((page) => page.category === "Admin");
+
+    expect(info?.lines || []).toContain("!usercmd — user");
+    expect(info?.lines || []).not.toContain("!admincmd — admin");
+    expect(admin?.lines || []).toContain("!admincmd — admin");
+  });
+
+  it("helpModel hides admin commands for non-admin viewers", () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register("!admincmd", handler, "!admincmd — admin", { category: "Info", admin: true });
+    });
+
+    isAdminOrPrivileged.mockReturnValue(false);
+    const reg = buildCommandRegistry({});
+    const pages = reg.helpModel("g1", makeMessage({ guildId: "g1" }));
+
+    expect(pages.some((page) => page.category === "Admin")).toBe(false);
+    expect(pages.some((page) => (page.lines || []).includes("!admincmd — admin"))).toBe(false);
+  });
+
+  it("helpModel sorts categories alphabetically with Admin last", () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register("!alpha", handler, "!alpha — user", { category: "Alpha" });
+      register("!beta", handler, "!beta — user", { category: "Beta" });
+      register("!admincmd", handler, "!admincmd — admin", { category: "Info", admin: true });
+    });
+
+    isAdminOrPrivileged.mockReturnValue(true);
+    const reg = buildCommandRegistry({});
+    const pages = reg.helpModel("g1", makeMessage({ guildId: "g1" }));
+    const categories = pages.map((page) => page.category);
+
+    const subset = categories.filter((cat) => ["Alpha", "Beta", "Admin"].includes(cat));
+    expect(subset).toEqual(["Alpha", "Beta", "Admin"]);
+    expect(categories[categories.length - 1]).toBe("Admin");
+  });
+
   it("dispatchMessage logs errors from handlers without throwing", async () => {
     const handler = vi.fn(async () => {
       throw new Error("boom");

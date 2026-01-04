@@ -328,7 +328,7 @@ export function buildCommandRegistry({ client } = {}) {
     const gid = guildId ? String(guildId) : null;
     const includeAdmin = viewerMessageLike ? isAdminOrPrivileged(viewerMessageLike) : false;
 
-    // cat -> { userLines: [], adminLines: [] }
+    // cat -> { userLines: [] }
     const byCat = new Map();
     const catOrder = [];
 
@@ -344,7 +344,7 @@ export function buildCommandRegistry({ client } = {}) {
     function ensureCat(cat) {
       const key = String(cat || "Other").toLowerCase();
       if (!byCat.has(key)) {
-        byCat.set(key, { userLines: [], adminLines: [], category: formatCategoryName(cat) });
+        byCat.set(key, { userLines: [], category: formatCategoryName(cat) });
         catOrder.push(key);
       } else {
         const entry = byCat.get(key);
@@ -355,10 +355,9 @@ export function buildCommandRegistry({ client } = {}) {
       return byCat.get(key);
     }
 
-    function pushLine(cat, line, isAdminLine) {
+    function pushLine(cat, line) {
       const bucket = ensureCat(cat);
-      if (isAdminLine) bucket.adminLines.push(line);
-      else bucket.userLines.push(line);
+      bucket.userLines.push(line);
     }
 
     // -------------------------
@@ -374,7 +373,7 @@ export function buildCommandRegistry({ client } = {}) {
       // Hide admin commands unless viewer can see them
       if (admin && !includeAdmin) continue;
 
-      const cat = category || "Other";
+      const cat = admin ? "Admin" : (category || "Other");
 
       // Games category shows only primary commands
       if (String(cat).toLowerCase() === "games") {
@@ -400,7 +399,7 @@ export function buildCommandRegistry({ client } = {}) {
         continue;
       }
 
-      pushLine(cat, line, Boolean(admin));
+      pushLine(cat, line);
     }
 
     // -------------------------
@@ -414,7 +413,7 @@ export function buildCommandRegistry({ client } = {}) {
 
       const admin = Boolean(meta?.admin);
       const hideFromHelp = Boolean(meta?.hideFromHelp);
-      const cat = (meta?.category || "Other");
+      const cat = admin ? "Admin" : (meta?.category || "Other");
       const helpTier = meta?.helpTier || "normal";
 
       if (hideFromHelp) continue;
@@ -426,7 +425,7 @@ export function buildCommandRegistry({ client } = {}) {
       }
 
       const line = `/${name} — ${desc}`;
-      pushLine(cat, line, admin);
+      pushLine(cat, line);
     }
 
     // -------------------------
@@ -434,19 +433,20 @@ export function buildCommandRegistry({ client } = {}) {
     // - sort user lines
     // - then "Admin:" + sorted admin lines (only if includeAdmin)
     // -------------------------
-    return catOrder.map((cat) => {
-      const bucket = byCat.get(cat) || { userLines: [], adminLines: [], category: cat };
-      const userLines = (bucket.userLines || []).slice().sort();
-      const adminLines = (bucket.adminLines || []).slice().sort();
+    const sorted = Array.from(byCat.values())
+      .map((bucket) => ({
+        category: bucket.category,
+        lines: (bucket.userLines || []).slice().sort(),
+      }))
+      .sort((a, b) => {
+        const aIsAdmin = String(a.category || "").toLowerCase() === "admin";
+        const bIsAdmin = String(b.category || "").toLowerCase() === "admin";
+        if (aIsAdmin && !bIsAdmin) return 1;
+        if (!aIsAdmin && bIsAdmin) return -1;
+        return String(a.category || "").localeCompare(String(b.category || ""));
+      });
 
-      const lines = [...userLines];
-      if (includeAdmin && adminLines.length) {
-        lines.push("Admin:");
-        lines.push(...adminLines);
-      }
-
-      return { category: bucket.category || cat, lines };
-    });
+    return sorted;
   }
 
   /* ------------------------------ Module wiring ------------------------------ */

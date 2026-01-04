@@ -172,6 +172,10 @@ function renderCategoryPublic(categoryPage) {
   return out.length <= 1990 ? out : out.slice(0, 1980) + "\n…";
 }
 
+function filterPublicPages(pages) {
+  return (pages || []).filter((page) => String(page.category || "").toLowerCase() !== "admin");
+}
+
 export function registerHelpbox(register, { helpModel }) {
   // Precompute static choices for the slash option (must be static at registration time).
   // Actual pages are computed per guild AND per viewer at runtime.
@@ -187,7 +191,7 @@ export function registerHelpbox(register, { helpModel }) {
       // QoL: list categories (permission-aware)
       const argKey = String(arg || "").trim().toLowerCase();
       if (argKey === "allcategories" || argKey === "categories") {
-        const pages = helpModel(message.guildId, message);
+        const pages = filterPublicPages(helpModel(message.guildId, message));
         if (!pages.length) {
           await message.reply("No help categories available. Use `/help` (private).");
           return;
@@ -218,7 +222,7 @@ export function registerHelpbox(register, { helpModel }) {
       }
 
       // With args -> show the category page publicly
-      const pages = helpModel(message.guildId, message);
+      const pages = filterPublicPages(helpModel(message.guildId, message));
       if (!pages.length) {
         await message.reply("Use `/help` for the full command list (private).");
         return;

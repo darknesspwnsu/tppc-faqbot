@@ -33,6 +33,7 @@ function makeRegister() {
 const pages = [
   { category: "Info", lines: ["!faq", "!help"] },
   { category: "Trading", lines: ["!ft", "!lf"] },
+  { category: "Admin", lines: ["!admincmd"] },
 ];
 
 function helpModel() {
@@ -60,6 +61,11 @@ describe("helpbox", () => {
     await handler({ message, rest: "Info" });
     expect(message.reply).toHaveBeenCalledWith(
       expect.stringContaining("**Info**")
+    );
+
+    await handler({ message, rest: "Admin" });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("Unknown help category")
     );
   });
 
