@@ -95,10 +95,10 @@ async function fetchWithTimeout(url) {
       },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    void metrics.increment("external.fetch", { source: "forumlist", status: "ok" });
+    void metrics.incrementExternalFetch("forumlist", "ok");
     return await res.text();
   } catch (err) {
-    void metrics.increment("external.fetch", { source: "forumlist", status: "error" });
+    void metrics.incrementExternalFetch("forumlist", "error");
     throw err;
   } finally {
     clearTimeout(t);

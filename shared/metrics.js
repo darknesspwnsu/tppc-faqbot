@@ -76,6 +76,14 @@ async function increment(metric, tags = {}, count = 1) {
   }
 }
 
+function incrementExternalFetch(source, status) {
+  return increment("external.fetch", { source, status });
+}
+
+function incrementSchedulerRun(name, status) {
+  return increment("scheduler.run", { name, status });
+}
+
 async function cleanupOldCounters() {
   if (!metricsEnabled()) return false;
   const days = retentionDays();
@@ -106,7 +114,7 @@ function scheduleMetricsCleanup({ intervalMs = 6 * 60 * 60 * 1000 } = {}) {
   if (typeof timer.unref === "function") timer.unref();
 }
 
-export const metrics = { increment };
+export const metrics = { increment, incrementExternalFetch, incrementSchedulerRun };
 
 export const __testables = {
   bucketStartUtcMs,

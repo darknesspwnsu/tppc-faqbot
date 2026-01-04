@@ -37,7 +37,7 @@ const RARITY_HISTORY_JSON = JSON.stringify({
 const isAdminOrPrivileged = vi.fn(() => true);
 
 vi.mock("../../auth.js", () => ({ isAdminOrPrivileged }));
-vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn() } }));
 
 const httpGet = vi.fn((url, cb) => {
   const res = new EventEmitter();

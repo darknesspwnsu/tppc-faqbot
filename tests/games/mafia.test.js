@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => true),
 }));
-vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn() } }));
 
 import { registerMafia } from "../../games/mafia.js";
 

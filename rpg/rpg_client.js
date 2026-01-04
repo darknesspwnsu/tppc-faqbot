@@ -106,12 +106,12 @@ export class RpgClient {
         signal: controller.signal,
       });
       void metrics.increment("rpg.fetch", { status: "ok", method });
-      void metrics.increment("external.fetch", { source: "rpg", status: "ok" });
+      void metrics.incrementExternalFetch("rpg", "ok");
       this._updateCookies(res);
       return res;
     } catch (err) {
       void metrics.increment("rpg.fetch", { status: "error", method });
-      void metrics.increment("external.fetch", { source: "rpg", status: "error" });
+      void metrics.incrementExternalFetch("rpg", "error");
       logger.error("rpg.fetch.error", {
         url,
         method,

@@ -5,7 +5,7 @@ const dbMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../db.js", () => dbMocks);
-vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn() } }));
 
 import { registerReminders, __testables } from "../../tools/reminders.js";
 

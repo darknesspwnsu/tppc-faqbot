@@ -53,7 +53,7 @@ function fetchText(url, source = "rarity") {
     const lib = url.startsWith("https://") ? https : http;
     const req = lib.get(url, (res) => {
       if (res.statusCode && res.statusCode >= 400) {
-        void metrics.increment("external.fetch", { source, status: "error" });
+        void metrics.incrementExternalFetch(source, "error");
         reject(new Error(`HTTP ${res.statusCode} for ${url}`));
         res.resume();
         return;
@@ -63,13 +63,13 @@ function fetchText(url, source = "rarity") {
       res.setEncoding("utf8");
       res.on("data", (c) => (data += c));
       res.on("end", () => {
-        void metrics.increment("external.fetch", { source, status: "ok" });
+        void metrics.incrementExternalFetch(source, "ok");
         resolve(data);
       });
     });
 
     req.on("error", (err) => {
-      void metrics.increment("external.fetch", { source, status: "error" });
+      void metrics.incrementExternalFetch(source, "error");
       reject(err);
     });
   });
