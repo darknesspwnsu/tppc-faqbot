@@ -379,11 +379,16 @@ export function registerForumList(register) {
           `\nusername - rpg id\n----------------`;
 
         try {
-          await dmChunked(interaction.user, header, lines, DM_CHUNK_LIMIT);
+          const dmRes = await dmChunked(interaction.user, header, lines, DM_CHUNK_LIMIT, "getforumlist");
+          if (!dmRes?.ok) {
+            await interaction.editReply(
+              "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
+            );
+            return;
+          }
           await interaction.editReply(`✅ Done — DM’d you ${rows.length} entries.`);
-      } catch (e) {
+        } catch (e) {
         console.warn("[getforumlist] DM failed:", e);
-        void metrics.increment("dm.fail", { feature: "getforumlist" });
         await interaction.editReply(
           "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
         );

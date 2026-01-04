@@ -4,6 +4,7 @@
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { getSavedId } from "../db.js";
+import { sendDmChunked } from "../shared/dm.js";
 
 export function isAdminOrPrivilegedMessage(messageLike) {
   try {
@@ -73,20 +74,8 @@ export async function sendChunked({ send, header, lines, limit = 1900 }) {
   if (chunk) await send(chunk);
 }
 
-export async function dmChunked(user, header, lines, limit = 1900) {
-  const dm = await user.createDM();
-
-  let cur = String(header || "").trim();
-  for (const line of lines) {
-    const add = (cur ? "\n" : "") + line;
-    if ((cur + add).length > limit) {
-      await dm.send(cur);
-      cur = line;
-    } else {
-      cur += add;
-    }
-  }
-  if (cur) await dm.send(cur);
+export async function dmChunked(user, header, lines, limit = 1900, feature = "dm") {
+  return sendDmChunked({ user, header, lines, limit, feature });
 }
 
 export async function formatUserWithId({ guildId, userId }) {

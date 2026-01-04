@@ -48,11 +48,11 @@ describe("contests helpers misc utilities", () => {
 
   test("dmChunked splits messages by limit", async () => {
     const dmSend = vi.fn(async () => {});
-    const user = { createDM: async () => ({ send: dmSend }) };
+    const user = { send: dmSend };
 
     await dmChunked(user, "Header", ["a"], 6);
     expect(dmSend).toHaveBeenCalledTimes(2);
-    expect(dmSend).toHaveBeenNthCalledWith(1, "Header");
-    expect(dmSend).toHaveBeenNthCalledWith(2, "a");
+    expect(dmSend).toHaveBeenNthCalledWith(1, { content: "Header" });
+    expect(dmSend).toHaveBeenNthCalledWith(2, { content: "a" });
   });
 });
