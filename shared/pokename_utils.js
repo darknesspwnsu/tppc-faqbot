@@ -58,6 +58,23 @@ function normalizeQueryVariants(qRaw) {
     candidates.add(normalizeKey(prefix + " " + rest));
   }
 
+  // Accept "gmeowth (alola)" / "sraichu alola" (NO dot, NO space after prefix letter)
+  if (
+    !q.includes(".") &&
+    !q.startsWith("shiny") &&
+    !q.startsWith("dark") &&
+    !q.startsWith("golden") &&
+    ["s", "d", "g"].includes(q[0]) &&
+    q[1] &&
+    q[1] !== " "
+  ) {
+    const letter = q[0];
+    const rest = q.slice(1).trim();
+    const prefix = letter === "s" ? "shiny" : letter === "d" ? "dark" : "golden";
+    candidates.add(normalizeKey(prefix + rest));
+    candidates.add(normalizeKey(prefix + " " + rest));
+  }
+
   return Array.from(candidates);
 }
 

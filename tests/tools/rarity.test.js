@@ -390,6 +390,31 @@ describe("rarity.js", () => {
     );
   });
 
+  it("rarity comparison accepts variant prefix without dot for forms", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "g.meowth gmeowth (alola)" });
+
+    expect(message.channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [expect.objectContaining({ title: "Golden Meowth vs Golden Meowth (Alola)" })],
+      })
+    );
+  });
+
   it("rarity comparison supports multiple parenthetical forms", async () => {
     const { registerLevel4Rarity } = await loadRarityModule();
     const register = vi.fn();
