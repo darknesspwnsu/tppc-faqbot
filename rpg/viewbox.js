@@ -7,6 +7,7 @@ import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
+import { requireRpgCredentials } from "./credentials.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { sendDmBatch } from "../shared/dm.js";
 import { getSavedId, getUserText } from "../db.js";
@@ -584,8 +585,7 @@ export function registerViewbox(register) {
 
       await ensureDeferred();
 
-      if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-        console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for /viewbox");
+      if (!requireRpgCredentials("/viewbox")) {
         await editResponse({ content: "❌ RPG credentials are not configured." });
         return;
       }

@@ -14,6 +14,7 @@ import {
 } from "../shared/pokename_utils.js";
 import { parse } from "node-html-parser";
 import { RpgClient } from "./rpg_client.js";
+import { requireRpgCredentials } from "./credentials.js";
 import { getPokedexEntry, upsertPokedexEntry } from "./storage.js";
 
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
@@ -25,13 +26,8 @@ let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
 let evolutionCache = null; // { baseByName }
 
-function hasRpgCredentials() {
-  return Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
-}
-
 async function ensureRpgCredentials(message, cmd) {
-  if (hasRpgCredentials()) return true;
-  console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${cmd}`);
+  if (requireRpgCredentials(cmd)) return true;
   await message.reply("❌ RPG credentials are not configured.");
   return false;
 }

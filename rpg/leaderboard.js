@@ -11,6 +11,7 @@ import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
+import { hasRpgCredentials, requireRpgCredentials } from "./credentials.js";
 
 const CHALLENGES = {
   ssanne: {
@@ -610,7 +611,7 @@ function scheduleTrainingChallenge(client) {
 export function registerLeaderboard(register) {
   const primaryCmd = "!leaderboard";
   const aliasCmds = ["!ld", "!lb"];
-  const hasCreds = Boolean(process.env.RPG_USERNAME && process.env.RPG_PASSWORD);
+  const hasCreds = hasRpgCredentials();
   let client = null;
   const getClient = () => {
     if (!client) client = new RpgClient();
@@ -627,8 +628,7 @@ export function registerLeaderboard(register) {
     primaryCmd,
     async ({ message, rest }) => {
       if (!message.guildId) return;
-      if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-        console.error(`[rpg] RPG_USERNAME/RPG_PASSWORD not configured for ${primaryCmd}`);
+      if (!requireRpgCredentials(primaryCmd)) {
         await message.reply("❌ RPG leaderboard credentials are not configured.");
         return;
       }

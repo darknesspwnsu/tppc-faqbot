@@ -5,6 +5,7 @@
 import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
+import { requireRpgCredentials } from "./credentials.js";
 
 const FIND_MY_ID_URL = "https://www.tppcrpg.net/view_profile.php";
 
@@ -84,8 +85,7 @@ export function registerFindMyId(register) {
       }
 
       try {
-        if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-          console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for /findmyid");
+        if (!requireRpgCredentials("/findmyid")) {
           await interaction.reply({
             content: "❌ RPG credentials are not configured.",
             ephemeral: true,

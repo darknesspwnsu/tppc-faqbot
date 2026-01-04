@@ -5,6 +5,7 @@
 import { parse } from "node-html-parser";
 
 import { RpgClient } from "./rpg_client.js";
+import { requireRpgCredentials } from "./credentials.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 
 const POWER_PLANT_URL = "https://www.tppcrpg.net/power_plant.php";
@@ -62,8 +63,7 @@ export function registerPowerPlant(register) {
     "!powerplant",
     async ({ message }) => {
       if (!message.guildId) return;
-      if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
-        console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for !powerplant");
+      if (!requireRpgCredentials("!powerplant")) {
         await message.reply("❌ RPG power plant credentials are not configured.");
         return;
       }
