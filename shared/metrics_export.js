@@ -47,6 +47,11 @@ function scrubRepoUrl(repo) {
   return repo.replace(/x-access-token:[^@]+@/i, "x-access-token:***@");
 }
 
+function isMissingRemoteRef(err) {
+  const msg = String(err?.message || "").toLowerCase();
+  return msg.includes("couldn't find remote ref");
+}
+
 async function runGit(args, { cwd, repoLabel } = {}) {
   try {
     const { stdout, stderr } = await execFileAsync("git", args, { cwd });
@@ -89,7 +94,9 @@ async function ensureExportRepo(cfg) {
   }
 
   const fetched = await runGit(["fetch", "origin", cfg.branch], { cwd: exportDir, repoLabel });
-  if (!fetched.ok) return { ok: false, reason: "fetch_failed" };
+  if (!fetched.ok && !isMissingRemoteRef(fetched.error)) {
+    return { ok: false, reason: "fetch_failed" };
+  }
 
   const remoteRef = `refs/remotes/origin/${cfg.branch}`;
   const remoteExists = await runGit(["show-ref", "--verify", remoteRef], { cwd: exportDir, repoLabel });
