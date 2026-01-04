@@ -140,7 +140,8 @@ describe("rpg viewbox slash", () => {
       JSON.stringify({ ids: [{ id: 123, label: null, addedAt: 1 }] })
     );
     rpgMocks.fetchPage.mockResolvedValueOnce(
-      `<ul id="allPoke"><li class="N ">Abra (Level: 5)</li></ul>`
+      `<div class="Linfo"><strong>Trainer Name:</strong> Test User<br /></div>
+      <ul id="allPoke"><li class="N ">Abra (Level: 5)</li></ul>`
     );
 
     await handler({ interaction });
@@ -148,7 +149,11 @@ describe("rpg viewbox slash", () => {
     expect(rpgMocks.fetchPage).toHaveBeenCalledWith(
       "https://www.tppcrpg.net/profile.php?id=123&View=All"
     );
-    expect(interaction.user.send).toHaveBeenCalled();
+    expect(interaction.user.send).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Viewing box contents for <@u1> (RPG username: Test User | RPG ID: 123)"
+      )
+    );
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({ content: "✅ Sent your box results via DM." })
     );

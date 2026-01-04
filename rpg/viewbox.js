@@ -126,6 +126,21 @@ function parseViewboxEntries(html) {
   return entries;
 }
 
+function parseTrainerName(html) {
+  const root = parse(String(html || ""));
+  const labels = root.querySelectorAll("strong");
+  for (const label of labels) {
+    if (getText(label).toLowerCase() !== "trainer name:") continue;
+    let node = label.nextSibling;
+    while (node) {
+      const text = getText(node);
+      if (text) return text;
+      node = node.nextSibling;
+    }
+  }
+  return "";
+}
+
 function applyFilter(entries, filter) {
   if (!filter || filter === "all") return entries;
 
@@ -261,7 +276,10 @@ function combineBlocks(blocks, maxLen = MAX_MESSAGE_LEN) {
 async function fetchViewboxEntries(client, id) {
   const url = `${VIEWBOX_URL}?id=${encodeURIComponent(String(id))}&View=All`;
   const html = await client.fetchPage(url);
-  return parseViewboxEntries(html);
+  return {
+    entries: parseViewboxEntries(html),
+    trainerName: parseTrainerName(html),
+  };
 }
 
 function buildConfirmButtons({ userId, id, filter }) {
@@ -324,7 +342,38 @@ async function replyEphemeral(interaction, options) {
   await interaction.reply({ ...options, ephemeral: true });
 }
 
-async function sendViewboxResults({ interaction, id, filter, bypassCooldown, client }) {
+function buildViewboxHeader({ id, targetUserId, trainerName, label }) {
+  const name = trainerName || label || "";
+  if (targetUserId) {
+    if (name) {
+      return `Viewing box contents for <@${targetUserId}> (RPG username: ${name} | RPG ID: ${id})`;
+    }
+    return `Viewing box contents for <@${targetUserId}> (RPG ID: ${id})`;
+  }
+  if (name) {
+    return `Viewing box contents for RPG username: ${name} (RPG ID: ${id})`;
+  }
+  return `Viewing box contents for RPG ID: ${id}`;
+}
+
+function extractViewboxLabel(messageContent) {
+  const content = String(messageContent || "");
+  const mention = content.match(/<@(\d+)>/);
+  if (mention) return { targetUserId: mention[1] };
+  const mUser = content.match(/entered username "([^"]+)"/i);
+  if (mUser) return { label: mUser[1] };
+  return {};
+}
+
+async function sendViewboxResults({
+  interaction,
+  id,
+  filter,
+  bypassCooldown,
+  client,
+  targetUserId,
+  label,
+}) {
   const userId = interaction.user?.id;
   const now = Date.now();
   const last = userCooldowns.get(userId) || 0;
@@ -340,7 +389,7 @@ async function sendViewboxResults({ interaction, id, filter, bypassCooldown, cli
     userCooldowns.set(userId, now);
   }
 
-  const rawEntries = await fetchViewboxEntries(client, id);
+  const { entries: rawEntries, trainerName } = await fetchViewboxEntries(client, id);
   if (!rawEntries.length) {
     await replyEphemeral(interaction, {
       content: "❌ No Pokemon found for that trainer ID.",
@@ -360,8 +409,20 @@ async function sendViewboxResults({ interaction, id, filter, bypassCooldown, cli
   const sections = buildSections(collapsed, filter);
   const blocks = buildSectionBlocks(sections);
   const messages = combineBlocks(blocks, MAX_MESSAGE_LEN);
+  const header = buildViewboxHeader({ id, targetUserId, trainerName, label });
   try {
-    for (const msg of messages) {
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (i === 0) {
+        const withHeader = `${header}\n\n${msg}`;
+        if (withHeader.length <= MAX_MESSAGE_LEN) {
+          await interaction.user.send(withHeader);
+        } else {
+          await interaction.user.send(header);
+          await interaction.user.send(msg);
+        }
+        continue;
+      }
       await interaction.user.send(msg);
     }
   } catch (err) {
@@ -403,6 +464,7 @@ export function registerViewbox(register) {
     const userId = parts[2] || "";
     const id = parts[3] || "";
     const filter = parts[4] || "all";
+    const labelInfo = extractViewboxLabel(interaction.message?.content);
 
     if (!interaction.user || interaction.user.id !== userId) {
       await interaction.reply({ content: "This confirmation isn't for you.", ephemeral: true });
@@ -428,7 +490,14 @@ export function registerViewbox(register) {
     });
 
     try {
-      await sendViewboxResults({ interaction, id, filter, bypassCooldown, client: getClient() });
+      await sendViewboxResults({
+        interaction,
+        id,
+        filter,
+        bypassCooldown,
+        client: getClient(),
+        ...labelInfo,
+      });
     } catch (err) {
       console.error("[rpg] viewbox failed:", err);
       await replyEphemeral(interaction, {
@@ -493,21 +562,21 @@ export function registerViewbox(register) {
       try {
         if (id) {
           if (!bypassCooldown && now - last < COOLDOWN_MS) {
-            const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
-            await interaction.reply({
-              content: `⚠️ This command is on cooldown for another ${remaining}s!`,
-              ephemeral: true,
-            });
-            return;
-          }
-          await sendViewboxResults({
-            interaction,
-            id,
-            filter,
-            bypassCooldown,
-            client: getClient(),
-          });
-          return;
+        const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
+        await interaction.reply({
+          content: `⚠️ This command is on cooldown for another ${remaining}s!`,
+          ephemeral: true,
+        });
+        return;
+      }
+      await sendViewboxResults({
+        interaction,
+        id,
+        filter,
+        bypassCooldown,
+        client: getClient(),
+      });
+      return;
         }
 
         if (rpgUsername) {
@@ -568,6 +637,7 @@ export function registerViewbox(register) {
             filter,
             bypassCooldown,
             client: getClient(),
+            targetUserId: resolvedUser.id,
           });
           return;
         }
