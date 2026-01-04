@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_WINDOW_DAYS = 90;
 const DEFAULT_BRANCH = "gh-pages";
 const DEFAULT_EXPORT_DIR = ".metrics_export";
-const DEFAULT_EXPORT_PATH = "metrics/all.json";
+const DEFAULT_EXPORT_PATH = "data/generated/metrics_export.json";
 
 let exportSchedulerBooted = false;
 let warnedMissingConfig = false;
