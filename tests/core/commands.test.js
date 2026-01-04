@@ -4,6 +4,10 @@ vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => false),
 }));
 
+vi.mock("../../shared/metrics.js", () => ({
+  metrics: { increment: vi.fn() },
+}));
+
 vi.mock("../../configs/command_exposure.js", () => ({
   DEFAULT_EXPOSURE: "bang",
   DEFAULT_SLASH_EXPOSURE: "on",

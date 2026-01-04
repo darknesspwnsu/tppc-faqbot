@@ -4,6 +4,7 @@
 // Logs in and reuses cookies for scraping leaderboards.
 
 import { logger } from "../shared/logger.js";
+import { metrics } from "../shared/metrics.js";
 
 function ensureFetch() {
   if (typeof fetch !== "function") {
@@ -104,9 +105,13 @@ export class RpgClient {
         redirect: "manual",
         signal: controller.signal,
       });
+      void metrics.increment("rpg.fetch", { status: "ok", method });
+      void metrics.increment("external.fetch", { source: "rpg", status: "ok" });
       this._updateCookies(res);
       return res;
     } catch (err) {
+      void metrics.increment("rpg.fetch", { status: "error", method });
+      void metrics.increment("external.fetch", { source: "rpg", status: "error" });
       logger.error("rpg.fetch.error", {
         url,
         method,

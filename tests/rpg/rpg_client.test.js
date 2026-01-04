@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("../../shared/metrics.js", () => ({
+  metrics: { increment: vi.fn() },
+}));
+
 import { RpgClient, __testables } from "../../rpg/rpg_client.js";
 
 const { parseCookiePair, getSetCookiesFromResponse } = __testables;

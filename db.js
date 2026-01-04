@@ -223,6 +223,25 @@ export async function initDb() {
     [],
     "init.reminders"
   );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS metrics_counters (
+      bucket_ts DATETIME NOT NULL,
+      metric VARCHAR(64) NOT NULL,
+      tags_hash CHAR(64) NOT NULL,
+      tags_json TEXT NOT NULL,
+      count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (bucket_ts, metric, tags_hash),
+      KEY metrics_metric_idx (metric),
+      KEY metrics_bucket_idx (bucket_ts)
+    )
+  `,
+    [],
+    "init.metrics_counters"
+  );
 }
 
 /**

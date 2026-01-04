@@ -42,6 +42,7 @@ import { handleLeaderboardInteraction } from "./rpg/leaderboard.js";
 import { handlePokedexInteraction } from "./rpg/pokedex.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import { logger } from "./shared/logger.js";
+import { metrics } from "./shared/metrics.js";
 import {
   DEFAULT_EXPOSURE,
   DEFAULT_SLASH_EXPOSURE,
@@ -319,6 +320,15 @@ export function buildCommandRegistry({ client } = {}) {
     return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
+  function latencyBucket(ms) {
+    if (ms < 100) return "lt100";
+    if (ms < 250) return "lt250";
+    if (ms < 500) return "lt500";
+    if (ms < 1000) return "lt1000";
+    if (ms < 3000) return "lt3000";
+    return "gte3000";
+  }
+
   /**
    * Build categorized help for a specific guild.
    * - Exposed commands are rewritten to show the correct prefix for that guild.
@@ -541,6 +551,16 @@ export function buildCommandRegistry({ client } = {}) {
 
     try {
       await entry.handler({ message, cmd, rest });
+      void metrics.increment("command.invoked", {
+        type: "bang",
+        cmd,
+        status: "ok",
+      });
+      void metrics.increment("command.latency", {
+        type: "bang",
+        cmd,
+        bucket: latencyBucket(Date.now() - startedAt),
+      });
       logger.info("command.bang.ok", {
         cmd,
         guildId: message.guildId || null,
@@ -549,6 +569,16 @@ export function buildCommandRegistry({ client } = {}) {
         durationMs: Date.now() - startedAt,
       });
     } catch (err) {
+      void metrics.increment("command.invoked", {
+        type: "bang",
+        cmd,
+        status: "error",
+      });
+      void metrics.increment("command.latency", {
+        type: "bang",
+        cmd,
+        bucket: latencyBucket(Date.now() - startedAt),
+      });
       logger.error("command.bang.error", {
         cmd,
         guildId: message.guildId || null,
@@ -572,6 +602,16 @@ export function buildCommandRegistry({ client } = {}) {
       const startedAt = Date.now();
       try {
         await entry.autocomplete({ interaction });
+        void metrics.increment("command.invoked", {
+          type: "autocomplete",
+          cmd: key,
+          status: "ok",
+        });
+        void metrics.increment("command.latency", {
+          type: "autocomplete",
+          cmd: key,
+          bucket: latencyBucket(Date.now() - startedAt),
+        });
         logger.info("command.autocomplete.ok", {
           cmd: key,
           guildId: interaction.guildId || null,
@@ -580,6 +620,16 @@ export function buildCommandRegistry({ client } = {}) {
           durationMs: Date.now() - startedAt,
         });
       } catch (err) {
+        void metrics.increment("command.invoked", {
+          type: "autocomplete",
+          cmd: key,
+          status: "error",
+        });
+        void metrics.increment("command.latency", {
+          type: "autocomplete",
+          cmd: key,
+          bucket: latencyBucket(Date.now() - startedAt),
+        });
         logger.error("command.autocomplete.error", {
           cmd: key,
           guildId: interaction.guildId || null,
@@ -607,6 +657,16 @@ export function buildCommandRegistry({ client } = {}) {
       const startedAt = Date.now();
       try {
         await entry.handler({ interaction });
+        void metrics.increment("command.invoked", {
+          type: "slash",
+          cmd: key,
+          status: "ok",
+        });
+        void metrics.increment("command.latency", {
+          type: "slash",
+          cmd: key,
+          bucket: latencyBucket(Date.now() - startedAt),
+        });
         logger.info("command.slash.ok", {
           cmd: key,
           guildId: interaction.guildId || null,
@@ -615,6 +675,16 @@ export function buildCommandRegistry({ client } = {}) {
           durationMs: Date.now() - startedAt,
         });
       } catch (err) {
+        void metrics.increment("command.invoked", {
+          type: "slash",
+          cmd: key,
+          status: "error",
+        });
+        void metrics.increment("command.latency", {
+          type: "slash",
+          cmd: key,
+          bucket: latencyBucket(Date.now() - startedAt),
+        });
         logger.error("command.slash.error", {
           cmd: key,
           guildId: interaction.guildId || null,
@@ -637,6 +707,16 @@ export function buildCommandRegistry({ client } = {}) {
         const startedAt = Date.now();
         try {
           await match.handler({ interaction });
+          void metrics.increment("command.invoked", {
+            type: "modal",
+            cmd: match.prefix,
+            status: "ok",
+          });
+          void metrics.increment("command.latency", {
+            type: "modal",
+            cmd: match.prefix,
+            bucket: latencyBucket(Date.now() - startedAt),
+          });
           logger.info("command.modal.ok", {
             prefix: match.prefix,
             guildId: interaction.guildId || null,
@@ -645,6 +725,16 @@ export function buildCommandRegistry({ client } = {}) {
             durationMs: Date.now() - startedAt,
           });
         } catch (err) {
+          void metrics.increment("command.invoked", {
+            type: "modal",
+            cmd: match.prefix,
+            status: "error",
+          });
+          void metrics.increment("command.latency", {
+            type: "modal",
+            cmd: match.prefix,
+            bucket: latencyBucket(Date.now() - startedAt),
+          });
           logger.error("command.modal.error", {
             prefix: match.prefix,
             guildId: interaction.guildId || null,
@@ -756,6 +846,16 @@ export function buildCommandRegistry({ client } = {}) {
         const startedAt = Date.now();
         try {
           await match.handler({ interaction });
+          void metrics.increment("command.invoked", {
+            type: "component",
+            cmd: match.prefix,
+            status: "ok",
+          });
+          void metrics.increment("command.latency", {
+            type: "component",
+            cmd: match.prefix,
+            bucket: latencyBucket(Date.now() - startedAt),
+          });
           logger.info("command.component.ok", {
             prefix: match.prefix,
             guildId: interaction.guildId || null,
@@ -764,6 +864,16 @@ export function buildCommandRegistry({ client } = {}) {
             durationMs: Date.now() - startedAt,
           });
         } catch (err) {
+          void metrics.increment("command.invoked", {
+            type: "component",
+            cmd: match.prefix,
+            status: "error",
+          });
+          void metrics.increment("command.latency", {
+            type: "component",
+            cmd: match.prefix,
+            bucket: latencyBucket(Date.now() - startedAt),
+          });
           logger.error("command.component.error", {
             prefix: match.prefix,
             guildId: interaction.guildId || null,
