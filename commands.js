@@ -41,6 +41,7 @@ import { handleRarityInteraction } from "./tools/rarity.js";
 import { handleLeaderboardInteraction } from "./rpg/leaderboard.js";
 import { handlePokedexInteraction } from "./rpg/pokedex.js";
 import { isAdminOrPrivileged } from "./auth.js";
+import { logger } from "./shared/logger.js";
 import {
   DEFAULT_EXPOSURE,
   DEFAULT_SLASH_EXPOSURE,
@@ -510,7 +511,9 @@ export function buildCommandRegistry({ client } = {}) {
         try {
           await h({ message });
         } catch (err) {
-          console.error("[COMMANDS] message hook error:", err);
+          logger.error("command.message_hook.error", {
+            error: logger.serializeError(err),
+          });
         }
       }
     }
@@ -524,6 +527,7 @@ export function buildCommandRegistry({ client } = {}) {
     const entry = bang.get(cmd);
     if (!entry?.handler) return;
 
+    const startedAt = Date.now();
     if (cmd.startsWith("!") && !entry.exposeMeta) {
       const base = cmd.slice(1);
       if (message.guildId && exposureFor(message.guildId, base) === "off") {
@@ -534,8 +538,22 @@ export function buildCommandRegistry({ client } = {}) {
 
     try {
       await entry.handler({ message, cmd, rest });
+      logger.info("command.bang.ok", {
+        cmd,
+        guildId: message.guildId || null,
+        channelId: message.channelId || null,
+        userId: message.author?.id || null,
+        durationMs: Date.now() - startedAt,
+      });
     } catch (err) {
-      console.error("[COMMANDS] bang handler error:", err);
+      logger.error("command.bang.error", {
+        cmd,
+        guildId: message.guildId || null,
+        channelId: message.channelId || null,
+        userId: message.author?.id || null,
+        durationMs: Date.now() - startedAt,
+        error: logger.serializeError(err),
+      });
     }
   }
 
@@ -548,10 +566,25 @@ export function buildCommandRegistry({ client } = {}) {
         await interaction.respond([]);
         return;
       }
+      const startedAt = Date.now();
       try {
         await entry.autocomplete({ interaction });
+        logger.info("command.autocomplete.ok", {
+          cmd: key,
+          guildId: interaction.guildId || null,
+          channelId: interaction.channelId || null,
+          userId: interaction.user?.id || null,
+          durationMs: Date.now() - startedAt,
+        });
       } catch (err) {
-        console.error("[COMMANDS] autocomplete handler error:", err);
+        logger.error("command.autocomplete.error", {
+          cmd: key,
+          guildId: interaction.guildId || null,
+          channelId: interaction.channelId || null,
+          userId: interaction.user?.id || null,
+          durationMs: Date.now() - startedAt,
+          error: logger.serializeError(err),
+        });
       }
       return;
     }
@@ -568,10 +601,25 @@ export function buildCommandRegistry({ client } = {}) {
         });
         return;
       }
+      const startedAt = Date.now();
       try {
         await entry.handler({ interaction });
+        logger.info("command.slash.ok", {
+          cmd: key,
+          guildId: interaction.guildId || null,
+          channelId: interaction.channelId || null,
+          userId: interaction.user?.id || null,
+          durationMs: Date.now() - startedAt,
+        });
       } catch (err) {
-        console.error("[COMMANDS] slash handler error:", err);
+        logger.error("command.slash.error", {
+          cmd: key,
+          guildId: interaction.guildId || null,
+          channelId: interaction.channelId || null,
+          userId: interaction.user?.id || null,
+          durationMs: Date.now() - startedAt,
+          error: logger.serializeError(err),
+        });
       }
       return;
     }
@@ -583,10 +631,25 @@ export function buildCommandRegistry({ client } = {}) {
 
       const match = components.find((c) => customId.startsWith(c.prefix));
       if (match?.handler) {
+        const startedAt = Date.now();
         try {
           await match.handler({ interaction });
+          logger.info("command.modal.ok", {
+            prefix: match.prefix,
+            guildId: interaction.guildId || null,
+            channelId: interaction.channelId || null,
+            userId: interaction.user?.id || null,
+            durationMs: Date.now() - startedAt,
+          });
         } catch (err) {
-          console.error("[COMMANDS] modal handler error:", err);
+          logger.error("command.modal.error", {
+            prefix: match.prefix,
+            guildId: interaction.guildId || null,
+            channelId: interaction.channelId || null,
+            userId: interaction.user?.id || null,
+            durationMs: Date.now() - startedAt,
+            error: logger.serializeError(err),
+          });
         }
       }
       return;
@@ -687,10 +750,25 @@ export function buildCommandRegistry({ client } = {}) {
 
       const match = components.find((c) => customId.startsWith(c.prefix));
       if (match?.handler) {
+        const startedAt = Date.now();
         try {
           await match.handler({ interaction });
+          logger.info("command.component.ok", {
+            prefix: match.prefix,
+            guildId: interaction.guildId || null,
+            channelId: interaction.channelId || null,
+            userId: interaction.user?.id || null,
+            durationMs: Date.now() - startedAt,
+          });
         } catch (err) {
-          console.error("[COMMANDS] component handler error:", err);
+          logger.error("command.component.error", {
+            prefix: match.prefix,
+            guildId: interaction.guildId || null,
+            channelId: interaction.channelId || null,
+            userId: interaction.user?.id || null,
+            durationMs: Date.now() - startedAt,
+            error: logger.serializeError(err),
+          });
         }
       }
     }
