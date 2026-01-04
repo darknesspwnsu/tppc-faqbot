@@ -6,6 +6,9 @@ const RARITY_JSON = JSON.stringify({
   data: {
     Pikachu: { total: 10, male: 4, female: 3, ungendered: 2, genderless: 1 },
     "Shiny Pikachu": { total: 1, male: 1, female: 0, ungendered: 0, genderless: 0 },
+    "Golden Meowth": { total: 5, male: 2, female: 2, ungendered: 1, genderless: 0 },
+    "Golden Meowth (Alola)": { total: 3, male: 1, female: 1, ungendered: 1, genderless: 0 },
+    "Golden Vulpix (Alola)": { total: 4, male: 2, female: 1, ungendered: 1, genderless: 0 },
   },
 });
 
@@ -331,5 +334,87 @@ describe("rarity.js", () => {
       String(call[0]).includes("api/v1/rarity")
     );
     expect(String(apiCall[0])).toContain("timeframe=12m");
+  });
+
+  it("rarity comparison supports parenthetical forms as a single arg", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "g.meowth g.meowth (alola)" });
+
+    expect(message.channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [expect.objectContaining({ title: "Golden Meowth vs Golden Meowth (Alola)" })],
+      })
+    );
+    expect(message.reply).not.toHaveBeenCalledWith(
+      expect.stringContaining("compare a Pokémon to itself")
+    );
+  });
+
+  it("rarity comparison accepts missing space before forms", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "g.meowth(alola) g.meowth" });
+
+    expect(message.channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [expect.objectContaining({ title: "Golden Meowth (Alola) vs Golden Meowth" })],
+      })
+    );
+  });
+
+  it("rarity comparison supports multiple parenthetical forms", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "g.vulpix (alola) g.meowth (alola)" });
+
+    expect(message.channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: [
+          expect.objectContaining({
+            title: "Golden Vulpix (Alola) vs Golden Meowth (Alola)",
+          }),
+        ],
+      })
+    );
   });
 });

@@ -296,7 +296,26 @@ function parseTwoArgs(rest) {
   }
   if (cur) out.push(cur);
 
-  return out.slice(0, 2);
+  const merged = [];
+  for (const token of out) {
+    if (!token) continue;
+    if (!merged.length) {
+      merged.push(token);
+      continue;
+    }
+
+    if (token.startsWith("(")) {
+      merged[merged.length - 1] = `${merged[merged.length - 1]} ${token}`;
+      continue;
+    }
+
+    if (merged.length < 2) {
+      merged.push(token);
+      continue;
+    }
+  }
+
+  return merged.slice(0, 2);
 }
 
 function cmpLine(a, b) {
