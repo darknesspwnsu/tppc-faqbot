@@ -3,6 +3,8 @@
 // Lightweight client for TPPC RPG pages.
 // Logs in and reuses cookies for scraping leaderboards.
 
+import { logger } from "../shared/logger.js";
+
 function ensureFetch() {
   if (typeof fetch !== "function") {
     throw new Error("Global fetch() not available. Use Node 18+ or add a fetch polyfill.");
@@ -104,6 +106,13 @@ export class RpgClient {
       });
       this._updateCookies(res);
       return res;
+    } catch (err) {
+      logger.error("rpg.fetch.error", {
+        url,
+        method,
+        error: logger.serializeError(err),
+      });
+      throw err;
     } finally {
       clearTimeout(t);
     }
@@ -126,6 +135,9 @@ export class RpgClient {
     const ok = res.status === 200 || res.status === 302;
     if (!ok) {
       this.loggedIn = false;
+      logger.error("rpg.login.error", {
+        status: res.status,
+      });
       throw new Error(`RPG login failed (HTTP ${res.status}).`);
     }
 
@@ -135,6 +147,10 @@ export class RpgClient {
     } catch {}
     if (bodyText && !bodyText.includes("Logout")) {
       this.loggedIn = false;
+      logger.error("rpg.login.error", {
+        status: res.status,
+        reason: "invalid-credentials",
+      });
       throw new Error("RPG login rejected (invalid username/password).");
     }
 
@@ -154,6 +170,11 @@ export class RpgClient {
         await this.login({ force: true });
         const retry = await this._fetch(pathOrUrl, { method: "GET" });
         if (!retry.ok) {
+          logger.error("rpg.fetch.error", {
+            status: retry.status,
+            reason: "retry-failed",
+            url: String(pathOrUrl),
+          });
           throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
         }
         return await retry.text();
@@ -162,12 +183,22 @@ export class RpgClient {
       if (location) {
         const next = await this._fetch(location, { method: "GET" });
         if (!next.ok) {
+          logger.error("rpg.fetch.error", {
+            status: next.status,
+            reason: "redirect-failed",
+            url: String(pathOrUrl),
+          });
           throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
         }
         return await next.text();
       }
     }
 
+    logger.error("rpg.fetch.error", {
+      status: res.status,
+      reason: "http-error",
+      url: String(pathOrUrl),
+    });
     throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
 
@@ -191,6 +222,11 @@ export class RpgClient {
           body,
         });
         if (!retry.ok) {
+          logger.error("rpg.fetch.error", {
+            status: retry.status,
+            reason: "retry-failed",
+            url: String(pathOrUrl),
+          });
           throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
         }
         return await retry.text();
@@ -199,12 +235,22 @@ export class RpgClient {
       if (location) {
         const next = await this._fetch(location, { method: "GET" });
         if (!next.ok) {
+          logger.error("rpg.fetch.error", {
+            status: next.status,
+            reason: "redirect-failed",
+            url: String(pathOrUrl),
+          });
           throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
         }
         return await next.text();
       }
     }
 
+    logger.error("rpg.fetch.error", {
+      status: res.status,
+      reason: "http-error",
+      url: String(pathOrUrl),
+    });
     throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
 }
