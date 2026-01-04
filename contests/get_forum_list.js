@@ -268,7 +268,7 @@ export function registerForumList(register) {
   register.slash(
     {
       name: "getforumlist",
-      description: "Scrape a TPPC forum thread and DM a username - rpg id list (admin/privileged)",
+      description: "Scrape a TPPC forum thread and DM a username - rpg id list",
       options: [
         {
           type: 3, // STRING

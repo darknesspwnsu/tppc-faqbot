@@ -852,7 +852,7 @@ export function registerLevel4Rarity(register) {
       await refreshL4();
       await message.reply("Rarity4 cache refreshed ✅");
     },
-    "!rarity4reload — refreshes rarity4 cache (admin)",
+    "!rarity4reload — refreshes rarity4 cache",
     { admin: true }
   );
 

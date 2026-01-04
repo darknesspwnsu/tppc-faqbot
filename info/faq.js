@@ -411,7 +411,7 @@ export function registerInfoCommands(register) {
         await message.reply("Reload failed ❌ (check console + faq.json formatting)");
       }
     },
-    "!faqreload — reloads faq.json (admin)",
+    "!faqreload — reloads faq.json",
     { admin: true }
   );
 

@@ -739,7 +739,7 @@ export function registerUnverify(register) {
   register.slash(
     {
       name: "unverify",
-      description: "Admin: remove forum verification linkage for a user",
+      description: "Remove forum verification linkage for a user",
       options: [
         {
           type: 6, // USER
