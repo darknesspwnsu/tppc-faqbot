@@ -113,6 +113,9 @@ describe("db.js", () => {
     const text = await db.getUserText({ guildId: 1, userId: 2, kind: "x" });
     expect(text).toBe("hi");
 
+    const row = await db.getUserTextRow({ guildId: 1, userId: 2, kind: "x" });
+    expect(row).toEqual({ text: "hi", updatedAt: null });
+
     await db.deleteUserText({ guildId: 1, userId: 2, kind: "x" });
     expect(execute).toHaveBeenCalledWith(
       expect.stringContaining("DELETE FROM user_texts"),

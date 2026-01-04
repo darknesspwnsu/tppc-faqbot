@@ -223,6 +223,20 @@ export async function getUserText({ guildId, userId, kind }) {
   return rows?.[0]?.text ?? null;
 }
 
+export async function getUserTextRow({ guildId, userId, kind }) {
+  const db = getDb();
+  const [rows] = await db.execute(
+    `SELECT text, updated_at FROM user_texts WHERE guild_id = ? AND user_id = ? AND kind = ? LIMIT 1`,
+    [String(guildId), String(userId), String(kind)]
+  );
+  const row = rows?.[0];
+  if (!row) return null;
+  return {
+    text: row.text ?? null,
+    updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : null,
+  };
+}
+
 export async function deleteUserText({ guildId, userId, kind }) {
   const db = getDb();
   await db.execute(
