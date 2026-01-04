@@ -8,6 +8,7 @@ import { registerRarity, registerLevel4Rarity } from "./rarity.js";
 import { registerLinks } from "./links.js";
 import { registerPromo } from "./promo.js";
 import { registerReminders } from "./reminders.js";
+import { registerMetricsExport } from "./metrics_export.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const TOOL_MODULES = [
@@ -16,6 +17,7 @@ const TOOL_MODULES = [
   { id: "calculator", register: registerCalculator },
   { id: "rarity", register: registerRarity },
   { id: "reminders", register: registerReminders },
+  { id: "metrics_export", register: registerMetricsExport },
 ];
 
 export function registerTools(register) {
