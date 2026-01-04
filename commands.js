@@ -105,6 +105,7 @@ export function buildCommandRegistry({ client } = {}) {
       handler,
       help,
       admin: Boolean(opts.admin),
+      adminCategory: opts.adminCategory || null,
       canonical: true,
       category: opts.category || "Other",
       hideFromHelp: Boolean(opts.hideFromHelp),
@@ -256,6 +257,7 @@ export function buildCommandRegistry({ client } = {}) {
       autocomplete: typeof opts.autocomplete === "function" ? opts.autocomplete : null,
       meta: {
         admin: Boolean(opts.admin),
+        adminCategory: opts.adminCategory || null,
         category: opts.category || "Other",
         hideFromHelp: Boolean(opts.hideFromHelp),
         helpTier: opts.helpTier || "normal", // "primary" | "normal"
@@ -364,7 +366,7 @@ export function buildCommandRegistry({ client } = {}) {
     // Bang/Q commands
     // -------------------------
     for (const entry of bang.values()) {
-      const { help, admin, canonical, category, hideFromHelp, helpTier } = entry;
+      const { help, admin, adminCategory, canonical, category, hideFromHelp, helpTier } = entry;
 
       if (!canonical) continue;
       if (!help) continue;
@@ -373,7 +375,7 @@ export function buildCommandRegistry({ client } = {}) {
       // Hide admin commands unless viewer can see them
       if (admin && !includeAdmin) continue;
 
-      const cat = admin ? "Admin" : (category || "Other");
+      const cat = admin ? (adminCategory || "Admin") : (category || "Other");
 
       // Games category shows only primary commands
       if (String(cat).toLowerCase() === "games") {
@@ -412,8 +414,9 @@ export function buildCommandRegistry({ client } = {}) {
       if (gid && slashExposureFor(gid, name) === "off") continue;
 
       const admin = Boolean(meta?.admin);
+      const adminCategory = meta?.adminCategory || null;
       const hideFromHelp = Boolean(meta?.hideFromHelp);
-      const cat = admin ? "Admin" : (meta?.category || "Other");
+      const cat = admin ? (adminCategory || "Admin") : (meta?.category || "Other");
       const helpTier = meta?.helpTier || "normal";
 
       if (hideFromHelp) continue;

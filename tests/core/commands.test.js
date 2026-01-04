@@ -197,6 +197,27 @@ describe("commands registry", () => {
     expect(categories[categories.length - 1]).toBe("Admin");
   });
 
+  it("helpModel keeps admin commands in override categories", () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register("!admincmd", handler, "!admincmd — admin", {
+        category: "Info",
+        admin: true,
+        adminCategory: "Contests",
+      });
+    });
+
+    isAdminOrPrivileged.mockReturnValue(true);
+    const reg = buildCommandRegistry({});
+    const pages = reg.helpModel("g1", makeMessage({ guildId: "g1" }));
+
+    const contests = pages.find((page) => page.category === "Contests");
+    const admin = pages.find((page) => page.category === "Admin");
+
+    expect(contests?.lines || []).toContain("!admincmd — admin");
+    expect(admin?.lines || []).not.toContain("!admincmd — admin");
+  });
+
   it("dispatchMessage logs errors from handlers without throwing", async () => {
     const handler = vi.fn(async () => {
       throw new Error("boom");

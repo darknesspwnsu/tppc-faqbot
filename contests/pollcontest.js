@@ -897,7 +897,7 @@ export function registerPollContest(register) {
         flags: MessageFlags.Ephemeral,
       });
     },
-    { admin: true }
+    { admin: true, adminCategory: "Contests" }
   );
 
   register.component("pollcontest:", async ({ interaction }) => {
