@@ -16,6 +16,7 @@ import { registerDealOrNoDeal } from "./deal_or_no_deal.js";
 import { registerAuction } from "./auction.js";
 import { registerPokemonUnscramble } from "./pokemon_unscramble.js";
 import { registerMafia } from "./mafia.js";
+import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const GAME_MODULES = [
   { id: "exploding_voltorbs", register: registerExplodingVoltorbs },
@@ -38,7 +39,7 @@ export function registerGames(register) {
     try {
       g.register(register);
     } catch (e) {
-      console.error(`[games] failed to register ${g.id}:`, e);
+      logRegisterFailure("games", g.id, e);
     }
   }
 }

@@ -10,6 +10,7 @@ import { registerReading } from "./reading.js";
 import { registerForumList } from "./get_forum_list.js";
 import { registerPollContest } from "./pollcontest.js";
 import { registerGiveaway } from "./giveaway.js";
+import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const CONTEST_MODULES = [
   { id: "rng", register: registerRng },
@@ -26,7 +27,7 @@ export function registerContests(register) {
     try {
       m.register(register);
     } catch (e) {
-      console.error(`[contests] failed to register ${m.id}:`, e);
+      logRegisterFailure("contests", m.id, e);
     }
   }
 }

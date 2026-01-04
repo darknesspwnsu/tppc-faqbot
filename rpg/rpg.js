@@ -7,6 +7,7 @@ import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
 import { registerViewbox } from "./viewbox.js";
 import { registerPokedex } from "./pokedex.js";
+import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const RPG_MODULES = [
   { id: "leaderboard", register: registerLeaderboard },
@@ -21,7 +22,7 @@ export function registerRpg(register) {
     try {
       m.register(register);
     } catch (e) {
-      console.error(`[rpg] failed to register ${m.id}:`, e);
+      logRegisterFailure("rpg", m.id, e);
     }
   }
 }

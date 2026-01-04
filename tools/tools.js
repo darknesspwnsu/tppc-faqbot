@@ -8,6 +8,7 @@ import { registerRarity, registerLevel4Rarity } from "./rarity.js";
 import { registerLinks } from "./links.js";
 import { registerPromo } from "./promo.js";
 import { registerReminders } from "./reminders.js";
+import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const TOOL_MODULES = [
   { id: "links", register: registerLinks },
@@ -22,7 +23,7 @@ export function registerTools(register) {
     try {
       t.register(register);
     } catch (e) {
-      console.error(`[tools] failed to register ${t.id}:`, e);
+      logRegisterFailure("tools", t.id, e);
     }
   }
 
