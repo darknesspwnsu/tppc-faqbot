@@ -52,8 +52,10 @@ function makeInteraction({
   filter = "all",
   user = null,
 } = {}) {
-  return {
+  const interaction = {
     guildId: "g1",
+    deferred: false,
+    replied: false,
     user: {
       id: "u1",
       send: vi.fn(async () => ({})),
@@ -68,8 +70,14 @@ function makeInteraction({
       },
       getUser: (key) => (key === "user" ? user : null),
     },
+    editReply: vi.fn(async () => ({})),
+    followUp: vi.fn(async () => ({})),
     reply: vi.fn(async () => ({})),
   };
+  interaction.deferReply = vi.fn(async () => {
+    interaction.deferred = true;
+  });
+  return interaction;
 }
 
 function extractRowData(components) {
@@ -116,8 +124,9 @@ describe("rpg viewbox slash", () => {
     await handler({ interaction });
 
     expect(rpgMocks.fetchPage).not.toHaveBeenCalled();
-    expect(interaction.reply).toHaveBeenCalled();
-    const replyArg = interaction.reply.mock.calls[0][0];
+    expect(interaction.deferReply).toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalled();
+    const replyArg = interaction.editReply.mock.calls[0][0];
     expect(replyArg.content).toContain("<@u2>");
     const rowData = extractRowData(replyArg.components);
     const customIds = rowData.map((c) => c.custom_id);
@@ -154,7 +163,7 @@ describe("rpg viewbox slash", () => {
         "Viewing box contents for <@u1> (RPG username: Test User | RPG ID: 123)"
       )
     );
-    expect(interaction.reply).toHaveBeenCalledWith(
+    expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({ content: "✅ Sent your box results via DM." })
     );
   });
@@ -172,7 +181,7 @@ describe("rpg viewbox slash", () => {
 
     await handler({ interaction });
 
-    const replyArg = interaction.reply.mock.calls[0][0];
+    const replyArg = interaction.editReply.mock.calls[0][0];
     expect(replyArg.content).toContain("Located ID 999");
     const rowData = extractRowData(replyArg.components);
     const customIds = rowData.map((c) => c.custom_id);
@@ -196,8 +205,8 @@ describe("rpg viewbox slash", () => {
 
     await handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledTimes(1);
-    expect(interaction.reply).toHaveBeenCalledWith(
+    expect(interaction.editReply).toHaveBeenCalledTimes(1);
+    expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
       })

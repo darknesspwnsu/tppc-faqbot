@@ -334,7 +334,15 @@ async function disableInteractionButtons(interaction) {
 }
 
 async function replyEphemeral(interaction, options) {
-  if (interaction.replied || interaction.deferred) {
+  if (interaction.deferred && !interaction.replied && interaction.editReply) {
+    const next = { ...options };
+    delete next.ephemeral;
+    delete next.flags;
+    await interaction.editReply(next);
+    return;
+  }
+
+  if (interaction.replied) {
     await interaction.followUp({ ...options, ephemeral: true });
     return;
   }
@@ -539,6 +547,19 @@ export function registerViewbox(register) {
       ],
     },
     async ({ interaction }) => {
+      async function ensureDeferred() {
+        if (interaction.deferred || interaction.replied) return;
+        await interaction.deferReply({ ephemeral: true });
+      }
+
+      async function editResponse(payload) {
+        await ensureDeferred();
+        const next = { ...(payload || {}) };
+        delete next.ephemeral;
+        delete next.flags;
+        return interaction.editReply(next);
+      }
+
       const userId = interaction.user?.id;
       const id = String(interaction.options?.getString?.("id") || "").trim();
       const rpgUsername = String(interaction.options?.getString?.("rpgusername") || "").trim();
@@ -553,9 +574,11 @@ export function registerViewbox(register) {
       const now = Date.now();
       const last = userCooldowns.get(userId) || 0;
 
+      await ensureDeferred();
+
       if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
         console.error("[rpg] RPG_USERNAME/RPG_PASSWORD not configured for /viewbox");
-        await interaction.reply({ content: "❌ RPG credentials are not configured.", ephemeral: true });
+        await editResponse({ content: "❌ RPG credentials are not configured." });
         return;
       }
 
@@ -563,9 +586,8 @@ export function registerViewbox(register) {
         if (id) {
           if (!bypassCooldown && now - last < COOLDOWN_MS) {
         const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
-        await interaction.reply({
+        await editResponse({
           content: `⚠️ This command is on cooldown for another ${remaining}s!`,
-          ephemeral: true,
         });
         return;
       }
@@ -582,36 +604,32 @@ export function registerViewbox(register) {
         if (rpgUsername) {
           if (!bypassCooldown && now - last < COOLDOWN_MS) {
             const remaining = Math.ceil((COOLDOWN_MS - (now - last)) / 1000);
-            await interaction.reply({
+            await editResponse({
               content: `⚠️ This command is on cooldown for another ${remaining}s!`,
-              ephemeral: true,
             });
             return;
           }
 
           const matches = await fetchFindMyIdMatches(getClient(), rpgUsername);
           if (!matches.length) {
-            await interaction.reply({
+            await editResponse({
               content: `❌ No trainer matches found for "${rpgUsername}".`,
-              ephemeral: true,
             });
             return;
           }
 
           if (matches.length > 1) {
             const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
-            await interaction.reply({
+            await editResponse({
               content: `⚠️ Multiple trainer matches found for "${rpgUsername}". Please narrow down your search term or use a trainer ID.\n${lines.join("\n")}`,
-              ephemeral: true,
             });
             return;
           }
 
           const match = matches[0];
-          await interaction.reply({
+          await editResponse({
             content: `✅ Located ID ${match.id} for entered username "${rpgUsername}". Proceed with retrieving box contents?`,
             components: buildConfirmButtons({ userId, id: match.id, filter }),
-            ephemeral: true,
           });
           return;
         }
@@ -623,9 +641,8 @@ export function registerViewbox(register) {
         });
 
         if (!savedIds.length) {
-          await interaction.reply({
+          await editResponse({
             content: `❌ ${mention(resolvedUser.id)} has not set an ID.`,
-            ephemeral: true,
           });
           return;
         }
@@ -642,18 +659,16 @@ export function registerViewbox(register) {
           return;
         }
 
-        await interaction.reply({
+        await editResponse({
           content: `Select which box to view for ${mention(resolvedUser.id)}:`,
           components: buildIdButtons({ userId, ids: savedIds, filter }),
-          ephemeral: true,
         });
         return;
 
       } catch (err) {
         console.error("[rpg] viewbox failed:", err);
-        await interaction.reply({
+        await editResponse({
           content: "❌ Failed to fetch the trainer box. Please try again later.",
-          ephemeral: true,
         });
       }
     }
