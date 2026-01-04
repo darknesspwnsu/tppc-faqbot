@@ -8,6 +8,7 @@ import { parse } from "node-html-parser";
 import { RpgClient } from "./rpg_client.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { metrics } from "../shared/metrics.js";
 import { getSavedId, getUserText } from "../db.js";
 
 const VIEWBOX_URL = "https://www.tppcrpg.net/profile.php";
@@ -435,6 +436,7 @@ async function sendViewboxResults({
     }
   } catch (err) {
     if (err?.code === 50007) {
+      void metrics.increment("dm.fail", { feature: "viewbox" });
       await replyEphemeral(interaction, {
         content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
       });

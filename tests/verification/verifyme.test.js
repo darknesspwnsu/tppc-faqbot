@@ -6,6 +6,7 @@ vi.mock("../../db.js", () => ({
   setUserText: vi.fn(),
   deleteUserText: vi.fn(),
 }));
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
 
 import { getSavedId, getUserText } from "../../db.js";
 import { registerVerifyMe } from "../../verification/verifyme.js";

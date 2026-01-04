@@ -15,6 +15,7 @@ import {
   requireCanManage,
   parseMentionIdsInOrder,
 } from "./framework.js";
+import { metrics } from "../shared/metrics.js";
 
 const MIN_PLAYERS = 5;
 const MAX_PLAYERS = 15;
@@ -156,6 +157,7 @@ async function dm(user, content) {
     await channel.send(content);
     return true;
   } catch {
+    void metrics.increment("dm.fail", { feature: "mafia" });
     return false;
   }
 }

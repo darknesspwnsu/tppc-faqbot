@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
 
 import {
   normalizeThreadUrl,

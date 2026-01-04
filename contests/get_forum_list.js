@@ -20,6 +20,7 @@
 
 import { MessageFlags } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { metrics } from "../shared/metrics.js";
 import { dmChunked } from "./helpers.js";
 
 const FETCH_TIMEOUT_MS = 30_000;
@@ -94,7 +95,11 @@ async function fetchWithTimeout(url) {
       },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    void metrics.increment("external.fetch", { source: "forumlist", status: "ok" });
     return await res.text();
+  } catch (err) {
+    void metrics.increment("external.fetch", { source: "forumlist", status: "error" });
+    throw err;
   } finally {
     clearTimeout(t);
   }
@@ -376,12 +381,13 @@ export function registerForumList(register) {
         try {
           await dmChunked(interaction.user, header, lines, DM_CHUNK_LIMIT);
           await interaction.editReply(`✅ Done — DM’d you ${rows.length} entries.`);
-        } catch (e) {
-          console.warn("[getforumlist] DM failed:", e);
-          await interaction.editReply(
-            "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
-          );
-        }
+      } catch (e) {
+        console.warn("[getforumlist] DM failed:", e);
+        void metrics.increment("dm.fail", { feature: "getforumlist" });
+        await interaction.editReply(
+          "❌ I couldn’t DM you (your DMs might be closed). Enable DMs from this server and retry."
+        );
+      }
       } finally {
         scrapeLocksByGuild.delete(gid);
       }

@@ -30,6 +30,7 @@ import {
 
 import { ForumClient } from "./forum_client.js";
 import { getSavedId, getUserText, setUserText, deleteUserText } from "../db.js";
+import { metrics } from "../shared/metrics.js";
 
 const K_VERIFIED = "fuser"; // <= 8 chars (db schema)
 const K_PENDING = "fpending";
@@ -729,6 +730,9 @@ export function registerVerifyMe(register) {
     }
 
     const dmNote = dmOk ? "" : " ⚠️ I couldn't DM the user (their DMs might be closed).";
+    if (!dmOk) {
+      void metrics.increment("dm.fail", { feature: "verifyme" });
+    }
     await interaction.reply({ ephemeral: true, content: `Done.${dmNote}` });
     await finalizeReviewMessage(interaction, outcomeLine);
   });

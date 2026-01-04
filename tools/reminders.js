@@ -6,6 +6,7 @@ import { MessageFlags } from "discord.js";
 import { getDb } from "../db.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { includesWholePhrase, normalizeForMatch } from "../contests/helpers.js";
+import { metrics } from "../shared/metrics.js";
 
 const MAX_NOTIFY_PER_USER = 10;
 const MAX_REMIND_PER_USER = 10;
@@ -54,12 +55,15 @@ function parseDurationExtended(raw) {
   return null;
 }
 
-async function ensureDmAvailable(user) {
+async function ensureDmAvailable(user, feature) {
   try {
     await user.send("✅ I can DM you for reminders/notifications.");
     return true;
   } catch (err) {
-    if (err?.code === 50007) return false;
+    if (err?.code === 50007) {
+      void metrics.increment("dm.fail", { feature: feature || "reminders" });
+      return false;
+    }
     throw err;
   }
 }
@@ -296,9 +300,14 @@ async function fireReminder(reminder) {
     } else if (reminder.phrase) {
       await user.send(`⏰ **Reminder**: ${reminder.phrase}${suffix}`);
     }
+    void metrics.increment("remindme.trigger", { status: "ok" });
   } catch (err) {
     if (err?.code !== 50007) {
       console.warn("[reminders] failed to deliver reminder:", err);
+      void metrics.increment("remindme.trigger", { status: "error" });
+    } else {
+      void metrics.increment("dm.fail", { feature: "remindme" });
+      void metrics.increment("remindme.trigger", { status: "error" });
     }
   } finally {
     try {
@@ -380,9 +389,14 @@ export function registerReminders(register) {
         await user.send(
           `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.\n${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`
         );
+        void metrics.increment("notifyme.trigger", { status: "ok" });
       } catch (err) {
         if (err?.code !== 50007) {
           console.warn("[notifyme] DM failed:", err);
+          void metrics.increment("notifyme.trigger", { status: "error" });
+        } else {
+          void metrics.increment("dm.fail", { feature: "notifyme" });
+          void metrics.increment("notifyme.trigger", { status: "error" });
         }
       }
     }
@@ -448,7 +462,7 @@ export function registerReminders(register) {
           return;
         }
 
-        const dmOk = await ensureDmAvailable(interaction.user);
+        const dmOk = await ensureDmAvailable(interaction.user, "notifyme");
         if (!dmOk) {
           await interaction.reply({
             content: "❌ I couldn’t DM you. Please enable DMs from this server and try again.",
@@ -495,6 +509,7 @@ export function registerReminders(register) {
         }
 
         state.items.push({ id, userId, phrase, key });
+        void metrics.increment("notifyme.set", { status: "ok" });
         await interaction.reply({
           content: `✅ I’ll notify you when I see: "${phrase}"`,
           flags: MessageFlags.Ephemeral,
@@ -507,6 +522,7 @@ export function registerReminders(register) {
           guildId: interaction.guildId,
           userId,
         });
+        void metrics.increment("notifyme.list", { status: "ok" });
         await interaction.reply({
           content: renderNotifyList(items),
           flags: MessageFlags.Ephemeral,
@@ -529,6 +545,7 @@ export function registerReminders(register) {
         const state = await loadNotifyGuild(interaction.guildId);
         state.items = state.items.filter((item) => !(item.id === id && item.userId === userId));
 
+        void metrics.increment("notifyme.unset", { status: "ok" });
         await interaction.reply({
           content: "✅ Notification removed.",
           flags: MessageFlags.Ephemeral,
@@ -541,6 +558,7 @@ export function registerReminders(register) {
         const state = await loadNotifyGuild(interaction.guildId);
         state.items = state.items.filter((item) => item.userId !== userId);
 
+        void metrics.increment("notifyme.clear", { status: "ok" });
         await interaction.reply({
           content: "✅ Cleared all notifications for this server.",
           flags: MessageFlags.Ephemeral,
@@ -678,7 +696,7 @@ export function registerReminders(register) {
           return;
         }
 
-        const dmOk = await ensureDmAvailable(interaction.user);
+        const dmOk = await ensureDmAvailable(interaction.user, "remindme");
         if (!dmOk) {
           await interaction.reply({
             content: "❌ I couldn’t DM you. Please enable DMs from this server and try again.",
@@ -744,6 +762,7 @@ export function registerReminders(register) {
           createdAtMs: Date.now(),
         });
 
+        void metrics.increment("remindme.set", { status: "ok" });
         await interaction.reply({
           content: "✅ Reminder set.",
           flags: MessageFlags.Ephemeral,
@@ -753,6 +772,7 @@ export function registerReminders(register) {
 
       if (sub === "list") {
         const items = await listReminders({ userId });
+        void metrics.increment("remindme.list", { status: "ok" });
         await interaction.reply({
           content: renderRemindList(items),
           flags: MessageFlags.Ephemeral,
@@ -774,6 +794,7 @@ export function registerReminders(register) {
         await deleteReminder({ id, userId });
         clearReminderTimeout(id);
 
+        void metrics.increment("remindme.unset", { status: "ok" });
         await interaction.reply({
           content: "✅ Reminder removed.",
           flags: MessageFlags.Ephemeral,
@@ -783,6 +804,7 @@ export function registerReminders(register) {
 
       if (sub === "clear") {
         await clearReminders({ userId });
+        void metrics.increment("remindme.clear", { status: "ok" });
         await interaction.reply({
           content: "✅ Cleared all reminders.",
           flags: MessageFlags.Ephemeral,

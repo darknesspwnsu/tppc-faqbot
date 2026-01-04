@@ -20,6 +20,7 @@ const authMocks = vi.hoisted(() => ({
 vi.mock("../../db.js", () => dbMocks);
 vi.mock("../../rpg/findmyid.js", () => findMyIdMocks);
 vi.mock("../../auth.js", () => authMocks);
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
     fetchPage(...args) {
