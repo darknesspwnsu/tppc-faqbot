@@ -1,6 +1,7 @@
 // db.js (ESM)
 import mysql from "mysql2/promise";
 import "dotenv/config";
+import { logger } from "./shared/logger.js";
 
 let pool;
 
@@ -21,6 +22,11 @@ export function getDb() {
   } = process.env;
 
   if (!DB_HOST || !DB_USER || !DB_NAME) {
+    logger.error("db.config.missing", {
+      hasHost: Boolean(DB_HOST),
+      hasUser: Boolean(DB_USER),
+      hasName: Boolean(DB_NAME),
+    });
     throw new Error(
       "Missing DB env vars. Required: DB_HOST, DB_USER, DB_NAME (and usually DB_PASSWORD)."
     );
@@ -48,9 +54,23 @@ export function getDb() {
   return pool;
 }
 
+async function execDb(db, sql, params, label) {
+  try {
+    return await db.execute(sql, params);
+  } catch (err) {
+    logger.error("db.execute.error", {
+      label,
+      error: logger.serializeError(err),
+    });
+    throw err;
+  }
+}
+
 export async function initDb() {
   const db = getDb();
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS user_ids (
       guild_id VARCHAR(32) NOT NULL,
       user_id  VARCHAR(32) NOT NULL,
@@ -58,9 +78,14 @@ export async function initDb() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (guild_id, user_id)
     )
-  `);
+  `,
+    [],
+    "init.user_ids"
+  );
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS user_texts (
       guild_id VARCHAR(32) NOT NULL,
       user_id  VARCHAR(32) NOT NULL,
@@ -69,30 +94,48 @@ export async function initDb() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (guild_id, user_id, kind)
     )
-  `);
-  await db.execute(`
+  `,
+    [],
+    "init.user_texts"
+  );
+  await execDb(
+    db,
+    `
     ALTER TABLE user_texts
     CONVERT TO CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci
-  `);
+  `,
+    [],
+    "init.user_texts_charset"
+  );
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS rpg_leaderboards (
       challenge VARCHAR(32) NOT NULL,
       payload   TEXT NOT NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (challenge)
     )
-  `);
+  `,
+    [],
+    "init.rpg_leaderboards"
+  );
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS rpg_pokedex (
       entry_key VARCHAR(32) NOT NULL,
       payload   TEXT NOT NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (entry_key)
     )
-  `);
+  `,
+    [],
+    "init.rpg_pokedex"
+  );
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS poll_contests (
@@ -117,7 +160,9 @@ export async function initDb() {
     )
   `);
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS giveaways (
       message_id VARCHAR(32) NOT NULL,
       guild_id VARCHAR(32) NOT NULL,
@@ -135,9 +180,14 @@ export async function initDb() {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (message_id)
     )
-  `);
+  `,
+    [],
+    "init.giveaways"
+  );
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS notify_me (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       guild_id VARCHAR(32) NOT NULL,
@@ -148,9 +198,14 @@ export async function initDb() {
       KEY notify_guild_idx (guild_id),
       KEY notify_user_idx (user_id)
     )
-  `);
+  `,
+    [],
+    "init.notify_me"
+  );
 
-  await db.execute(`
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS reminders (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       user_id VARCHAR(32) NOT NULL,
@@ -164,7 +219,10 @@ export async function initDb() {
       KEY reminder_user_idx (user_id),
       KEY reminder_time_idx (remind_at_ms)
     )
-  `);
+  `,
+    [],
+    "init.reminders"
+  );
 }
 
 /**
@@ -172,13 +230,15 @@ export async function initDb() {
  */
 export async function setSavedId({ guildId, userId, savedId }) {
   const db = getDb();
-  await db.execute(
+  await execDb(
+    db,
     `
     INSERT INTO user_ids (guild_id, user_id, saved_id)
     VALUES (?, ?, ?)
     ON DUPLICATE KEY UPDATE saved_id = VALUES(saved_id)
     `,
-    [String(guildId), String(userId), savedId]
+    [String(guildId), String(userId), savedId],
+    "setSavedId"
   );
 }
 
@@ -187,47 +247,57 @@ export async function setSavedId({ guildId, userId, savedId }) {
  */
 export async function getSavedId({ guildId, userId }) {
   const db = getDb();
-  const [rows] = await db.execute(
+  const [rows] = await execDb(
+    db,
     `SELECT saved_id FROM user_ids WHERE guild_id = ? AND user_id = ? LIMIT 1`,
-    [String(guildId), String(userId)]
+    [String(guildId), String(userId)],
+    "getSavedId"
   );
   return rows?.[0]?.saved_id ?? null;
 }
 
 export async function deleteSavedId({ guildId, userId }) {
   const db = getDb();
-  await db.execute(
+  await execDb(
+    db,
     `DELETE FROM user_ids WHERE guild_id = ? AND user_id = ?`,
-    [String(guildId), String(userId)]
+    [String(guildId), String(userId)],
+    "deleteSavedId"
   );
 }
 
 export async function setUserText({ guildId, userId, kind, text }) {
   const db = getDb();
-  await db.execute(
+  await execDb(
+    db,
     `
     INSERT INTO user_texts (guild_id, user_id, kind, text)
     VALUES (?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE text = VALUES(text)
     `,
-    [String(guildId), String(userId), String(kind), String(text)]
+    [String(guildId), String(userId), String(kind), String(text)],
+    "setUserText"
   );
 }
 
 export async function getUserText({ guildId, userId, kind }) {
   const db = getDb();
-  const [rows] = await db.execute(
+  const [rows] = await execDb(
+    db,
     `SELECT text FROM user_texts WHERE guild_id = ? AND user_id = ? AND kind = ? LIMIT 1`,
-    [String(guildId), String(userId), String(kind)]
+    [String(guildId), String(userId), String(kind)],
+    "getUserText"
   );
   return rows?.[0]?.text ?? null;
 }
 
 export async function getUserTextRow({ guildId, userId, kind }) {
   const db = getDb();
-  const [rows] = await db.execute(
+  const [rows] = await execDb(
+    db,
     `SELECT text, updated_at FROM user_texts WHERE guild_id = ? AND user_id = ? AND kind = ? LIMIT 1`,
-    [String(guildId), String(userId), String(kind)]
+    [String(guildId), String(userId), String(kind)],
+    "getUserTextRow"
   );
   const row = rows?.[0];
   if (!row) return null;
@@ -239,8 +309,10 @@ export async function getUserTextRow({ guildId, userId, kind }) {
 
 export async function deleteUserText({ guildId, userId, kind }) {
   const db = getDb();
-  await db.execute(
+  await execDb(
+    db,
     `DELETE FROM user_texts WHERE guild_id = ? AND user_id = ? AND kind = ?`,
-    [String(guildId), String(userId), String(kind)]
+    [String(guildId), String(userId), String(kind)],
+    "deleteUserText"
   );
 }
