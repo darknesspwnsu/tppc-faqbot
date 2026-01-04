@@ -172,7 +172,7 @@ export function registerWhispers(register) {
   register.slash(
     {
       name: "whisper",
-      description: "Manage magic phrases you are listening for (private to you)",
+      description: "Manage magic phrases you are listening for (not for reminders)",
       options: [
         {
           type: 1, // SUB_COMMAND
@@ -297,7 +297,8 @@ export function registerWhispers(register) {
         content:
           `✅ Listening for: "${phrase}"` +
           (prize ? `\nPrize: ${prize}` : "") +
-          `\nUse \`/whisper list\` to see your phrases.`,
+          `\nUse \`/whisper list\` to see your phrases.` +
+          `\nFor reminders/notifications, use \`/notifyme\` or \`/remindme\`.`,
         ephemeral: true,
       });
     }
