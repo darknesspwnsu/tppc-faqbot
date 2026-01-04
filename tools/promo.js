@@ -5,6 +5,7 @@
 import { parse } from "node-html-parser";
 
 import { isAdminOrPrivileged } from "../auth.js";
+import { logger } from "../shared/logger.js";
 import { getDb, getUserTextRow, setUserText } from "../db.js";
 import { RpgClient } from "../rpg/rpg_client.js";
 
@@ -122,6 +123,7 @@ async function listPromoGuilds() {
 
 async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
   if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
+    logger.warn("promo.refresh.skipped", { reason: "missing-credentials" });
     console.warn("[promo] RPG credentials not configured; skipping promo refresh.");
     return;
   }
@@ -131,6 +133,7 @@ async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
     const client = new RpgClient();
     promo = await fetchCurrentPromo(client);
   } catch (err) {
+    logger.warn("promo.fetch.error", { reason, error: logger.serializeError(err) });
     console.warn(`[promo] failed to fetch current promo (${reason}):`, err);
     return;
   }
@@ -150,6 +153,7 @@ async function ensurePromoScheduler() {
       await refreshPromoForGuilds(guildIds, "startup");
     }
   } catch (err) {
+    logger.warn("promo.refresh.error", { reason: "startup", error: logger.serializeError(err) });
     console.warn("[promo] startup promo refresh failed:", err);
   }
 
@@ -163,6 +167,7 @@ async function ensurePromoScheduler() {
       const ids = await listPromoGuilds();
       await refreshPromoForGuilds(ids, "scheduled");
     } catch (err) {
+      logger.warn("promo.refresh.error", { reason: "scheduled", error: logger.serializeError(err) });
       console.warn("[promo] scheduled promo refresh failed:", err);
     }
     const next = nextPromoRefreshEt(new Date());

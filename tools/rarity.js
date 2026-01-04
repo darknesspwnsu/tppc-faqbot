@@ -11,6 +11,7 @@ import https from "node:https";
 import http from "node:http";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
+import { logger } from "../shared/logger.js";
 import {
   getSuggestionsFromIndex,
   normalizeKey,
@@ -463,7 +464,12 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   );
 
   setTimeout(async function tick() {
-    await refreshFn();
+    try {
+      await refreshFn();
+    } catch (err) {
+      logger.error("rarity.refresh.error", { error: logger.serializeError(err) });
+      console.error("[RARITY] Refresh failed:", err);
+    }
 
     const next = nextRunInEastern(DAILY_REFRESH_ET);
     let nextDelay = next.getTime() - Date.now();

@@ -9,6 +9,7 @@ import { RpgClient } from "./rpg_client.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
+import { logger } from "../shared/logger.js";
 
 const CHALLENGES = {
   ssanne: {
@@ -532,6 +533,10 @@ function schedulePokemonCacheRefresh(client) {
         const cacheKey = `pokemon:${lookupKey}`;
         await upsertLeaderboard({ challenge: cacheKey, payload: { rows, pageCount } });
       } catch (err) {
+        logger.error("leaderboard.pokemon.refresh.error", {
+          lookupKey,
+          error: logger.serializeError(err),
+        });
         console.error(`[rpg] pokemon leaderboard refresh failed for ${lookupKey}:`, err);
       }
     }
@@ -586,6 +591,9 @@ function scheduleTrainingChallenge(client) {
     try {
       await fetchAndStore(CHALLENGES.tc, client);
     } catch (err) {
+      logger.error("leaderboard.training.refresh.error", {
+        error: logger.serializeError(err),
+      });
       console.error("[rpg] failed to refresh training challenge:", err);
     }
   }
