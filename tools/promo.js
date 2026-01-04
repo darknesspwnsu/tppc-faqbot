@@ -6,6 +6,7 @@ import { parse } from "node-html-parser";
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { logger } from "../shared/logger.js";
+import { metrics } from "../shared/metrics.js";
 import { getDb, getUserTextRow, setUserText } from "../db.js";
 import { RpgClient } from "../rpg/rpg_client.js";
 
@@ -125,6 +126,7 @@ async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
   if (!process.env.RPG_USERNAME || !process.env.RPG_PASSWORD) {
     logger.warn("promo.refresh.skipped", { reason: "missing-credentials" });
     console.warn("[promo] RPG credentials not configured; skipping promo refresh.");
+    void metrics.increment("promo.refresh", { reason, status: "skipped" });
     return;
   }
   if (!guildIds.length) return;
@@ -135,12 +137,14 @@ async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
   } catch (err) {
     logger.warn("promo.fetch.error", { reason, error: logger.serializeError(err) });
     console.warn(`[promo] failed to fetch current promo (${reason}):`, err);
+    void metrics.increment("promo.refresh", { reason, status: "error" });
     return;
   }
   if (!promo) return;
   for (const guildId of guildIds) {
     await setPromoForGuild(guildId, promo);
   }
+  void metrics.increment("promo.refresh", { reason, status: "ok" });
 }
 
 async function ensurePromoScheduler() {
@@ -155,6 +159,7 @@ async function ensurePromoScheduler() {
   } catch (err) {
     logger.warn("promo.refresh.error", { reason: "startup", error: logger.serializeError(err) });
     console.warn("[promo] startup promo refresh failed:", err);
+    void metrics.increment("promo.refresh", { reason: "startup", status: "error" });
   }
 
   const now = new Date();
@@ -169,6 +174,7 @@ async function ensurePromoScheduler() {
     } catch (err) {
       logger.warn("promo.refresh.error", { reason: "scheduled", error: logger.serializeError(err) });
       console.warn("[promo] scheduled promo refresh failed:", err);
+      void metrics.increment("promo.refresh", { reason: "scheduled", status: "error" });
     }
     const next = nextPromoRefreshEt(new Date());
     let nextDelay = next.getTime() - Date.now();

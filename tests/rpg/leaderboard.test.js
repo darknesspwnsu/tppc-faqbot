@@ -17,6 +17,7 @@ const rpgMocks = vi.hoisted(() => ({
 
 vi.mock("../../rpg/storage.js", () => storageMocks);
 vi.mock("../../rpg/pokedex.js", () => pokedexMocks);
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
     fetchPage(...args) {

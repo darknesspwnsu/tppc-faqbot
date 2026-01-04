@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn() } }));
 import { __testables } from "../../rpg/leaderboard.js";
 import { __testables as pokedexTestables } from "../../rpg/pokedex.js";
 

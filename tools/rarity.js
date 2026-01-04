@@ -12,6 +12,7 @@ import http from "node:http";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { logger } from "../shared/logger.js";
+import { metrics } from "../shared/metrics.js";
 import {
   getSuggestionsFromIndex,
   normalizeKey,
@@ -47,11 +48,12 @@ const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
 
 /* --------------------------------- fetch --------------------------------- */
 
-function fetchText(url) {
+function fetchText(url, source = "rarity") {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith("https://") ? https : http;
     const req = lib.get(url, (res) => {
       if (res.statusCode && res.statusCode >= 400) {
+        void metrics.increment("external.fetch", { source, status: "error" });
         reject(new Error(`HTTP ${res.statusCode} for ${url}`));
         res.resume();
         return;
@@ -60,10 +62,16 @@ function fetchText(url) {
       let data = "";
       res.setEncoding("utf8");
       res.on("data", (c) => (data += c));
-      res.on("end", () => resolve(data));
+      res.on("end", () => {
+        void metrics.increment("external.fetch", { source, status: "ok" });
+        resolve(data);
+      });
     });
 
-    req.on("error", reject);
+    req.on("error", (err) => {
+      void metrics.increment("external.fetch", { source, status: "error" });
+      reject(err);
+    });
   });
 }
 
@@ -325,8 +333,8 @@ function cmpLine(a, b) {
 
 /* --------------------------------- loading -------------------------------- */
 
-async function loadIndexFromUrl(url) {
-  const raw = await fetchText(url);
+async function loadIndexFromUrl(url, source = "rarity") {
+  const raw = await fetchText(url, source);
   const json = JSON.parse(raw);
   return buildIndexGeneric(json);
 }
@@ -346,8 +354,10 @@ async function refresh() {
     rarity = idx.lower;
     rarityNorm = idx.norm;
     console.log(`[RARITY] Loaded ${Object.keys(rarity).length} entries`);
+    void metrics.increment("rarity.refresh", { kind: "main", status: "ok" });
   } catch (e) {
     console.warn("[RARITY] Refresh failed:", e?.message ?? e);
+    void metrics.increment("rarity.refresh", { kind: "main", status: "error" });
   }
 }
 
@@ -355,13 +365,15 @@ async function refresh() {
 
 async function refreshL4() {
   try {
-    const idx = L4_URL ? await loadIndexFromUrl(L4_URL) : loadIndexFromFile(L4_FILE);
+    const idx = L4_URL ? await loadIndexFromUrl(L4_URL, "rarity4") : loadIndexFromFile(L4_FILE);
     meta4 = idx.meta;
     rarity4 = idx.lower;
     rarity4Norm = idx.norm;
     console.log(`[RARITY4] Loaded ${Object.keys(rarity4).length} entries`);
+    void metrics.increment("rarity.refresh", { kind: "l4", status: "ok" });
   } catch (e) {
     console.warn("[RARITY4] Refresh failed:", e?.message ?? e);
+    void metrics.increment("rarity.refresh", { kind: "l4", status: "error" });
   }
 }
 
@@ -466,9 +478,11 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   setTimeout(async function tick() {
     try {
       await refreshFn();
+      void metrics.increment("scheduler.run", { name: label, status: "ok" });
     } catch (err) {
       logger.error("rarity.refresh.error", { error: logger.serializeError(err) });
       console.error("[RARITY] Refresh failed:", err);
+      void metrics.increment("scheduler.run", { name: label, status: "error" });
     }
 
     const next = nextRunInEastern(DAILY_REFRESH_ET);
@@ -567,7 +581,7 @@ async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
 
   let payload;
   try {
-    payload = await fetchText(url);
+    payload = await fetchText(url, "rarity_history");
   } catch (e) {
     await message.reply(`Couldn’t fetch rarity history for \`${hit.name}\`.`);
     return;

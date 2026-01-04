@@ -10,6 +10,7 @@ import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { logger } from "../shared/logger.js";
+import { metrics } from "../shared/metrics.js";
 
 const CHALLENGES = {
   ssanne: {
@@ -532,12 +533,14 @@ function schedulePokemonCacheRefresh(client) {
         pokemonCache.set(lookupKey, { rows, pageCount, updatedAtMs: Date.now() });
         const cacheKey = `pokemon:${lookupKey}`;
         await upsertLeaderboard({ challenge: cacheKey, payload: { rows, pageCount } });
+        void metrics.increment("leaderboard.refresh", { kind: "pokemon", status: "ok" });
       } catch (err) {
         logger.error("leaderboard.pokemon.refresh.error", {
           lookupKey,
           error: logger.serializeError(err),
         });
         console.error(`[rpg] pokemon leaderboard refresh failed for ${lookupKey}:`, err);
+        void metrics.increment("leaderboard.refresh", { kind: "pokemon", status: "error" });
       }
     }
   }
@@ -590,11 +593,13 @@ function scheduleTrainingChallenge(client) {
     lastRunDate = dateKey;
     try {
       await fetchAndStore(CHALLENGES.tc, client);
+      void metrics.increment("leaderboard.refresh", { kind: "training", status: "ok" });
     } catch (err) {
       logger.error("leaderboard.training.refresh.error", {
         error: logger.serializeError(err),
       });
       console.error("[rpg] failed to refresh training challenge:", err);
+      void metrics.increment("leaderboard.refresh", { kind: "training", status: "error" });
     }
   }
 
