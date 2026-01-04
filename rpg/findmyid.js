@@ -4,7 +4,7 @@
 
 import { parse } from "node-html-parser";
 
-import { RpgClient } from "./rpg_client.js";
+import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials } from "./credentials.js";
 
 const FIND_MY_ID_URL = "https://www.tppcrpg.net/view_profile.php";
@@ -48,11 +48,7 @@ async function fetchFindMyIdMatches(client, name) {
 }
 
 export function registerFindMyId(register) {
-  let client = null;
-  const getClient = () => {
-    if (!client) client = new RpgClient();
-    return client;
-  };
+  const getClient = createRpgClientFactory();
 
   register(
     "!findmyid",

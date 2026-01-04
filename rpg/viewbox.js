@@ -5,8 +5,8 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { parse } from "node-html-parser";
 
-import { RpgClient } from "./rpg_client.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
+import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials } from "./credentials.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { sendDmBatch } from "../shared/dm.js";
@@ -456,11 +456,7 @@ async function sendViewboxResults({
 }
 
 export function registerViewbox(register) {
-  let client = null;
-  const getClient = () => {
-    if (!client) client = new RpgClient();
-    return client;
-  };
+  const getClient = createRpgClientFactory();
 
   register(
     "!viewbox",

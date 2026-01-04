@@ -13,7 +13,7 @@ import {
   queryVariantPrefix,
 } from "../shared/pokename_utils.js";
 import { parse } from "node-html-parser";
-import { RpgClient } from "./rpg_client.js";
+import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials } from "./credentials.js";
 import { getPokedexEntry, upsertPokedexEntry } from "./storage.js";
 
@@ -549,11 +549,7 @@ export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
   const statsCmd = "!stats";
   const eggCmd = "!eggtime";
-  let client = null;
-  const getClient = () => {
-    if (!client) client = new RpgClient();
-    return client;
-  };
+  const getClient = createRpgClientFactory();
 
   register(
     primaryCmd,

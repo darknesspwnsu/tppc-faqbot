@@ -5,8 +5,8 @@
 import { parse } from "node-html-parser";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
-import { RpgClient } from "./rpg_client.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
+import { createRpgClientFactory } from "./client_factory.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { logger } from "../shared/logger.js";
@@ -612,11 +612,7 @@ export function registerLeaderboard(register) {
   const primaryCmd = "!leaderboard";
   const aliasCmds = ["!ld", "!lb"];
   const hasCreds = hasRpgCredentials();
-  let client = null;
-  const getClient = () => {
-    if (!client) client = new RpgClient();
-    return client;
-  };
+  const getClient = createRpgClientFactory();
 
   if (hasCreds) {
     const initClient = getClient();
