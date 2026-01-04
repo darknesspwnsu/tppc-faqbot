@@ -676,7 +676,7 @@ export function registerExplodingElectrode(register) {
       await message.channel.send("🧯 Exploding Electrode game ended early.");
     },
     "!endelectrode — force-end Exploding Electrode (admin)",
-    { admin: true, aliases: ["!stopelectrode"] }
+    { admin: true, hideFromHelp: true, aliases: ["!stopelectrode"] }
   );
 }
 

@@ -804,7 +804,7 @@ export function registerSafariZone(register) {
       endGame(guildId);
     },
     "!endsafari — force end Safari Zone (admin)",
-    { admin: true }
+    { admin: true, hideFromHelp: true }
   );
 }
 

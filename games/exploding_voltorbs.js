@@ -625,6 +625,10 @@ export function registerExplodingVoltorbs(register) {
       endVoltorbGame(message, { reason: "ended early" });
     },
     "!endvoltorb — force-end Exploding Voltorbs (admin)",
-    { admin: true, aliases: ["!stopvoltorb", "!cancelvoltorb", "!endev", "!stopev", "!cancelev"] }
+    {
+      admin: true,
+      hideFromHelp: true,
+      aliases: ["!stopvoltorb", "!cancelvoltorb", "!endev", "!stopev", "!cancelev"],
+    }
   );
 }
