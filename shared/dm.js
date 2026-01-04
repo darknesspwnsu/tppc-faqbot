@@ -7,7 +7,7 @@ import { metrics } from "./metrics.js";
 
 function normalizePayload(payload) {
   if (payload == null) return { content: "" };
-  if (typeof payload === "string") return { content: payload };
+  if (typeof payload === "string") return payload;
   return payload;
 }
 

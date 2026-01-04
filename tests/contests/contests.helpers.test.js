@@ -52,7 +52,7 @@ describe("contests helpers misc utilities", () => {
 
     await dmChunked(user, "Header", ["a"], 6);
     expect(dmSend).toHaveBeenCalledTimes(2);
-    expect(dmSend).toHaveBeenNthCalledWith(1, { content: "Header" });
-    expect(dmSend).toHaveBeenNthCalledWith(2, { content: "a" });
+    expect(dmSend).toHaveBeenNthCalledWith(1, "Header");
+    expect(dmSend).toHaveBeenNthCalledWith(2, "a");
   });
 });

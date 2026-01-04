@@ -7,6 +7,7 @@ import { getDb } from "../db.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { includesWholePhrase, normalizeForMatch } from "../contests/helpers.js";
 import { metrics } from "../shared/metrics.js";
+import { sendDm } from "../shared/dm.js";
 
 const MAX_NOTIFY_PER_USER = 10;
 const MAX_REMIND_PER_USER = 10;
@@ -56,16 +57,14 @@ function parseDurationExtended(raw) {
 }
 
 async function ensureDmAvailable(user, feature) {
-  try {
-    await user.send("✅ I can DM you for reminders/notifications.");
-    return true;
-  } catch (err) {
-    if (err?.code === 50007) {
-      void metrics.increment("dm.fail", { feature: feature || "reminders" });
-      return false;
-    }
-    throw err;
-  }
+  const res = await sendDm({
+    user,
+    payload: "✅ I can DM you for reminders/notifications.",
+    feature: feature || "reminders",
+  });
+  if (res.ok) return true;
+  if (res.code === 50007) return false;
+  throw res.error;
 }
 
 function getNotifyState(guildId) {
@@ -295,20 +294,27 @@ async function fireReminder(reminder) {
     });
     const ageLabel = formatAge(reminder.createdAtMs);
     const suffix = ageLabel ? ` (set ${ageLabel})` : "";
+    let res = { ok: true };
     if (reminder.messageId && link) {
-      await user.send(`⏰ **Reminder**: ${link}${suffix}`);
+      res = await sendDm({
+        user,
+        payload: `⏰ **Reminder**: ${link}${suffix}`,
+        feature: "remindme",
+      });
     } else if (reminder.phrase) {
-      await user.send(`⏰ **Reminder**: ${reminder.phrase}${suffix}`);
+      res = await sendDm({
+        user,
+        payload: `⏰ **Reminder**: ${reminder.phrase}${suffix}`,
+        feature: "remindme",
+      });
     }
-    void metrics.increment("remindme.trigger", { status: "ok" });
+    void metrics.increment("remindme.trigger", { status: res.ok ? "ok" : "error" });
+    if (!res.ok && res.code !== 50007) {
+      console.warn("[reminders] failed to deliver reminder:", res.error);
+    }
   } catch (err) {
-    if (err?.code !== 50007) {
-      console.warn("[reminders] failed to deliver reminder:", err);
-      void metrics.increment("remindme.trigger", { status: "error" });
-    } else {
-      void metrics.increment("dm.fail", { feature: "remindme" });
-      void metrics.increment("remindme.trigger", { status: "error" });
-    }
+    void metrics.increment("remindme.trigger", { status: "error" });
+    console.warn("[reminders] failed to deliver reminder:", err);
   } finally {
     try {
       await deleteReminder({ id: reminder.id, userId: reminder.userId });
@@ -386,18 +392,19 @@ export function registerReminders(register) {
           channelId: message.channelId,
           messageId: message.id,
         });
-        await user.send(
-          `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.\n${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`
-        );
-        void metrics.increment("notifyme.trigger", { status: "ok" });
-      } catch (err) {
-        if (err?.code !== 50007) {
-          console.warn("[notifyme] DM failed:", err);
-          void metrics.increment("notifyme.trigger", { status: "error" });
-        } else {
-          void metrics.increment("dm.fail", { feature: "notifyme" });
-          void metrics.increment("notifyme.trigger", { status: "error" });
+        const res = await sendDm({
+          user,
+          payload:
+            `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.\n${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`,
+          feature: "notifyme",
+        });
+        void metrics.increment("notifyme.trigger", { status: res.ok ? "ok" : "error" });
+        if (!res.ok && res.code !== 50007) {
+          console.warn("[notifyme] DM failed:", res.error);
         }
+      } catch (err) {
+        void metrics.increment("notifyme.trigger", { status: "error" });
+        console.warn("[notifyme] DM failed:", err);
       }
     }
   });

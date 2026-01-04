@@ -30,7 +30,7 @@ import {
 
 import { ForumClient } from "./forum_client.js";
 import { getSavedId, getUserText, setUserText, deleteUserText } from "../db.js";
-import { metrics } from "../shared/metrics.js";
+import { sendDm } from "../shared/dm.js";
 
 const K_VERIFIED = "fuser"; // <= 8 chars (db schema)
 const K_PENDING = "fpending";
@@ -275,12 +275,8 @@ async function dmIdSuggestion({ guildId, member, forumUsername, baseUrl }) {
       "If you add one in the forums, you can link it with `!id <id>` in the #botspam channel on the TPPC server.";
   }
 
-  try {
-    await member.user.send({ content });
-    return true;
-  } catch {
-    return false;
-  }
+  const res = await sendDm({ user: member.user, payload: { content }, feature: "verifyme" });
+  return res.ok;
 }
 
 // ---- Staff review message + buttons ----
@@ -730,9 +726,6 @@ export function registerVerifyMe(register) {
     }
 
     const dmNote = dmOk ? "" : " ⚠️ I couldn't DM the user (their DMs might be closed).";
-    if (!dmOk) {
-      void metrics.increment("dm.fail", { feature: "verifyme" });
-    }
     await interaction.reply({ ephemeral: true, content: `Done.${dmNote}` });
     await finalizeReviewMessage(interaction, outcomeLine);
   });

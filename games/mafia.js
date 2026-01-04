@@ -15,7 +15,7 @@ import {
   requireCanManage,
   parseMentionIdsInOrder,
 } from "./framework.js";
-import { metrics } from "../shared/metrics.js";
+import { sendDm } from "../shared/dm.js";
 
 const MIN_PLAYERS = 5;
 const MAX_PLAYERS = 15;
@@ -152,14 +152,8 @@ function getStateByPlayer(userId) {
 }
 
 async function dm(user, content) {
-  try {
-    const channel = await user.createDM();
-    await channel.send(content);
-    return true;
-  } catch {
-    void metrics.increment("dm.fail", { feature: "mafia" });
-    return false;
-  }
+  const res = await sendDm({ user, payload: content, feature: "mafia" });
+  return res.ok;
 }
 
 async function assignRoles(state, players) {

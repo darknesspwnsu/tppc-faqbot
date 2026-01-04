@@ -8,7 +8,7 @@ import { parse } from "node-html-parser";
 import { RpgClient } from "./rpg_client.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
 import { isAdminOrPrivileged } from "../auth.js";
-import { metrics } from "../shared/metrics.js";
+import { sendDmBatch } from "../shared/dm.js";
 import { getSavedId, getUserText } from "../db.js";
 
 const VIEWBOX_URL = "https://www.tppcrpg.net/profile.php";
@@ -420,28 +420,34 @@ async function sendViewboxResults({
   const messages = combineBlocks(blocks, MAX_MESSAGE_LEN);
   const header = buildViewboxHeader({ id, targetUserId, trainerName, label });
   try {
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      if (i === 0) {
-        const withHeader = `${header}\n\n${msg}`;
-        if (withHeader.length <= MAX_MESSAGE_LEN) {
-          await interaction.user.send(withHeader);
-        } else {
-          await interaction.user.send(header);
-          await interaction.user.send(msg);
-        }
-        continue;
+    const out = [];
+    if (messages.length) {
+      const first = messages[0];
+      const withHeader = `${header}\n\n${first}`;
+      if (withHeader.length <= MAX_MESSAGE_LEN) {
+        out.push(withHeader);
+      } else {
+        out.push(header);
+        out.push(first);
       }
-      await interaction.user.send(msg);
+      for (let i = 1; i < messages.length; i++) {
+        out.push(messages[i]);
+      }
+    } else {
+      out.push(header);
+    }
+
+    const res = await sendDmBatch({ user: interaction.user, messages: out, feature: "viewbox" });
+    if (!res.ok) {
+      if (res.code === 50007) {
+        await replyEphemeral(interaction, {
+          content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
+        });
+        return;
+      }
+      throw res.error;
     }
   } catch (err) {
-    if (err?.code === 50007) {
-      void metrics.increment("dm.fail", { feature: "viewbox" });
-      await replyEphemeral(interaction, {
-        content: "❌ I couldn't DM you. Please enable DMs from server members and try again.",
-      });
-      return;
-    }
     throw err;
   }
 
