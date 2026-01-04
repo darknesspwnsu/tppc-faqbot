@@ -53,6 +53,7 @@ describe("db.js", () => {
         password: "pw",
         database: "tppc",
         connectionLimit: 5,
+        charset: "utf8mb4",
       })
     );
   });
@@ -72,6 +73,7 @@ describe("db.js", () => {
       expect.arrayContaining([
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_ids/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_texts/),
+        expect.stringMatching(/ALTER TABLE user_texts/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS rpg_pokedex/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS notify_me/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS reminders/),

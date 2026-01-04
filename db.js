@@ -39,6 +39,7 @@ export function getDb() {
     user: DB_USER,
     password: DB_PASSWORD ?? "",
     database: DB_NAME,
+    charset: "utf8mb4",
     waitForConnections: true,
     connectionLimit: DB_CONNECTION_LIMIT ? Number(DB_CONNECTION_LIMIT) : 10,
     queueLimit: 0
@@ -68,6 +69,11 @@ export async function initDb() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (guild_id, user_id, kind)
     )
+  `);
+  await db.execute(`
+    ALTER TABLE user_texts
+    CONVERT TO CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci
   `);
 
   await db.execute(`
