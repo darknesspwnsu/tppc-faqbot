@@ -185,10 +185,11 @@ async function resetSpectreonCounts({ guildId }) {
 }
 
 export function registerMessageCounts(register) {
-  register.listener(async ({ message }) => {
+  register.listener(async ({ message, isCommand }) => {
     if (!message?.guildId) return;
     if (message.author?.bot) return;
     if (message.channel && message.channel.viewable === false) return;
+    if (isCommand) return;
 
     const tracked = trackedChannelsForGuild(message.guildId);
     if (!tracked.size || !tracked.has(String(message.channelId))) return;

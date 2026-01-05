@@ -85,6 +85,20 @@ describe("tools/message_counts", () => {
     );
   });
 
+  it("skips counting when the message is a command", async () => {
+    const execute = vi.fn(async () => [[]]);
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerMessageCounts(register);
+    const listener = register.calls.listener[0];
+
+    const tracked = makeMessage({ channelId: "c1", content: "!count" });
+    await listener({ message: tracked, isCommand: true });
+
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it("returns counts for self and tagged users", async () => {
     const execute = vi.fn(async (sql, params) => {
       if (sql.includes("SELECT count FROM message_counts")) {

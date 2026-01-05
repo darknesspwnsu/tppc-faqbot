@@ -95,11 +95,11 @@ export function buildCommandRegistry({ client } = {}) {
     return registerOnMessage(handler);
   }
 
-  async function dispatchMessageHooks(message) {
+  async function dispatchMessageHooks(message, extra = {}) {
     if (!messageHooks.length) return;
     for (const h of messageHooks) {
       try {
-        await h({ message });
+        await h({ message, ...extra });
       } catch (err) {
         logger.error("command.message_hook.error", {
           error: logger.serializeError(err),
@@ -530,17 +530,21 @@ export function buildCommandRegistry({ client } = {}) {
     const content = (message.content ?? "").trim();
     const isBang = content.startsWith("!");
     const isQ = content.startsWith("?");
+    let cmd = null;
+    let rest = "";
+    let entry = null;
+
+    if (isBang || isQ) {
+      const spaceIdx = content.indexOf(" ");
+      cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
+      rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);
+      entry = bang.get(cmd);
+    }
 
     // Passive listeners run for ALL messages (not just !/? commands)
-    await dispatchMessageHooks(message);
+    await dispatchMessageHooks(message, { isCommand: Boolean(entry?.handler), commandName: entry?.handler ? cmd : null });
 
     if (!isBang && !isQ) return;
-
-    const spaceIdx = content.indexOf(" ");
-    const cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
-    const rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);
-
-    const entry = bang.get(cmd);
     if (!entry?.handler) return;
 
     const startedAt = Date.now();
