@@ -503,13 +503,13 @@ export function buildCommandRegistry({ client } = {}) {
   registerTrades(withCategory(register, "Trading"));
 
   registerTools(withCategory(register, "Tools"));
-  // Info registry must call helpModel(guildId) per-request (see info/helpbox.js).
-  registerInfo(withCategory(register, "Info"), { helpModel });
   registerVerification(withCategory(register, "Info"));
   registerRpg(withCategory(register, "Rpg"));
   registerContests(withCategory(register, "Contests"));
   registerGames(withCategory(register, "Games"));
   registerToybox(withCategory(register, "Fun"));
+  // Register helpbox last so static category choices include all modules.
+  registerInfo(withCategory(register, "Info"), { helpModel });
 
   /* ------------------------------- dispatchers ------------------------------ */
 
