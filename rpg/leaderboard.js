@@ -611,7 +611,7 @@ function scheduleTrainingChallenge(client) {
 
 export function registerLeaderboard(register) {
   const primaryCmd = "!leaderboard";
-  const aliasCmds = ["!ld", "!lb"];
+  const aliasCmds = ["!ld", "!lb", "!leader"];
   const getClient = createRpgClientFactory();
 
   register(
