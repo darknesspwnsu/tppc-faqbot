@@ -4,6 +4,7 @@ async function loadRpg({ throwsAt = null } = {}) {
   vi.resetModules();
 
   const registerLeaderboard = vi.fn();
+  const registerLeaderboardScheduler = vi.fn();
   const registerPowerPlant = vi.fn();
   const registerFindMyId = vi.fn();
   const registerViewbox = vi.fn();
@@ -13,14 +14,22 @@ async function loadRpg({ throwsAt = null } = {}) {
     throw new Error("boom");
   });
 
-  vi.doMock("../../rpg/leaderboard.js", () => ({ registerLeaderboard }));
+  vi.doMock("../../rpg/leaderboard.js", () => ({ registerLeaderboard, registerLeaderboardScheduler }));
   vi.doMock("../../rpg/powerplant.js", () => ({ registerPowerPlant }));
   vi.doMock("../../rpg/findmyid.js", () => ({ registerFindMyId }));
   vi.doMock("../../rpg/viewbox.js", () => ({ registerViewbox }));
   vi.doMock("../../rpg/pokedex.js", () => ({ registerPokedex }));
 
   const mod = await import("../../rpg/rpg.js");
-  return { ...mod, registerLeaderboard, registerPowerPlant, registerFindMyId, registerViewbox, registerPokedex };
+  return {
+    ...mod,
+    registerLeaderboard,
+    registerLeaderboardScheduler,
+    registerPowerPlant,
+    registerFindMyId,
+    registerViewbox,
+    registerPokedex,
+  };
 }
 
 afterEach(() => {

@@ -11,6 +11,7 @@ import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
+import { registerScheduler } from "../shared/scheduler_registry.js";
 import { hasRpgCredentials, requireRpgCredentials } from "./credentials.js";
 
 const CHALLENGES = {
@@ -611,14 +612,7 @@ function scheduleTrainingChallenge(client) {
 export function registerLeaderboard(register) {
   const primaryCmd = "!leaderboard";
   const aliasCmds = ["!ld", "!lb"];
-  const hasCreds = hasRpgCredentials();
   const getClient = createRpgClientFactory();
-
-  if (hasCreds) {
-    const initClient = getClient();
-    scheduleTrainingChallenge(initClient);
-    schedulePokemonCacheRefresh(initClient);
-  }
 
   register(
     primaryCmd,
@@ -796,6 +790,15 @@ export function registerLeaderboard(register) {
     `${primaryCmd} <challenge> — show cached TPPC RPG leaderboard`,
     { aliases: aliasCmds }
   );
+}
+
+export function registerLeaderboardScheduler() {
+  registerScheduler("leaderboard_refresh", () => {
+    if (!hasRpgCredentials()) return;
+    const initClient = createRpgClientFactory()();
+    scheduleTrainingChallenge(initClient);
+    schedulePokemonCacheRefresh(initClient);
+  });
 }
 
 export async function handleLeaderboardInteraction(interaction) {

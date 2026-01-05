@@ -2,7 +2,7 @@
 //
 // Central registry for RPG modules.
 
-import { registerLeaderboard } from "./leaderboard.js";
+import { registerLeaderboard, registerLeaderboardScheduler } from "./leaderboard.js";
 import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
 import { registerViewbox } from "./viewbox.js";
@@ -11,7 +11,7 @@ import { registerSchedulerForRadioTower } from "./radio_tower.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const RPG_MODULES = [
-  { id: "leaderboard", register: registerLeaderboard },
+  { id: "leaderboard", register: registerLeaderboard, registerScheduler: registerLeaderboardScheduler },
   { id: "powerplant", register: registerPowerPlant },
   { id: "findmyid", register: registerFindMyId },
   { id: "viewbox", register: registerViewbox },
