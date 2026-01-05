@@ -8,6 +8,7 @@ import { isAdminOrPrivileged } from "../auth.js";
 import { includesWholePhrase, normalizeForMatch } from "../contests/helpers.js";
 import { metrics } from "../shared/metrics.js";
 import { sendDm } from "../shared/dm.js";
+import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 
 const MAX_NOTIFY_PER_USER = 10;
 const MAX_REMIND_PER_USER = 10;
@@ -240,7 +241,7 @@ async function boot(client) {
 
 function clearReminderTimeout(id) {
   const entry = remindersById.get(id);
-  if (entry?.timeout) clearTimeout(entry.timeout);
+  if (entry?.timeout) clearTimer(entry.timeout, `reminder:${id}`);
   remindersById.delete(id);
 }
 
@@ -255,14 +256,18 @@ function scheduleReminder(reminder) {
   }
 
   const wait = Math.min(delay, MAX_TIMEOUT_MS);
-  const timeout = setTimeout(() => {
+  const timeout = startTimeout({
+    label: `reminder:${reminder.id}`,
+    ms: wait,
+    fn: () => {
     const remaining = reminder.remindAtMs - Date.now();
     if (remaining > 0) {
       scheduleReminder(reminder);
       return;
     }
     void fireReminder(reminder);
-  }, wait);
+    },
+  });
 
   remindersById.set(reminder.id, { reminder, timeout });
 }
@@ -854,7 +859,7 @@ export const __testables = {
   },
   resetState: () => {
     for (const entry of remindersById.values()) {
-      if (entry?.timeout) clearTimeout(entry.timeout);
+      clearTimer(entry?.timeout, "reminders.reset");
     }
     remindersById.clear();
     notifyByGuild.clear();
