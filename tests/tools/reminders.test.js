@@ -66,7 +66,7 @@ describe("tools/reminders", () => {
 
   it("sets a notifyme phrase", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) return [[]];
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) return [[]];
       if (sql.includes("INSERT INTO notify_me")) return [{ insertId: 10 }];
       return [[]];
     });
@@ -84,7 +84,7 @@ describe("tools/reminders", () => {
     );
     expect(execute).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO notify_me"),
-      ["g1", "u1", "hello"]
+      ["g1", "u1", "hello", null]
     );
   });
 
@@ -108,7 +108,7 @@ describe("tools/reminders", () => {
 
   it("lists notifyme phrases", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, phrase, created_at FROM notify_me")) {
+      if (sql.includes("SELECT id, phrase, target_user_id, created_at FROM notify_me")) {
         return [[{ id: 1, phrase: "alpha", created_at: "2025-01-01T00:00:00Z" }]];
       }
       return [[]];
@@ -129,7 +129,7 @@ describe("tools/reminders", () => {
 
   it("rejects notifyme duplicates", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[{ id: 5, user_id: "u1", phrase: "Hello" }]];
       }
       return [[]];
@@ -151,7 +151,7 @@ describe("tools/reminders", () => {
 
   it("enforces notifyme limit", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[
           { id: 1, user_id: "u1", phrase: "a" },
           { id: 2, user_id: "u1", phrase: "b" },
@@ -180,7 +180,7 @@ describe("tools/reminders", () => {
 
   it("allows notifyme over limit for admins", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[
           { id: 1, user_id: "u1", phrase: "a" },
           { id: 2, user_id: "u1", phrase: "b" },
@@ -207,13 +207,13 @@ describe("tools/reminders", () => {
     );
     expect(execute).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO notify_me"),
-      ["g1", "u1", "hello"]
+      ["g1", "u1", "hello", null]
     );
   });
 
   it("responds with notifyme autocomplete options", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[{ id: 2, user_id: "u1", phrase: "beta" }]];
       }
       return [[]];
@@ -232,7 +232,7 @@ describe("tools/reminders", () => {
 
   it("notifies on matching phrases", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[{ id: 3, user_id: "u1", phrase: "magic" }]];
       }
       return [[]];
@@ -255,6 +255,33 @@ describe("tools/reminders", () => {
 
     await listener({ message });
     expect(send).toHaveBeenCalledWith(expect.stringContaining("/notifyme unset"));
+  });
+
+  it("allows notifyme for bot messages when target user matches", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
+        return [[{ id: 4, user_id: "u1", phrase: "rocket", target_user_id: "b1" }]];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const listener = register.calls.listener[0];
+
+    const send = vi.fn(async () => {});
+    const message = {
+      guildId: "g1",
+      channelId: "c1",
+      id: "m2",
+      content: "team rocket takeover",
+      author: { id: "b1", bot: true },
+      client: { users: { fetch: vi.fn(async () => ({ send })) } },
+    };
+
+    await listener({ message });
+    expect(send).toHaveBeenCalled();
   });
 
   it("rejects remindme set with invalid input", async () => {
@@ -453,7 +480,7 @@ describe("tools/reminders", () => {
   it("clears notifyme entries for the server", async () => {
     const execute = vi.fn(async (sql) => {
       if (sql.includes("DELETE FROM notify_me WHERE guild_id")) return [[]];
-      if (sql.includes("SELECT id, user_id, phrase FROM notify_me")) {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
         return [[{ id: 2, user_id: "u1", phrase: "beta" }]];
       }
       return [[]];

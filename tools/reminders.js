@@ -81,24 +81,25 @@ async function loadNotifyGuild(guildId) {
   if (state.loaded) return state;
   const db = getDb();
   const [rows] = await db.execute(
-    `SELECT id, user_id, phrase FROM notify_me WHERE guild_id = ?`,
+    `SELECT id, user_id, phrase, target_user_id FROM notify_me WHERE guild_id = ?`,
     [String(guildId)]
   );
   state.items = (rows || []).map((row) => ({
     id: Number(row.id),
     userId: String(row.user_id),
     phrase: String(row.phrase || ""),
+    targetUserId: row.target_user_id ? String(row.target_user_id) : null,
     key: phraseKey(row.phrase),
   }));
   state.loaded = true;
   return state;
 }
 
-async function addNotifyEntry({ guildId, userId, phrase }) {
+async function addNotifyEntry({ guildId, userId, phrase, targetUserId }) {
   const db = getDb();
   const [result] = await db.execute(
-    `INSERT INTO notify_me (guild_id, user_id, phrase) VALUES (?, ?, ?)`,
-    [String(guildId), String(userId), String(phrase)]
+    `INSERT INTO notify_me (guild_id, user_id, phrase, target_user_id) VALUES (?, ?, ?, ?)`,
+    [String(guildId), String(userId), String(phrase), targetUserId ? String(targetUserId) : null]
   );
   const id = Number(result?.insertId);
   return Number.isFinite(id) ? id : null;
@@ -123,12 +124,13 @@ async function clearNotifyEntries({ guildId, userId }) {
 async function listNotifyEntries({ guildId, userId }) {
   const db = getDb();
   const [rows] = await db.execute(
-    `SELECT id, phrase, created_at FROM notify_me WHERE guild_id = ? AND user_id = ? ORDER BY id ASC`,
+    `SELECT id, phrase, target_user_id, created_at FROM notify_me WHERE guild_id = ? AND user_id = ? ORDER BY id ASC`,
     [String(guildId), String(userId)]
   );
   return (rows || []).map((row) => ({
     id: Number(row.id),
     phrase: String(row.phrase || ""),
+    targetUserId: row.target_user_id ? String(row.target_user_id) : null,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : null,
   }));
 }
@@ -352,7 +354,10 @@ function buildReminderChoices(items, focused) {
 
 function renderNotifyList(items) {
   if (!items.length) return "You have no active notifications.";
-  const lines = items.map((x, idx) => `${idx + 1}. ${x.phrase}`);
+  const lines = items.map((x, idx) => {
+    const suffix = x.targetUserId ? ` (from ${mention(x.targetUserId)})` : "";
+    return `${idx + 1}. ${x.phrase}${suffix}`;
+  });
   return `Your notifications:\n${lines.join("\n")}`;
 }
 
@@ -371,12 +376,12 @@ export function registerReminders(register) {
    * /notifyme
    * - Guild-scoped phrase watcher: triggers only for messages in the same server.
    * - Case-insensitive whole-phrase matching.
+   * - Optional target user to match only messages from that user (including bots).
    * - Limit: 10 notifications per user across all servers (admin/privileged exempt).
    * - /notifyme clear removes all notifications for the current server only.
    */
   register.listener(async ({ message }) => {
     if (!message?.guildId) return;
-    if (message.author?.bot) return;
     await boot(message.client);
 
     const state = await loadNotifyGuild(message.guildId);
@@ -385,7 +390,13 @@ export function registerReminders(register) {
     const normalized = normalizeForMatch(message.content || "");
     if (!normalized || normalized === " ") return;
 
-    const matches = state.items.filter((item) => includesWholePhrase(normalized, item.phrase));
+    const authorId = message.author?.id || "";
+    const isBot = !!message.author?.bot;
+    const matches = state.items.filter((item) => {
+      if (item.targetUserId && item.targetUserId !== authorId) return false;
+      if (isBot && !item.targetUserId) return false;
+      return includesWholePhrase(normalized, item.phrase);
+    });
     if (!matches.length) return;
 
     for (const item of matches) {
@@ -430,6 +441,12 @@ export function registerReminders(register) {
               description: "Phrase to watch for",
               required: true,
             },
+            {
+              type: 6,
+              name: "from_user",
+              description: "Only notify when this user says the phrase",
+              required: false,
+            },
           ],
         },
         {
@@ -466,6 +483,8 @@ export function registerReminders(register) {
 
       if (sub === "set") {
         const phrase = norm(interaction.options?.getString?.("phrase"));
+        const targetUser = interaction.options?.getUser?.("from_user") || null;
+        const targetUserId = targetUser?.id || null;
         if (!phrase) {
           await interaction.reply({
             content: "Please provide a phrase to watch for.",
@@ -484,7 +503,6 @@ export function registerReminders(register) {
         }
 
         const state = await loadNotifyGuild(interaction.guildId);
-        const perUser = state.items.filter((item) => item.userId === userId);
         const isExempt = isAdminOrPrivileged(interaction);
         const totalForUser = await countNotifyEntries({ userId });
         if (!isExempt && totalForUser >= MAX_NOTIFY_PER_USER) {
@@ -496,9 +514,11 @@ export function registerReminders(register) {
         }
 
         const key = phraseKey(phrase);
-        const exists = state.items.some(
-          (item) => item.userId === userId && item.key === key
-        );
+        const exists = state.items.some((item) => {
+          if (item.userId !== userId) return false;
+          if (item.key !== key) return false;
+          return (item.targetUserId || null) === (targetUserId || null);
+        });
         if (exists) {
           await interaction.reply({
             content: `You are already watching: "${phrase}"`,
@@ -511,6 +531,7 @@ export function registerReminders(register) {
           guildId: interaction.guildId,
           userId,
           phrase,
+          targetUserId,
         });
         if (!id) {
           await interaction.reply({
@@ -520,10 +541,11 @@ export function registerReminders(register) {
           return;
         }
 
-        state.items.push({ id, userId, phrase, key });
+        state.items.push({ id, userId, phrase, key, targetUserId });
         void metrics.increment("notifyme.set", { status: "ok" });
+        const suffix = targetUserId ? ` (from ${mention(targetUserId)})` : "";
         await interaction.reply({
-          content: `✅ I’ll notify you when I see: "${phrase}"`,
+          content: `✅ I’ll notify you when I see: "${phrase}"${suffix}`,
           flags: MessageFlags.Ephemeral,
         });
         return;

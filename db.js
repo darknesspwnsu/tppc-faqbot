@@ -202,6 +202,33 @@ export async function initDb() {
     [],
     "init.notify_me"
   );
+  {
+    const { DB_NAME } = process.env;
+    const [rows] = await execDb(
+      db,
+      `
+      SELECT COUNT(*) AS total
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'notify_me'
+        AND COLUMN_NAME = 'target_user_id'
+    `,
+      [DB_NAME],
+      "init.notify_me_target_user_check"
+    );
+    const total = Number(rows?.[0]?.total || 0);
+    if (!total) {
+      await execDb(
+        db,
+        `
+        ALTER TABLE notify_me
+        ADD COLUMN target_user_id VARCHAR(32)
+      `,
+        [],
+        "init.notify_me_target_user"
+      );
+    }
+  }
 
   await execDb(
     db,
