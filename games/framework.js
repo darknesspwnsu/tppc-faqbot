@@ -12,6 +12,7 @@ import { PermissionsBitField } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { CONTEST_ROLES_BY_GUILD } from "../configs/contest_roles.js";
 import { parseDurationSeconds, formatDurationSeconds } from "../shared/time_utils.js";
+import { startTimeout, startInterval, clearTimer } from "../shared/timer_utils.js";
 
 /* --------------------------------- basics -------------------------------- */
 
@@ -323,29 +324,38 @@ export function canManageGame({ member, userId }, state, ownerField = "creatorId
 /* --------------------------------- timers -------------------------------- */
 
 export class TimerBag {
-  constructor() {
+  constructor(label = "game.timer") {
     this._timers = new Set();
     this._intervals = new Set();
+    this._label = label;
   }
 
   setTimeout(fn, ms) {
-    const t = setTimeout(() => {
-      this._timers.delete(t);
-      fn();
-    }, ms);
+    const t = startTimeout({
+      label: `${this._label}:timeout`,
+      ms,
+      fn: () => {
+        this._timers.delete(t);
+        fn();
+      },
+    });
     this._timers.add(t);
     return t;
   }
 
   setInterval(fn, ms) {
-    const t = setInterval(fn, ms);
+    const t = startInterval({
+      label: `${this._label}:interval`,
+      ms,
+      fn,
+    });
     this._intervals.add(t);
     return t;
   }
 
   clearAll() {
-    for (const t of this._timers) clearTimeout(t);
-    for (const t of this._intervals) clearInterval(t);
+    for (const t of this._timers) clearTimer(t, `${this._label}:timeout`);
+    for (const t of this._intervals) clearTimer(t, `${this._label}:interval`);
     this._timers.clear();
     this._intervals.clear();
   }
