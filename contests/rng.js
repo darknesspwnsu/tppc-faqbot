@@ -6,6 +6,7 @@
 // - !awesome, !coinflip (legacy)
 import { isAdminOrPrivileged } from "../auth.js";
 import { onAwesomeRoll } from "../games/closest_roll_wins.js";
+import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 
 // guildId -> { timeout, channelId, creatorId }
 const activeElimByGuild = new Map();
@@ -64,9 +65,7 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
 
   const finish = async () => {
     const st = activeElimByGuild.get(guildId);
-    if (st?.timeout) {
-      try { clearTimeout(st.timeout); } catch {}
-    }
+    clearTimer(st?.timeout, `rng.elim:${guildId}`);
     activeElimByGuild.delete(guildId);
 
     if (remaining.length === 1) {
@@ -97,7 +96,11 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
       return;
     }
 
-    const t = setTimeout(runRound, delayMs);
+    const t = startTimeout({
+      label: `rng.elim.round:${guildId}`,
+      ms: delayMs,
+      fn: runRound,
+    });
     const st = activeElimByGuild.get(guildId);
     if (st) st.timeout = t;
   };
@@ -106,7 +109,11 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
   activeElimByGuild.set(guildId, { timeout: null, channelId: message.channelId, creatorId: message.author.id });
 
   // Start (first elimination after delayMs)
-  const t0 = setTimeout(runRound, delayMs);
+  const t0 = startTimeout({
+    label: `rng.elim.round:${guildId}`,
+    ms: delayMs,
+    fn: runRound,
+  });
   activeElimByGuild.set(guildId, { timeout: t0, channelId: message.channelId, creatorId: message.author.id });
 
   return { ok: true };
@@ -252,9 +259,7 @@ export function registerRng(register) {
         return;
       }
 
-      if (state.timeout) {
-        try { clearTimeout(state.timeout); } catch {}
-      }
+      clearTimer(state.timeout, `rng.elim:${message.guildId}`);
 
       activeElimByGuild.delete(message.guildId);
       await message.channel.send("Elimination has been cancelled!");

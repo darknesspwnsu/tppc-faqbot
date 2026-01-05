@@ -7,6 +7,7 @@
 import { isAdminOrPrivileged } from "../auth.js";
 import { formatUsersWithIds } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
+import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
 
 // messageId -> { guildId, channelId, creatorId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone? }
@@ -187,7 +188,7 @@ export function installReactionHooks(client) {
     collector.entrants.add(user.id);
 
     if (collector.maxEntrants && collector.entrants.size >= collector.maxEntrants) {
-      try { clearTimeout(collector.timeout); } catch {}
+      clearTimer(collector.timeout, `reaction_contest:${msg.id}`);
       await finalizeCollector(msg.id, "max");
     }
   });
@@ -231,7 +232,11 @@ export async function collectEntrantsByReactions({
   try { await joinMsg.react(emoji); } catch {}
 
   return await new Promise((resolve) => {
-    const timeout = setTimeout(() => finalizeCollector(joinMsg.id, "timer"), durationMs);
+    const timeout = startTimeout({
+      label: `reaction_contest:${joinMsg.id}`,
+      ms: durationMs,
+      fn: () => finalizeCollector(joinMsg.id, "timer"),
+    });
 
     activeCollectorsByMessage.set(joinMsg.id, {
       client: message.client,
@@ -256,9 +261,7 @@ function canManageContest(message) {
 async function cancelCollector({ messageId, canceledById }) {
   const state = activeCollectorsByMessage.get(messageId);
   if (!state) return false;
-  if (state.timeout) {
-    try { clearTimeout(state.timeout); } catch {}
-  }
+  clearTimer(state.timeout, `reaction_contest:${messageId}`);
   await finalizeCollector(
     messageId,
     "cancel",

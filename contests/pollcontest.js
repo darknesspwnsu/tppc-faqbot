@@ -17,6 +17,7 @@ import { getDb } from "../db.js";
 import { chooseOne } from "./rng.js";
 import { formatUserWithId, sendChunked, stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
+import { startTimeout, startInterval, clearTimer } from "../shared/timer_utils.js";
 
 const MAX_DURATION_SECONDS = 24 * 60 * 60;
 
@@ -97,16 +98,8 @@ async function loadPollRecords() {
 
 function clearPollTimer(messageId) {
   const existing = activePolls.get(messageId);
-  if (existing?.timeout) {
-    try {
-      clearTimeout(existing.timeout);
-    } catch {}
-  }
-  if (existing?.watch) {
-    try {
-      clearInterval(existing.watch);
-    } catch {}
-  }
+  if (existing?.timeout) clearTimer(existing.timeout, `poll:${messageId}`);
+  if (existing?.watch) clearTimer(existing.watch, `poll:${messageId}:watch`);
   activePolls.delete(messageId);
 }
 
@@ -141,10 +134,18 @@ function schedulePoll(record) {
   if (activePolls.has(msgId)) return;
 
   const delayMs = Math.max(0, Number(record.endsAtMs) - Date.now() + 2000);
-  const timeout = setTimeout(() => processPoll(msgId), delayMs);
-  const watch = setInterval(() => {
-    void checkPollStatus(msgId);
-  }, 10_000);
+  const timeout = startTimeout({
+    label: `poll:${msgId}`,
+    ms: delayMs,
+    fn: () => processPoll(msgId),
+  });
+  const watch = startInterval({
+    label: `poll:${msgId}:watch`,
+    ms: 10_000,
+    fn: () => {
+      void checkPollStatus(msgId);
+    },
+  });
 
   activePolls.set(msgId, {
     ...record,
@@ -155,7 +156,11 @@ function schedulePoll(record) {
 
 function storePendingConfig(config) {
   const token = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  const timeout = setTimeout(() => pendingConfigs.delete(token), 10 * 60_000);
+  const timeout = startTimeout({
+    label: `poll:config:${token}`,
+    ms: 10 * 60_000,
+    fn: () => pendingConfigs.delete(token),
+  });
   pendingConfigs.set(token, { ...config, timeout });
   return token;
 }
@@ -166,11 +171,7 @@ function getPendingConfig(token) {
 
 function clearPendingConfig(token) {
   const existing = pendingConfigs.get(token);
-  if (existing?.timeout) {
-    try {
-      clearTimeout(existing.timeout);
-    } catch {}
-  }
+  if (existing?.timeout) clearTimer(existing.timeout, `poll:config:${token}`);
   pendingConfigs.delete(token);
 }
 
@@ -406,7 +407,11 @@ async function processPoll(messageId) {
   if (!record) return;
 
   if (!clientRef) {
-    record.timeout = setTimeout(() => processPoll(messageId), 5000);
+    record.timeout = startTimeout({
+      label: `poll:${messageId}`,
+      ms: 5000,
+      fn: () => processPoll(messageId),
+    });
     return;
   }
 

@@ -19,6 +19,7 @@ import {
 import { isAdminOrPrivileged } from "../auth.js";
 import { getDb } from "../db.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
+import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 import { stripEmojisAndSymbols, formatUserWithId, formatUsersWithIds } from "./helpers.js";
 
 const MAX_DURATION_SECONDS = 3 * 24 * 60 * 60;
@@ -390,16 +391,18 @@ function scheduleGiveaway(record) {
   if (activeGiveaways.has(msgId)) return;
 
   const delayMs = Math.max(0, Number(record.endsAtMs) - Date.now());
-  const timeout = setTimeout(() => finalizeGiveaway(msgId), delayMs);
+  const timeout = startTimeout({
+    label: `giveaway:${msgId}`,
+    ms: delayMs,
+    fn: () => finalizeGiveaway(msgId),
+  });
   activeGiveaways.set(msgId, { ...record, timeout });
 }
 
 function clearGiveawayTimer(messageId) {
   const existing = activeGiveaways.get(messageId);
   if (existing?.timeout) {
-    try {
-      clearTimeout(existing.timeout);
-    } catch {}
+    clearTimer(existing.timeout, `giveaway:${messageId}`);
   }
   activeGiveaways.delete(messageId);
 }
@@ -409,7 +412,11 @@ async function finalizeGiveaway(messageId) {
   if (!record) return;
 
   if (!clientRef) {
-    record.timeout = setTimeout(() => finalizeGiveaway(messageId), 5000);
+    record.timeout = startTimeout({
+      label: `giveaway:${messageId}`,
+      ms: 5000,
+      fn: () => finalizeGiveaway(messageId),
+    });
     return;
   }
 
@@ -471,7 +478,11 @@ async function cancelGiveaway(messageId) {
   if (!record) return { ok: false, reason: "not_found" };
 
   if (!clientRef) {
-    record.timeout = setTimeout(() => cancelGiveaway(messageId), 3000);
+    record.timeout = startTimeout({
+      label: `giveaway:cancel-retry:${messageId}`,
+      ms: 3000,
+      fn: () => cancelGiveaway(messageId),
+    });
     return { ok: false, reason: "retry" };
   }
 
