@@ -9,3 +9,5 @@ export function registerInfo(register, { helpModel }) {
   registerInfoCommands(register);
   registerHelpbox(register, { helpModel });
 }
+
+export function registerInfoSchedulers() {}

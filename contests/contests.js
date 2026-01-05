@@ -32,6 +32,17 @@ export function registerContests(register) {
   }
 }
 
+export function registerContestSchedulers(context = {}) {
+  for (const m of CONTEST_MODULES) {
+    if (typeof m.registerScheduler !== "function") continue;
+    try {
+      m.registerScheduler(context);
+    } catch (e) {
+      logRegisterFailure("contests.schedulers", m.id, e);
+    }
+  }
+}
+
 export function listContests() {
   return CONTEST_MODULES.map((m) => m.id);
 }

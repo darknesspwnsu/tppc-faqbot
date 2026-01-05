@@ -5,6 +5,7 @@ import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 import { scheduleMetricsCleanup } from "./shared/metrics.js";
 import { scheduleRadioTowerMonitor } from "./rpg/radio_tower.js";
+import { startSchedulers } from "./schedulers.js";
 
 function mustEnv(name) {
   const v = process.env[name];
@@ -89,6 +90,7 @@ client.once(Events.ClientReady, async () => {
     console.error("Slash sync failed:", e?.message ?? e);
   }
 
+  startSchedulers({ client });
   scheduleRadioTowerMonitor(client);
 });
 

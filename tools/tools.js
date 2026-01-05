@@ -32,6 +32,17 @@ export function registerTools(register) {
   registerLevel4Rarity(register, "Tools");
 }
 
+export function registerToolSchedulers(context = {}) {
+  for (const t of TOOL_MODULES) {
+    if (typeof t.registerScheduler !== "function") continue;
+    try {
+      t.registerScheduler(context);
+    } catch (e) {
+      logRegisterFailure("tools.schedulers", t.id, e);
+    }
+  }
+}
+
 export function listTools() {
   return TOOL_MODULES.map((t) => t.id);
 }

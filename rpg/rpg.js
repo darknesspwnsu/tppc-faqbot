@@ -27,6 +27,17 @@ export function registerRpg(register) {
   }
 }
 
+export function registerRpgSchedulers(context = {}) {
+  for (const m of RPG_MODULES) {
+    if (typeof m.registerScheduler !== "function") continue;
+    try {
+      m.registerScheduler(context);
+    } catch (e) {
+      logRegisterFailure("rpg.schedulers", m.id, e);
+    }
+  }
+}
+
 export function listRpgModules() {
   return RPG_MODULES.map((m) => m.id);
 }
