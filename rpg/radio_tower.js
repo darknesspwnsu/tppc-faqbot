@@ -7,6 +7,7 @@ import http from "node:http";
 import { parse } from "node-html-parser";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
+import { registerScheduler } from "../shared/scheduler_registry.js";
 import { RADIO_TOWER_ALERTS_BY_GUILD } from "../configs/radio_tower_alerts.js";
 
 const RADIO_TOWER_URL = "https://www.tppcrpg.net/radio_tower.php";
@@ -176,3 +177,7 @@ export const __testables = {
     checkHook = hook;
   },
 };
+
+export function registerSchedulerForRadioTower({ client } = {}) {
+  registerScheduler("radio_tower", () => scheduleRadioTowerMonitor(client));
+}

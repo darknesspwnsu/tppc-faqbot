@@ -4,7 +4,6 @@ import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 import { scheduleMetricsCleanup } from "./shared/metrics.js";
-import { scheduleRadioTowerMonitor } from "./rpg/radio_tower.js";
 import { startSchedulers } from "./schedulers.js";
 
 function mustEnv(name) {
@@ -91,7 +90,6 @@ client.once(Events.ClientReady, async () => {
   }
 
   startSchedulers({ client });
-  scheduleRadioTowerMonitor(client);
 });
 
 client.on("messageCreate", async (message) => {

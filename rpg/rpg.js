@@ -7,6 +7,7 @@ import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
 import { registerViewbox } from "./viewbox.js";
 import { registerPokedex } from "./pokedex.js";
+import { registerSchedulerForRadioTower } from "./radio_tower.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const RPG_MODULES = [
@@ -35,6 +36,12 @@ export function registerRpgSchedulers(context = {}) {
     } catch (e) {
       logRegisterFailure("rpg.schedulers", m.id, e);
     }
+  }
+
+  try {
+    registerSchedulerForRadioTower(context);
+  } catch (e) {
+    logRegisterFailure("rpg.schedulers", "radio_tower", e);
   }
 }
 
