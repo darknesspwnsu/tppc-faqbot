@@ -95,6 +95,19 @@ export function buildCommandRegistry({ client } = {}) {
     return registerOnMessage(handler);
   }
 
+  async function dispatchMessageHooks(message) {
+    if (!messageHooks.length) return;
+    for (const h of messageHooks) {
+      try {
+        await h({ message });
+      } catch (err) {
+        logger.error("command.message_hook.error", {
+          error: logger.serializeError(err),
+        });
+      }
+    }
+  }
+
   function registerBang(name, handler, help = "", opts = {}) {
     const key = String(name).toLowerCase();
     if (bang.has(key)) {
@@ -519,17 +532,7 @@ export function buildCommandRegistry({ client } = {}) {
     const isQ = content.startsWith("?");
 
     // Passive listeners run for ALL messages (not just !/? commands)
-    if (messageHooks.length) {
-      for (const h of messageHooks) {
-        try {
-          await h({ message });
-        } catch (err) {
-          logger.error("command.message_hook.error", {
-            error: logger.serializeError(err),
-          });
-        }
-      }
-    }
+    await dispatchMessageHooks(message);
 
     if (!isBang && !isQ) return;
 
@@ -908,6 +911,7 @@ export function buildCommandRegistry({ client } = {}) {
 
   return {
     dispatchMessage,
+    dispatchMessageHooks,
     dispatchInteraction,
 
     listBang: () =>

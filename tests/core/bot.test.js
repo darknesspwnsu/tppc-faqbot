@@ -16,6 +16,7 @@ async function loadBotModule({
   };
 
   const dispatchMessage = vi.fn(async () => {});
+  const dispatchMessageHooks = vi.fn(async () => {});
   const dispatchInteraction = vi.fn(async () => {});
   const syncSlashCommands = vi.fn(async () => {});
   const listBang = vi.fn(() => ["!a"]);
@@ -23,6 +24,7 @@ async function loadBotModule({
 
   const buildCommandRegistry = vi.fn(() => ({
     dispatchMessage,
+    dispatchMessageHooks,
     dispatchInteraction,
     listBang,
     listSlash,
@@ -67,6 +69,7 @@ async function loadBotModule({
   return {
     buildCommandRegistry,
     dispatchMessage,
+    dispatchMessageHooks,
     dispatchInteraction,
     syncSlashCommands,
     listBang,
@@ -101,7 +104,7 @@ describe("bot.js", () => {
   });
 
   it("dispatches messages only when they pass guards", async () => {
-    const { client, dispatchMessage } = await loadBotModule({
+    const { client, dispatchMessage, dispatchMessageHooks } = await loadBotModule({
       allowedChannels: "c1,c2",
     });
 
@@ -112,9 +115,22 @@ describe("bot.js", () => {
     await handler({ guild: {}, author: { bot: true } });
     await handler({ guild: {}, author: { bot: false }, channelId: "c3" });
     expect(dispatchMessage).not.toHaveBeenCalled();
+    expect(dispatchMessageHooks).not.toHaveBeenCalled();
 
     await handler({ guild: {}, author: { bot: false }, channelId: "c2" });
     expect(dispatchMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispatches message hooks for the bot's own messages", async () => {
+    const { client, dispatchMessageHooks } = await loadBotModule({
+      allowedChannels: "c1",
+    });
+
+    const handler = client._events.on.get("messageCreate");
+    expect(handler).toBeTypeOf("function");
+
+    await handler({ guild: {}, author: { bot: true, id: "user1" }, channelId: "c1" });
+    expect(dispatchMessageHooks).toHaveBeenCalledTimes(1);
   });
 
   it("dispatches interactions through the registry", async () => {

@@ -93,7 +93,12 @@ client.once(Events.ClientReady, async () => {
 client.on("messageCreate", async (message) => {
   try {
     if (!message.guild) return;
-    if (message.author?.bot) return;
+    if (message.author?.bot) {
+      if (message.author.id === client.user?.id && inAllowedChannel(message.channelId)) {
+        await commands.dispatchMessageHooks?.(message);
+      }
+      return;
+    }
     if (!inAllowedChannel(message.channelId)) return;
 
     await commands.dispatchMessage(message);
