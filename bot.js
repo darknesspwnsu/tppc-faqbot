@@ -4,6 +4,7 @@ import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 import { scheduleMetricsCleanup } from "./shared/metrics.js";
+import { scheduleRadioTowerMonitor } from "./rpg/radio_tower.js";
 
 function mustEnv(name) {
   const v = process.env[name];
@@ -87,6 +88,8 @@ client.once(Events.ClientReady, async () => {
   } catch (e) {
     console.error("Slash sync failed:", e?.message ?? e);
   }
+
+  scheduleRadioTowerMonitor(client);
 });
 
 client.on("messageCreate", async (message) => {
