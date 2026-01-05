@@ -8,6 +8,7 @@ import { registerRarity, registerLevel4Rarity, registerRarityScheduler } from ".
 import { registerLinks } from "./links.js";
 import { registerPromo, registerPromoScheduler } from "./promo.js";
 import { registerReminders } from "./reminders.js";
+import { registerMessageCounts } from "./message_counts.js";
 import { registerMetricsExport, registerMetricsExportScheduler } from "./metrics_export.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
@@ -19,6 +20,7 @@ const TOOL_MODULES = [
   { id: "calculator", register: registerCalculator },
   { id: "rarity", register: registerRarity, registerScheduler: registerRarityScheduler },
   { id: "reminders", register: registerReminders },
+  { id: "message_counts", register: registerMessageCounts },
   { id: "metrics_export", register: registerMetricsExport, registerScheduler: registerMetricsExportScheduler },
 ];
 

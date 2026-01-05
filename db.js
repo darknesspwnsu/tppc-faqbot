@@ -254,6 +254,22 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS message_counts (
+      guild_id VARCHAR(32) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, user_id),
+      KEY message_counts_guild_idx (guild_id)
+    )
+  `,
+    [],
+    "init.message_counts"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS metrics_counters (
       bucket_ts DATETIME NOT NULL,
       metric VARCHAR(64) NOT NULL,

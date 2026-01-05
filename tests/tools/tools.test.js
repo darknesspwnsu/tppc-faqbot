@@ -8,6 +8,7 @@ const registerRarity = vi.fn();
 const registerRarityScheduler = vi.fn();
 const registerLevel4Rarity = vi.fn();
 const registerReminders = vi.fn();
+const registerMessageCounts = vi.fn();
 const registerMetricsExport = vi.fn();
 const registerMetricsExportScheduler = vi.fn();
 
@@ -20,6 +21,7 @@ vi.mock("../../tools/rarity.js", () => ({
   registerRarityScheduler,
 }));
 vi.mock("../../tools/reminders.js", () => ({ registerReminders }));
+vi.mock("../../tools/message_counts.js", () => ({ registerMessageCounts }));
 vi.mock("../../tools/metrics_export.js", () => ({
   registerMetricsExport,
   registerMetricsExportScheduler,
@@ -47,6 +49,7 @@ describe("tools/tools.js", () => {
     expect(registerCalculator).toHaveBeenCalledWith(reg.register);
     expect(registerRarity).toHaveBeenCalledWith(reg.register);
     expect(registerReminders).toHaveBeenCalledWith(reg.register);
+    expect(registerMessageCounts).toHaveBeenCalledWith(reg.register);
     expect(registerMetricsExport).toHaveBeenCalledWith(reg.register);
     expect(registerLevel4Rarity).toHaveBeenCalledWith(reg.register, "Tools");
   });
