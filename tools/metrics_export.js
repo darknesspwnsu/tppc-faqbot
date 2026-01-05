@@ -3,10 +3,9 @@
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { exportMetricsSnapshot, scheduleMetricsExport } from "../shared/metrics_export.js";
+import { registerScheduler } from "../shared/scheduler_registry.js";
 
 export function registerMetricsExport(register) {
-  scheduleMetricsExport();
-
   register(
     "!exportmetrics",
     async ({ message }) => {
@@ -36,4 +35,8 @@ export function registerMetricsExport(register) {
     "!exportmetrics — export metrics snapshot",
     { admin: true, aliases: ["!export"] }
   );
+}
+
+export function registerMetricsExportScheduler() {
+  registerScheduler("metrics_export", () => scheduleMetricsExport());
 }

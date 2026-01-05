@@ -637,7 +637,6 @@ async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
 
 export function registerRarity(register) {
   refresh();
-  scheduleDailyRefresh(refresh, "RARITY");
 
   // Exposable rarity main command (policy-controlled by logicalId rarity.main)
   register.expose({
@@ -709,6 +708,10 @@ export function registerRarity(register) {
     help: "?rarityreload — refreshes rarity cache (admin)",
     opts: { admin: true, hideFromHelp: true }
   });
+}
+
+export function registerRarityScheduler() {
+  scheduleDailyRefresh(refresh, "RARITY");
 }
 
 export function registerLevel4Rarity(register) {

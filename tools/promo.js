@@ -230,8 +230,6 @@ async function setPromoForGuild(guildId, promoText) {
 }
 
 export function registerPromo(register) {
-  void ensurePromoScheduler();
-
   register(
     "!promo",
     async ({ message }) => {
@@ -267,6 +265,10 @@ export function registerPromo(register) {
     "!setpromo <text> — sets the last promo",
     { admin: true }
   );
+}
+
+export function registerPromoScheduler() {
+  void ensurePromoScheduler();
 }
 
 export const __testables = {

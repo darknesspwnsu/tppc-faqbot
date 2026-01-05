@@ -3,7 +3,6 @@ import process from "node:process";
 import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
-import { scheduleMetricsCleanup } from "./shared/metrics.js";
 import { startSchedulers } from "./schedulers.js";
 
 function mustEnv(name) {
@@ -36,7 +35,6 @@ const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
 
 await initDbWithRetry();
 console.log("DB ready ✅");
-scheduleMetricsCleanup();
 
 // If set, slash commands are registered ONLY to this guild (recommended for dev).
 // If empty, slash commands are registered globally.

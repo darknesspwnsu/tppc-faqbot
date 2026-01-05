@@ -4,20 +4,22 @@
 // Add new tools by importing + appending to TOOL_MODULES.
 
 import { registerCalculator } from "./calculator.js";
-import { registerRarity, registerLevel4Rarity } from "./rarity.js";
+import { registerRarity, registerLevel4Rarity, registerRarityScheduler } from "./rarity.js";
 import { registerLinks } from "./links.js";
-import { registerPromo } from "./promo.js";
+import { registerPromo, registerPromoScheduler } from "./promo.js";
 import { registerReminders } from "./reminders.js";
-import { registerMetricsExport } from "./metrics_export.js";
+import { registerMetricsExport, registerMetricsExportScheduler } from "./metrics_export.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
+import { registerScheduler } from "../shared/scheduler_registry.js";
+import { scheduleMetricsCleanup } from "../shared/metrics.js";
 
 const TOOL_MODULES = [
   { id: "links", register: registerLinks },
-  { id: "promo", register: registerPromo },
+  { id: "promo", register: registerPromo, registerScheduler: registerPromoScheduler },
   { id: "calculator", register: registerCalculator },
-  { id: "rarity", register: registerRarity },
+  { id: "rarity", register: registerRarity, registerScheduler: registerRarityScheduler },
   { id: "reminders", register: registerReminders },
-  { id: "metrics_export", register: registerMetricsExport },
+  { id: "metrics_export", register: registerMetricsExport, registerScheduler: registerMetricsExportScheduler },
 ];
 
 export function registerTools(register) {
@@ -33,6 +35,12 @@ export function registerTools(register) {
 }
 
 export function registerToolSchedulers(context = {}) {
+  try {
+    registerScheduler("metrics_cleanup", () => scheduleMetricsCleanup());
+  } catch (e) {
+    logRegisterFailure("tools.schedulers", "metrics_cleanup", e);
+  }
+
   for (const t of TOOL_MODULES) {
     if (typeof t.registerScheduler !== "function") continue;
     try {
