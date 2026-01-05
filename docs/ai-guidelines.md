@@ -72,6 +72,7 @@ fast without breaking invariants that keep the bot stable.
 - Use explicit timezone conversions for ET or PT scheduling.
 - Avoid assuming local machine time or UTC for user-facing schedules.
 - Add tests for DST boundaries for any new scheduler logic.
+ - Use `shared/timer_utils.js` (and `games/framework.js` TimerBag) for timeouts/intervals.
   - Good: ET scheduling helpers in `tools/rarity.js`.
   - Bad: `Date.UTC()` with local times and no TZ conversion.
 
