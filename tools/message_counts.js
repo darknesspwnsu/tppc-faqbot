@@ -11,7 +11,7 @@ import { MESSAGE_COUNT_CHANNELS_BY_GUILD } from "../configs/message_count_channe
 
 const TOP_LIMIT = 10;
 const FLAREON_PATH = "data/user_message_counts_flareon_migration_data.json";
-const RESET_PREFIX = "restcount:";
+const RESET_PREFIX = "resetcount:";
 
 let flareonCounts = null;
 let flareonLoadAttempted = false;
@@ -243,7 +243,7 @@ export function registerMessageCounts(register) {
 
   register.slash(
     {
-      name: "restcount",
+      name: "resetcount",
       description: "Reset Spectreon message counts for this server",
     },
     async ({ interaction }) => {
