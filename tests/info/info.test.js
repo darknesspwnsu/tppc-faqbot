@@ -17,6 +17,9 @@ import { registerInfo } from "../../info/info.js";
 describe("info registry", () => {
   it("registers info commands and helpbox", () => {
     const register = vi.fn();
+    register.slash = vi.fn();
+    register.component = vi.fn();
+    register.listener = vi.fn();
     const helpModel = vi.fn(() => []);
 
     registerInfo(register, { helpModel });

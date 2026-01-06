@@ -1,0 +1,80 @@
+{
+  "defaults": {
+    "timezone": "America/New_York",
+    "announceHour": 0,
+    "announceMinute": 0,
+    "enabledByDefault": true
+  },
+  "days": [
+    {
+      "id": "new_years_day",
+      "name": "New Year’s Day",
+      "kind": "fixed_date",
+      "month": 1,
+      "day": 1,
+      "message": "🎉 Happy New Year, everyone! Wishing you a legendary year ahead."
+    },
+    {
+      "id": "valentines_day",
+      "name": "Valentine’s Day",
+      "kind": "fixed_date",
+      "month": 2,
+      "day": 14,
+      "message": "💖 Happy Valentine’s Day! May your trades be lucky and your boxes full."
+    },
+    {
+      "id": "st_patricks_day",
+      "name": "St. Patrick’s Day",
+      "kind": "fixed_date",
+      "month": 3,
+      "day": 17,
+      "message": "☘️ Happy St. Patrick’s Day! May your luck rolls be cracked today."
+    },
+    {
+      "id": "easter",
+      "name": "Easter",
+      "kind": "easter",
+      "message": "🐣 Happy Easter! Hope you all hatch something amazing."
+    },
+    {
+      "id": "canada_day",
+      "name": "Canada Day",
+      "kind": "fixed_date",
+      "month": 7,
+      "day": 1,
+      "message": "🍁 Happy Canada Day to our Canadian trainers!"
+    },
+    {
+      "id": "independence_day_us",
+      "name": "Independence Day (US)",
+      "kind": "fixed_date",
+      "month": 7,
+      "day": 4,
+      "message": "🎆 Happy 4th of July! Have a safe and fun day."
+    },
+    {
+      "id": "shrimpy_birthday",
+      "name": "Shrimpy’s Birthday",
+      "kind": "fixed_date",
+      "month": 8,
+      "day": 2,
+      "message": "🦐🎂 Happy Birthday, **Shrimpy**! Thanks for creating this awesome place."
+    },
+    {
+      "id": "halloween",
+      "name": "Halloween",
+      "kind": "fixed_date",
+      "month": 10,
+      "day": 31,
+      "message": "🎃 Happy Halloween! Beware the ghost pixels 👻"
+    },
+    {
+      "id": "christmas",
+      "name": "Christmas",
+      "kind": "fixed_date",
+      "month": 12,
+      "day": 25,
+      "message": "🎄 Merry Christmas! Hope you get something golden under the tree."
+    }
+  ]
+}

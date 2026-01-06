@@ -270,6 +270,56 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS event_subscriptions (
+      user_id VARCHAR(32) NOT NULL,
+      event_id VARCHAR(64) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, event_id),
+      KEY event_sub_event_idx (event_id)
+    )
+  `,
+    [],
+    "init.event_subscriptions"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS event_occurrences (
+      event_id VARCHAR(64) NOT NULL,
+      start_ms BIGINT UNSIGNED NOT NULL,
+      end_ms BIGINT UNSIGNED NOT NULL,
+      source VARCHAR(32),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (event_id, start_ms)
+    )
+  `,
+    [],
+    "init.event_occurrences"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS event_notifications (
+      event_id VARCHAR(64) NOT NULL,
+      start_ms BIGINT UNSIGNED NOT NULL,
+      target_type VARCHAR(16) NOT NULL,
+      target_id VARCHAR(64) NOT NULL,
+      guild_id VARCHAR(32),
+      channel_id VARCHAR(32),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (event_id, start_ms, target_type, target_id, channel_id),
+      KEY event_notify_target_idx (target_type, target_id)
+    )
+  `,
+    [],
+    "init.event_notifications"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS metrics_counters (
       bucket_ts DATETIME NOT NULL,
       metric VARCHAR(64) NOT NULL,
