@@ -350,6 +350,20 @@ export async function initDb() {
     [],
     "init.metrics_counters"
   );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS welcome_dms (
+      guild_id VARCHAR(32) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, user_id)
+    )
+  `,
+    [],
+    "init.welcome_dms"
+  );
 }
 
 /**

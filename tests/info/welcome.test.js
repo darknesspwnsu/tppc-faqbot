@@ -9,6 +9,8 @@ const { sendDm, increment, warn } = vi.hoisted(() => ({
 vi.mock("../../shared/dm.js", () => ({ sendDm }));
 vi.mock("../../shared/metrics.js", () => ({ metrics: { increment } }));
 vi.mock("../../shared/logger.js", () => ({ logger: { warn } }));
+const execute = vi.fn(async () => [[]]);
+vi.mock("../../db.js", () => ({ getDb: () => ({ execute }) }));
 vi.mock("../../configs/welcome_config.js", () => ({
   WELCOME_GUILD_IDS: new Set(["329934860388925442"]),
   WELCOME_MESSAGE: "welcome",
@@ -21,6 +23,7 @@ describe("welcome DM", () => {
     sendDm.mockClear();
     increment.mockClear();
     warn.mockClear();
+    execute.mockClear();
   });
 
   it("skips bots", async () => {
@@ -50,6 +53,20 @@ describe("welcome DM", () => {
       feature: "welcome",
     });
     expect(increment).toHaveBeenCalledWith("welcome.dm", { status: "ok" });
+  });
+
+  it("skips users already welcomed", async () => {
+    execute.mockImplementation(async (sql) => {
+      if (sql.includes("FROM welcome_dms")) {
+        return [[{ ok: 1 }]];
+      }
+      return [[]];
+    });
+    await handleGuildMemberAdd({
+      user: { id: "u1", bot: false },
+      guild: { id: "329934860388925442" },
+    });
+    expect(sendDm).not.toHaveBeenCalled();
   });
 
   it("logs failures", async () => {
