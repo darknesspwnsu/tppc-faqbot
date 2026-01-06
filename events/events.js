@@ -158,6 +158,13 @@ function buildEventMessage(event, start, end) {
   return `📣 **${event.name}** has begun.\n${event.description || ""}\n${duration}`.trim();
 }
 
+function describeEventId(id) {
+  const entry = RPG_EVENTS.find((event) => event.id === id);
+  if (!entry) return `• \`${id}\``;
+  const desc = entry.description || entry.name;
+  return `• \`${id}\` — ${desc}`;
+}
+
 function getAnnouncementChannels(client) {
   const entries = Object.entries(RPG_EVENT_CHANNELS_BY_GUILD || {});
   const output = [];
@@ -547,7 +554,7 @@ export function registerEvents(register) {
       if (sub === "list") {
         const ids = await listSubscriptions(userId);
         const content = ids.length
-          ? `You are subscribed to:\n${ids.map((id) => `• \`${id}\``).join("\n")}`
+          ? `You are subscribed to:\n${ids.map((id) => describeEventId(id)).join("\n")}`
           : "You have no event subscriptions.";
         await interaction.reply({ content, flags: MessageFlags.Ephemeral });
         return;
