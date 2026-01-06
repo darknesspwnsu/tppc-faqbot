@@ -555,6 +555,21 @@ export function registerEvents(register) {
     "!events",
     async ({ message }) => {
       const tokens = String(message.content || "").trim().split(/\s+/).slice(1);
+      if (tokens.some((t) => t.toLowerCase() === "help")) {
+        await message.reply(
+          [
+            "**!events help**",
+            "• `!events` — list events in the next 2 months",
+            "• `!events all` — list all possible events",
+            "• `/subscriptions subscribe event_ids:<id[,id]>` — subscribe to event IDs",
+            "• `/subscriptions list` — list your subscriptions",
+            "• `/subscriptions unsubscribe event_ids:<id[,id]>` — remove subscriptions",
+            "• `/subscriptions unsub_all` — remove all subscriptions",
+            "Note: to receive subscription notifications, please ensure the bot can DM you.",
+          ].join("\n")
+        );
+        return;
+      }
       const includeAll = tokens.some((t) => t.toLowerCase() === "all");
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
@@ -562,7 +577,7 @@ export function registerEvents(register) {
       void metrics.increment("events.list", { status: "ok", type: "bang" });
       await message.reply({ embeds: [embed] });
     },
-    "!events — show active and upcoming TPPC events"
+    "!events — list events (`!events all` for full list); subscribe via `/subscriptions` (subscribe/list/unsubscribe/unsub_all). DMs must be enabled."
   );
 
   register.slash(
@@ -598,7 +613,7 @@ export function registerEvents(register) {
   register.slash(
     {
       name: "subscriptions",
-      description: "Manage RPG event subscriptions",
+      description: "Manage RPG event subscriptions (DMs required)",
       options: [
         {
           type: 1,
