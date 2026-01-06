@@ -455,6 +455,12 @@ async function resolveEventsForList(now = new Date(), { includeAll = false } = {
   const rocket = await getLatestOccurrence("team_rocket");
   if (rocket && now >= rocket.start && now < rocket.end) {
     active.push({ id: "team_rocket", name: "Team Rocket Takeover", start: rocket.start, end: rocket.end });
+  } else if (includeAll) {
+    upcoming.push({
+      id: "team_rocket",
+      name: "Team Rocket Takeover (random)",
+      start: now,
+    });
   }
 
   upcoming.sort((a, b) => a.start.getTime() - b.start.getTime());
