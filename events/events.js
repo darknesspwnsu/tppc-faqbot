@@ -425,9 +425,11 @@ async function listAllEventIds() {
   return RPG_EVENTS.map((e) => e.id);
 }
 
-async function resolveEventsForList(now = new Date()) {
+async function resolveEventsForList(now = new Date(), { includeAll = false } = {}) {
   const active = [];
   const upcoming = [];
+  const limit = new Date(now.getTime());
+  limit.setMonth(limit.getMonth() + 2);
 
   for (const event of RPG_EVENTS) {
     if (event.kind === "radio_tower") continue;
@@ -437,7 +439,9 @@ async function resolveEventsForList(now = new Date()) {
       active.push({ ...event, start: window.start, end: window.end });
     } else {
       const next = computeNextStart(event, now);
-      if (next) upcoming.push({ ...event, start: next });
+      if (next && (includeAll || next.getTime() <= limit.getTime())) {
+        upcoming.push({ ...event, start: next });
+      }
     }
   }
 
@@ -462,7 +466,9 @@ export function registerEvents(register) {
   register(
     "!events",
     async ({ message }) => {
-      const { active, upcoming } = await resolveEventsForList(new Date());
+      const tokens = String(message.content || "").trim().split(/\s+/).slice(1);
+      const includeAll = tokens.some((t) => t.toLowerCase() === "all");
+      const { active, upcoming } = await resolveEventsForList(new Date(), { includeAll });
       const embed = buildEventsEmbed({ active, upcoming });
       await message.reply({ embeds: [embed] });
     },
@@ -473,9 +479,18 @@ export function registerEvents(register) {
     {
       name: "events",
       description: "Show active and upcoming TPPC events",
+      options: [
+        {
+          type: 5,
+          name: "all",
+          description: "Include all upcoming events",
+          required: false,
+        },
+      ],
     },
     async ({ interaction }) => {
-      const { active, upcoming } = await resolveEventsForList(new Date());
+      const includeAll = interaction.options?.getBoolean?.("all") || false;
+      const { active, upcoming } = await resolveEventsForList(new Date(), { includeAll });
       const embed = buildEventsEmbed({ active, upcoming });
       await interaction.reply({ embeds: [embed] });
     }
