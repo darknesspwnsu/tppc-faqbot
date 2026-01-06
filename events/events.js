@@ -500,6 +500,11 @@ export function registerEventSchedulers({ client } = {}) {
       }, delay);
     })();
   });
+
+  registerScheduler("event_subscriptions_snapshot", () => {
+    void recordSubscriptionSnapshot();
+    scheduleSubscriptionSnapshots();
+  });
 }
 
 function buildEventsEmbed({ active, upcoming, now, includeAll }) {
@@ -774,6 +779,14 @@ export function registerEvents(register) {
       }
 
       if (sub === "unsub_all") {
+        const existing = await listSubscriptions(userId);
+        if (!existing.length) {
+          await interaction.reply({
+            content: "You have no active subscriptions.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
         await clearSubscriptions(userId);
         void metrics.increment("events.subscriptions.clear", { status: "ok" });
         await interaction.reply({ content: "✅ Unsubscribed from all events.", flags: MessageFlags.Ephemeral });
@@ -804,24 +817,47 @@ export function registerEvents(register) {
       }
 
       if (sub === "subscribe") {
+        const existing = new Set(await listSubscriptions(userId));
+        const added = [];
         for (const id of targetIds) {
+          if (existing.has(id)) continue;
           await addSubscription(userId, id);
+          added.push(id);
         }
-        void metrics.increment("events.subscriptions.subscribe", { status: "ok" });
+        void metrics.increment("events.subscriptions.subscribe", {
+          status: added.length ? "ok" : "noop",
+        });
         await interaction.reply({
-          content: `✅ Subscribed to ${targetIds.length} event(s).`,
+          content: added.length
+            ? `✅ Subscribed to ${added.length} event(s).`
+            : "You are already subscribed to those event(s).",
           flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       if (sub === "unsubscribe") {
-        for (const id of targetIds) {
-          await removeSubscription(userId, id);
+        const existing = new Set(await listSubscriptions(userId));
+        if (!existing.size) {
+          await interaction.reply({
+            content: "You have no active subscriptions.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
         }
-        void metrics.increment("events.subscriptions.unsubscribe", { status: "ok" });
+        let removed = 0;
+        for (const id of targetIds) {
+          if (!existing.has(id)) continue;
+          await removeSubscription(userId, id);
+          removed += 1;
+        }
+        void metrics.increment("events.subscriptions.unsubscribe", {
+          status: removed ? "ok" : "noop",
+        });
         await interaction.reply({
-          content: `✅ Unsubscribed from ${targetIds.length} event(s).`,
+          content: removed
+            ? `✅ Unsubscribed from ${removed} event(s).`
+            : "You are not subscribed to those event(s).",
           flags: MessageFlags.Ephemeral,
         });
         return;

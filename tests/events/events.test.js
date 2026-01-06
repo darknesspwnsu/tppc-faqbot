@@ -208,6 +208,82 @@ describe("events parsing helpers", () => {
     expect(reply.mock.calls[0][0].content).toContain("Subscribed");
   });
 
+  it("avoids duplicate subscriptions", async () => {
+    dbExecute.mockImplementation(async (sql) => {
+      if (sql.includes("FROM event_subscriptions")) {
+        return [[{ event_id: "soon" }]];
+      }
+      return [[]];
+    });
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: {
+          getSubcommand: () => "subscribe",
+          getString: () => "soon",
+        },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("already subscribed");
+  });
+
+  it("reports no subscriptions when unsubscribing with none", async () => {
+    dbExecute.mockImplementation(async () => [[]]);
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: {
+          getSubcommand: () => "unsub_all",
+        },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("no active subscriptions");
+  });
+
+  it("reports no subscriptions when unsubscribing specific ids", async () => {
+    dbExecute.mockImplementation(async () => [[]]);
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: {
+          getSubcommand: () => "unsubscribe",
+          getString: () => "soon",
+        },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("no active subscriptions");
+  });
+
   it("forwards admin announcements to subscribers", async () => {
     dbExecute.mockImplementation(async (sql) => {
       if (sql.includes("FROM event_subscriptions")) {
