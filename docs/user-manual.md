@@ -8,10 +8,10 @@ This manual documents all user-facing and admin-facing features, commands, optio
 
 1. General Behavior & Conventions
 2. Getting Started
-3. Info Commands
-4. Verification Commands
-5. RPG Commands
-6. Trades & IDs
+3. Trades & IDs
+4. Info Commands
+5. Verification Commands
+6. RPG Commands
 7. Tools & Utilities
 8. Contests
 9. Games
@@ -45,7 +45,56 @@ This manual documents all user-facing and admin-facing features, commands, optio
 
 ---
 
-## 3) Info Commands
+## 3) Trades & IDs
+
+### `!id` (and `/id`)
+Save and look up TPPC IDs.
+
+**Bang usage:**
+- `!id add <number> [label]`
+- `!id del` (delete all)
+- `!id del <id|label>`
+- `!id setdefault <id|label>`
+- `!id` (default ID)
+- `!id all` (list all)
+- `!id <label>` (lookup label)
+- `!id @user` / `!id @user all` / `!id @user <label>`
+
+**Slash usage:**
+- `/id action:<add|del|delall|get|list|setdefault> value:<id> label:<label> target:<id|label> user:<user> users:<mentions>`
+
+**Rules:**
+- Max 5 IDs per user
+- Labels: letters/numbers/underscore/hyphen, 1–20 chars
+- Reserved labels: `all`, `help`
+
+**Invalid input:**
+- Bad ID or label → returns usage or validation error
+
+### `!ft` / `!lf` (Trading lists)
+Create and view “is trading” and “is looking for” lists.
+
+**Usage:**
+- `!ft add <list>` — save your trading list
+- `!ft del` — clear your trading list
+- `!ft [@user...]` — show trading list(s)
+- `!lf add <list>` — save your looking‑for list
+- `!lf del` — clear your looking‑for list
+- `!lf [@user...]` — show looking‑for list(s)
+
+**Shortcuts:**
+- `!ftadd <text>` → `!ft add <text>`
+- `!ftdel` → `!ft del`
+- `!lfadd <text>` → `!lf add <text>`
+- `!lfdel` → `!lf del`
+
+**Invalid input:**
+- Missing list text on add → usage hint
+- Clearing when empty → “Nothing to clear!”
+
+---
+
+## 4) Info Commands
 
 ### `/help`
 **What it does:** Private, interactive help menu with categorized commands.
@@ -116,7 +165,7 @@ Manage event subscriptions (DMs required).
 
 ---
 
-## 4) Verification Commands
+## 5) Verification Commands
 
 ### `/verifyme`
 Links your TPPC forums account for server verification.
@@ -141,7 +190,7 @@ See **Admin Appendix**.
 
 ---
 
-## 5) RPG Commands
+## 6) RPG Commands
 
 ### `!leaderboard` (aliases: `!ld`, `!lb`, `!leader`)
 Fetches TPPC leaderboards.
@@ -205,34 +254,6 @@ RPG informational helpers.
 
 ---
 
-## 6) Trades & IDs
-
-### `!id` (and `/id`)
-Save and look up TPPC IDs.
-
-**Bang usage:**
-- `!id add <number> [label]`
-- `!id del` (delete all)
-- `!id del <id|label>`
-- `!id setdefault <id|label>`
-- `!id` (default ID)
-- `!id all` (list all)
-- `!id <label>` (lookup label)
-- `!id @user` / `!id @user all` / `!id @user <label>`
-
-**Slash usage:**
-- `/id action:<add|del|delall|get|list|setdefault> value:<id> label:<label> target:<id|label> user:<user> users:<mentions>`
-
-**Rules:**
-- Max 5 IDs per user
-- Labels: letters/numbers/underscore/hyphen, 1–20 chars
-- Reserved labels: `all`, `help`
-
-**Invalid input:**
-- Bad ID or label → returns usage or validation error
-
----
-
 ## 7) Tools & Utilities
 
 ### `!rarity` and related
@@ -257,6 +278,26 @@ Quick link shortcuts (see response list). Some are aliases.
 
 ### `!calculator` / `!calc`
 Multi-purpose calculations (game/tool specific). Follow prompts and usage output.
+
+**Core functions:**
+- `!calc l2e <level>` — Level → Exp
+- `!calc l2eb <level>` — Level → Exp (billions)
+- `!calc e2l <exp>` — Exp → Level
+- `!calc eb2l <exp_in_billions>` — Exp (billions) → Level
+- `!calc la <lvl...>` — Add levels → level
+- `!calc ea <exp...>` — Add exp values → level
+- `!calc eba <exp_bil...>` — Add exp values in billions → level
+- `!calc ld <lvl1> <lvl2>` — Level difference → level
+- `!calc buy <money>` — Buyer pays money → max affordable level (PP no/yes)
+- `!calc buym <money_millions>` — Buyer pays (millions) → max affordable level
+- `!calc sell <money>` — Seller receives money → max affordable level
+- `!calc sellm <money_millions>` — Seller receives (millions) → max affordable level
+
+**Examples:**
+- `!calc l2e 125`
+- `!calc eb2l 42.5`
+- `!calc la 100 200 300`
+- `!calc buy 500000000`
 
 ### Message counts (`!count` / `!activity` / `!yap`)
 Tracks message counts in configured channels.
@@ -293,7 +334,6 @@ Tracks message counts in configured channels.
 ### `!contest` (umbrella)
 Hosts multiple contest types with subcommands.
 - `!contest choose <duration>`
-- `!contest roll <duration>`
 - `!contest start <duration>`
 - `!contest list`
 - (See in-command help output for full options)
@@ -330,16 +370,17 @@ Game commands generally follow a `!game` and `!game help` pattern. Many support 
 
 **Examples:**
 - `!hangman`, `/hangman`
-- `!pokemonunscramble`, `/pokemonunscramble`
+- `!pokeunscramble`, `/pokeunscramble`
 - `!blackjack`
 - `!rps`
 - `!bingo`
-- `!deal` (Deal or No Deal)
-- `!safari` / `!safarizone`
-- `!voltorb` / `!electrode` (exploding games)
+- `!dond` (Deal or No Deal)
+- `!sz` (Safari Zone) — aliases: `!safari`, `!safarizone`
+- `!ev` (Exploding Voltorbs) — alias: `!voltorb`
+- `!ee` (Exploding Electrode) — alias: `!electrode`
 - `!auction`
-- `!higherorlower`
-- `!closestrollwins`
+- `!higherorlower` (alias: `!hol`)
+- `!closestroll` (alias: `!cr`)
 - `!mafia`
 
 **Invalid input:**
@@ -347,11 +388,13 @@ Game commands generally follow a `!game` and `!game help` pattern. Many support 
 
 ---
 
-## 10) Fun / Toybox
+## 10) Fun Commands
 
-Commands for lightweight utilities or fun responses.
-- `!toybox` commands (see help output)
-- Additional fun aliases registered in `toybox.js`
+Lightweight utilities or fun responses.
+- `!rig` — bless someone with RNG
+- `!curse @user` — curse someone with anti‑RNG
+- `!slap @user` — playful slap command
+- Passive: messages containing “intbkty” get a boot reaction
 
 ---
 
