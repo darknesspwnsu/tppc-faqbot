@@ -411,11 +411,14 @@ export function registerEventSchedulers({ client } = {}) {
   });
 }
 
-function buildEventsEmbed({ active, upcoming, now }) {
+function buildEventsEmbed({ active, upcoming, now, includeAll }) {
   const embed = new EmbedBuilder().setTitle("TPPC Events");
+  if (includeAll) {
+    embed.setDescription("All possible events. Order is by next occurrence; dates show the next occurrence.");
+  }
 
   const activeLines = active.length
-    ? active.map((e) => `• **${e.name}** — ends <t:${Math.floor(e.end.getTime() / 1000)}:R> \`(${e.id})\``)
+    ? active.map((e) => formatActiveLine(e, now))
     : ["(none)"];
   const upcomingLines = upcoming.length
     ? upcoming.map((e) => formatUpcomingLine(e, now))
@@ -425,10 +428,30 @@ function buildEventsEmbed({ active, upcoming, now }) {
     { name: "Active", value: activeLines.join("\n"), inline: false },
     { name: "Upcoming", value: upcomingLines.join("\n"), inline: false }
   );
+  embed.setFooter({ text: "* - recurring event" });
   return embed;
 }
 
+function isRecurringEvent(event) {
+  const recurringKinds = new Set([
+    "weekly",
+    "monthly_first",
+    "seasonal_marker",
+    "radio_tower",
+  ]);
+  return recurringKinds.has(event.kind);
+}
+
+function formatActiveLine(event, now) {
+  const recurring = isRecurringEvent(event);
+  const name = recurring ? `${event.name} *` : event.name;
+  return `• **${name}** — ends <t:${Math.floor(event.end.getTime() / 1000)}:R> \`(${event.id})\``;
+}
+
 function formatUpcomingLine(event, now) {
+  if (event.noDate) {
+    return `• **${event.name}** — timing varies (eventid: \`${event.id}\`)`;
+  }
   const baseDate = now instanceof Date ? now : new Date();
   const longDate = event.start.toLocaleDateString("en-US", {
     month: "short",
@@ -442,7 +465,9 @@ function formatUpcomingLine(event, now) {
     timeZone: RPG_EVENT_TIMEZONE,
   });
   const label = event.start.getFullYear() === baseDate.getFullYear() ? shortDate : longDate;
-  return `• **${event.name}** — starts <t:${Math.floor(event.start.getTime() / 1000)}:R> (${label}) (eventid: \`${event.id}\`)`;
+  const recurring = isRecurringEvent(event);
+  const name = recurring ? `${event.name} *` : event.name;
+  return `• **${name}** — starts <t:${Math.floor(event.start.getTime() / 1000)}:R> (${label}) (eventid: \`${event.id}\`)`;
 }
 
 async function listAllEventIds() {
@@ -461,26 +486,59 @@ async function resolveEventsForList(now = new Date(), { includeAll = false } = {
     if (!window) continue;
     if (now >= window.start && now < window.end) {
       active.push({ ...event, start: window.start, end: window.end });
-    } else {
-      const next = computeNextStart(event, now);
-      if (next && (includeAll || next.getTime() <= limit.getTime())) {
-        upcoming.push({ ...event, start: next });
-      }
     }
   }
 
   const rocket = await getLatestOccurrence("team_rocket");
   if (rocket && now >= rocket.start && now < rocket.end) {
     active.push({ id: "team_rocket", name: "Team Rocket Takeover", start: rocket.start, end: rocket.end });
-  } else if (includeAll) {
-    upcoming.push({
-      id: "team_rocket",
-      name: "Team Rocket Takeover (random)",
-      start: now,
-    });
   }
 
-  upcoming.sort((a, b) => a.start.getTime() - b.start.getTime());
+  if (includeAll) {
+    for (const event of RPG_EVENTS) {
+      if (event.kind === "radio_tower") {
+        upcoming.push({
+          id: event.id,
+          name: `${event.name} (random) *`,
+          start: now,
+          kind: event.kind,
+          noDate: true,
+        });
+        continue;
+      }
+      const next = computeNextStart(event, now);
+      upcoming.push({
+        ...event,
+        start: next || now,
+      });
+    }
+    const activeIds = new Set(active.map((event) => event.id));
+    const unique = [];
+    const seen = new Set();
+    for (const entry of upcoming) {
+      if (seen.has(entry.id) || activeIds.has(entry.id)) continue;
+      seen.add(entry.id);
+      unique.push(entry);
+    }
+    upcoming.length = 0;
+    upcoming.push(...unique);
+    upcoming.sort((a, b) => {
+      const aKey = a.noDate ? Number.POSITIVE_INFINITY : a.start.getTime();
+      const bKey = b.noDate ? Number.POSITIVE_INFINITY : b.start.getTime();
+      if (aKey !== bKey) return aKey - bKey;
+      return a.name.localeCompare(b.name);
+    });
+  } else {
+    for (const event of RPG_EVENTS) {
+      if (event.kind === "radio_tower") continue;
+      const next = computeNextStart(event, now);
+      if (next && next.getTime() <= limit.getTime()) {
+        upcoming.push({ ...event, start: next });
+      }
+    }
+    upcoming.sort((a, b) => a.start.getTime() - b.start.getTime());
+  }
+
   return { active, upcoming };
 }
 
@@ -500,7 +558,7 @@ export function registerEvents(register) {
       const includeAll = tokens.some((t) => t.toLowerCase() === "all");
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
-      const embed = buildEventsEmbed({ active, upcoming, now });
+      const embed = buildEventsEmbed({ active, upcoming, now, includeAll });
       void metrics.increment("events.list", { status: "ok", type: "bang" });
       await message.reply({ embeds: [embed] });
     },
@@ -531,7 +589,7 @@ export function registerEvents(register) {
       }
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
-      const embed = buildEventsEmbed({ active, upcoming, now });
+      const embed = buildEventsEmbed({ active, upcoming, now, includeAll });
       void metrics.increment("events.list", { status: "ok", type: "slash" });
       await interaction.reply({ embeds: [embed] });
     }

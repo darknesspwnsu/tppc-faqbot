@@ -55,6 +55,6 @@ describe("events parsing helpers", () => {
     expect(limited.upcoming.map((e) => e.id)).toEqual(["soon"]);
 
     const all = await __testables.resolveEventsForList(now, { includeAll: true });
-    expect(all.upcoming.map((e) => e.id)).toEqual(["team_rocket", "soon", "later"]);
+    expect(all.upcoming.map((e) => e.id)).toEqual(["soon", "later"]);
   });
 });
