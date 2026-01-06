@@ -4,6 +4,7 @@ import { Client, GatewayIntentBits, Partials, Events } from "discord.js";
 import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 import { startSchedulers } from "./schedulers.js";
+import { handleGuildMemberAdd } from "./info/welcome.js";
 
 function mustEnv(name) {
   const v = process.env[name];
@@ -48,6 +49,7 @@ function inAllowedChannel(channelId) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
@@ -113,6 +115,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await commands.dispatchInteraction(interaction);
   } catch (err) {
     console.error("interactionCreate error:", err);
+  }
+});
+
+client.on(Events.GuildMemberAdd, async (member) => {
+  try {
+    await handleGuildMemberAdd(member);
+  } catch (err) {
+    console.error("guildMemberAdd error:", err);
   }
 });
 
