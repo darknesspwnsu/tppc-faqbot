@@ -49,7 +49,7 @@ export const RPG_EVENTS = [
     name: "Weekly Promo Refresh",
     kind: "weekly",
     weekday: 0, // Sunday
-    description: "Weekly promo refresh (Sunday midnight).",
+    description: "Weekly TPPC promo refresh (Sunday midnight).",
   },
   {
     id: "halloween",

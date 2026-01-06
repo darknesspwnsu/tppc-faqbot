@@ -12,6 +12,7 @@ import { RPG_EVENT_CHANNELS_BY_GUILD } from "../configs/rpg_event_channels.js";
 import { RPG_EVENTS, RPG_EVENT_TIMEZONE, computeEventWindow, computeNextStart, startOfDayInZone } from "./rpg_events.js";
 import { loadSpecialDays, computeSpecialDayWindow } from "./special_days.js";
 import { detectRadioTower, buildRadioTowerMessage } from "../rpg/radio_tower.js";
+import { getPromoForGuild } from "../tools/promo.js";
 
 const EVENT_SUB_LIMIT = 1000;
 const EVENT_NOTIFY_DELAY_MS = 1000;
@@ -153,9 +154,22 @@ function formatDuration(ms) {
   return `${total}s`;
 }
 
-function buildEventMessage(event, start, end) {
+function buildEventMessage(event, start, end, { promo } = {}) {
+  if (event.id === "weekly_promo") {
+    const promoText = promo ? `Current promo: **${promo}**.` : "Current promo: **Not set**.";
+    return `📣 **Weekly TPPC promo has been refreshed.**\n${promoText}\nDuration: **7 days**.`;
+  }
   const duration = end && start ? `Duration: **${formatDuration(end - start)}**.` : "";
   return `📣 **${event.name}** has begun.\n${event.description || ""}\n${duration}`.trim();
+}
+
+function getDefaultPromoGuildId(client) {
+  const entries = Object.entries(RPG_EVENT_CHANNELS_BY_GUILD || {});
+  for (const [guildId] of entries) {
+    if (client?.guilds?.cache?.has?.(String(guildId))) return String(guildId);
+  }
+  const first = client?.guilds?.cache?.keys?.().next?.().value;
+  return first ? String(first) : null;
 }
 
 function describeEventId(id) {
@@ -182,6 +196,11 @@ function getAnnouncementChannels(client) {
 
 async function notifySubscribers({ client, event, start, end }) {
   const subscribers = await listSubscribers(event.id);
+  let promo = null;
+  if (event.id === "weekly_promo") {
+    const promoGuildId = getDefaultPromoGuildId(client);
+    if (promoGuildId) promo = await getPromoForGuild(promoGuildId);
+  }
   for (const userId of subscribers) {
     try {
       const already = await wasNotified({
@@ -196,7 +215,7 @@ async function notifySubscribers({ client, event, start, end }) {
       if (!user) continue;
       const res = await sendDm({
         user,
-        payload: buildEventMessage(event, start, end),
+        payload: buildEventMessage(event, start, end, { promo }),
         feature: "events",
       });
       await recordNotification({
@@ -218,7 +237,7 @@ async function notifySubscribers({ client, event, start, end }) {
 async function notifyChannels({ client, event, start, end }) {
   const channels = getAnnouncementChannels(client);
   if (!channels.length) return;
-  const content = buildEventMessage(event, start, end);
+  const promoByGuild = new Map();
 
   for (const { guildId, channelId } of channels) {
     try {
@@ -232,6 +251,14 @@ async function notifyChannels({ client, event, start, end }) {
       if (already) continue;
       const channel = await client.channels.fetch(channelId);
       if (!channel || typeof channel.send !== "function") continue;
+      let promo = null;
+      if (event.id === "weekly_promo") {
+        if (!promoByGuild.has(guildId)) {
+          promoByGuild.set(guildId, await getPromoForGuild(guildId));
+        }
+        promo = promoByGuild.get(guildId);
+      }
+      const content = buildEventMessage(event, start, end, { promo });
       await channel.send(content);
       await recordNotification({
         eventId: event.id,

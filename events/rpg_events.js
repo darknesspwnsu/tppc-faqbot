@@ -107,7 +107,7 @@ function monthlyFirstWindow({ year, month, timeZone }) {
   return { start, end };
 }
 
-function weeklyWindow({ now, weekday, timeZone }) {
+function weeklyWindow({ now, weekday, timeZone, durationDays = 1 }) {
   const parts = getZonedDateParts(now, timeZone);
   const currentWeekday = weekdayIndex(parts.weekday);
   const delta = (weekday - currentWeekday + 7) % 7;
@@ -116,7 +116,7 @@ function weeklyWindow({ now, weekday, timeZone }) {
     timeZone
   );
   const start = new Date(base.getTime() + delta * 24 * 60 * 60_000);
-  const end = new Date(start.getTime() + 24 * 60 * 60_000);
+  const end = new Date(start.getTime() + durationDays * 24 * 60 * 60_000);
   return { start, end };
 }
 
@@ -198,7 +198,12 @@ export function computeEventWindow(event, now = new Date()) {
     case "monthly_first":
       return monthlyFirstWindow({ year: parts.year, month: parts.month, timeZone });
     case "weekly":
-      return weeklyWindow({ now, weekday: event.weekday ?? 0, timeZone });
+      return weeklyWindow({
+        now,
+        weekday: event.weekday ?? 0,
+        timeZone,
+        durationDays: event.id === "weekly_promo" ? 7 : 1,
+      });
     case "fixed_date":
       return fixedDateWindow({ year: parts.year, month: event.month, day: event.day, timeZone, eventId: event.id });
     case "easter": {

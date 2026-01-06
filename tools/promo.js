@@ -280,3 +280,5 @@ export const __testables = {
   getTimeZoneOffset,
   zonedTimeToUtc,
 };
+
+export { getPromoForGuild };
