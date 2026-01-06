@@ -15,6 +15,7 @@ export const WELCOME_MESSAGE = [
   "* Super quick turnaround time from our helpful Community Staff Team",
   "",
   "To get started, please have a quick look over the [chatroom rules](https://wiki.tppc.info/Discord)",
+  "",
   "Instructions for selecting a role: Click on \"Channels & Roles\" just under the server's banner to set a role with your favorite color and enable notifications for contests!",
   "",
   "We highly advise you become verified. This will make you eligible for more contests, able to post pictures, and if you are a new player or returning with nothing, you may then qualify for the new [starter quests](https://forums.tppc.info/showthread.php?t=621060).",
