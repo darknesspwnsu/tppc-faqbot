@@ -422,12 +422,7 @@ function buildEventsEmbed({ active, upcoming }) {
 }
 
 async function listAllEventIds() {
-  const ids = RPG_EVENTS.map((e) => e.id);
-  const { days } = await loadSpecialDays();
-  for (const day of days) {
-    ids.push(`special_${day.id}`);
-  }
-  return ids;
+  return RPG_EVENTS.map((e) => e.id);
 }
 
 async function resolveEventsForList(now = new Date()) {
@@ -443,19 +438,6 @@ async function resolveEventsForList(now = new Date()) {
     } else {
       const next = computeNextStart(event, now);
       if (next) upcoming.push({ ...event, start: next });
-    }
-  }
-
-  const { defaults, days } = await loadSpecialDays();
-  for (const day of days) {
-    const window = computeSpecialDayWindow(day, defaults, now);
-    if (!window) continue;
-    const eventId = `special_${day.id}`;
-    const entry = { id: eventId, name: day.name, start: window.start, end: window.end };
-    if (now >= window.start && now < window.end) {
-      active.push(entry);
-    } else if (now < window.start) {
-      upcoming.push(entry);
     }
   }
 
