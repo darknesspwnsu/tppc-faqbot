@@ -7,6 +7,7 @@ import { registerPowerPlant } from "./powerplant.js";
 import { registerFindMyId } from "./findmyid.js";
 import { registerViewbox } from "./viewbox.js";
 import { registerPokedex } from "./pokedex.js";
+import { registerRpgInfo, registerRpgInfoScheduler } from "./rpginfo.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const RPG_MODULES = [
@@ -15,6 +16,7 @@ const RPG_MODULES = [
   { id: "findmyid", register: registerFindMyId },
   { id: "viewbox", register: registerViewbox },
   { id: "pokedex", register: registerPokedex },
+  { id: "rpginfo", register: registerRpgInfo, registerScheduler: registerRpgInfoScheduler },
 ];
 
 export function registerRpg(register) {

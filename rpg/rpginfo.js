@@ -1,0 +1,336 @@
+// rpg/rpginfo.js
+//
+// Fetch and cache RPG info helpers (SS Anne + Training Challenge).
+
+import fs from "node:fs/promises";
+import path from "node:path";
+
+import { parse } from "node-html-parser";
+
+import { createRpgClientFactory } from "./client_factory.js";
+import { requireRpgCredentials, hasRpgCredentials } from "./credentials.js";
+import { getLeaderboard, upsertLeaderboard } from "./storage.js";
+import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
+import { normalizeKey } from "../shared/pokename_utils.js";
+import { logger } from "../shared/logger.js";
+import { registerScheduler } from "../shared/scheduler_registry.js";
+
+const SS_ANNE_URL = "https://www.tppcrpg.net/ss_anne.php";
+const TC_URL = "https://www.tppcrpg.net/training_challenge.php";
+const SS_ANNE_KEY = "rpginfo:ssanne";
+const TC_INELIGIBLE_KEY = "rpginfo:tc_ineligible";
+
+const SS_ANNE_TTL_MS = 24 * 60 * 60_000;
+const TC_INELIGIBLE_TTL_MS = 7 * 24 * 60 * 60_000;
+
+const EVOLUTION_PATH = path.resolve("data/pokemon_evolutions.json");
+
+let evolutionBaseByName = null; // { normalizedName: normalizedBase }
+
+function getText(node) {
+  if (!node) return "";
+  return String(node.text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeName(name) {
+  return normalizeKey(String(name || ""));
+}
+
+async function loadEvolutionMap() {
+  if (evolutionBaseByName) return evolutionBaseByName;
+
+  try {
+    const raw = await fs.readFile(EVOLUTION_PATH, "utf8");
+    const data = JSON.parse(raw);
+    const baseByName = data?.base_by_name || {};
+    const normalized = {};
+    for (const [key, value] of Object.entries(baseByName)) {
+      const normKey = normalizeName(key);
+      if (!normKey) continue;
+      normalized[normKey] = String(value || key);
+    }
+    evolutionBaseByName = normalized;
+    return normalized;
+  } catch (err) {
+    console.error("[rpg] failed to load evolution data:", err);
+    evolutionBaseByName = {};
+    return evolutionBaseByName;
+  }
+}
+
+async function resolvePokemonName(raw) {
+  const direct = await findPokedexEntry(raw);
+  if (direct?.entry?.name) {
+    return { name: direct.entry.name, variant: "" };
+  }
+
+  const parsed = parsePokemonQuery(raw);
+  const base = parsed.base || raw;
+  const baseResult = await findPokedexEntry(base);
+  if (baseResult?.entry?.name) {
+    return { name: baseResult.entry.name, variant: parsed.variant || "" };
+  }
+
+  return { name: null, variant: parsed.variant || "" };
+}
+
+function isBaseEvolution(name, baseByName) {
+  const norm = normalizeName(name);
+  if (!norm) return true;
+  const base = baseByName?.[norm];
+  if (!base) return true;
+  return base === norm;
+}
+
+function parseBattleThreshold(html) {
+  const root = parse(String(html || ""));
+  const text = getText(root);
+  const match = /more than\s+([\d,]+)\s+battles/i.exec(text);
+  if (!match) return null;
+  const count = Number(String(match[1]).replace(/,/g, ""));
+  if (!Number.isFinite(count)) return null;
+  return count + 1;
+}
+
+function parseTrainingChallengeIneligible(html) {
+  const root = parse(String(html || ""));
+  const paragraphs = root.querySelectorAll("p");
+  for (const p of paragraphs) {
+    const text = getText(p);
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    if (!lower.includes("ineligible") || !lower.includes("training challenge")) continue;
+    const idx = text.indexOf(":");
+    if (idx === -1) continue;
+    const listText = text.slice(idx + 1).trim();
+    if (!listText) continue;
+    return listText
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean);
+  }
+  return null;
+}
+
+function isStale(updatedAtMs, ttlMs) {
+  if (!updatedAtMs) return true;
+  return Date.now() - updatedAtMs > ttlMs;
+}
+
+async function getCachedPayload(key, ttlMs) {
+  const cached = await getLeaderboard({ challenge: key });
+  if (!cached?.payload) return null;
+  if (ttlMs && isStale(cached.updatedAt, ttlMs)) return null;
+  return { payload: cached.payload, updatedAt: cached.updatedAt };
+}
+
+async function fetchAndStoreSsAnne(client) {
+  const html = await client.fetchPage(SS_ANNE_URL);
+  const battles = parseBattleThreshold(html);
+  if (!battles) throw new Error("SS Anne battle threshold not found.");
+  await upsertLeaderboard({ challenge: SS_ANNE_KEY, payload: { battles } });
+  return battles;
+}
+
+async function fetchAndStoreTrainingChallengeIneligible(client) {
+  const html = await client.fetchPage(TC_URL);
+  const list = parseTrainingChallengeIneligible(html);
+  if (!list || !list.length) {
+    throw new Error("Training Challenge ineligible list not found.");
+  }
+  await upsertLeaderboard({ challenge: TC_INELIGIBLE_KEY, payload: { list } });
+  return list;
+}
+
+async function getSsAnneBattles(client) {
+  const cached = await getCachedPayload(SS_ANNE_KEY, SS_ANNE_TTL_MS);
+  if (cached?.payload?.battles) return cached.payload.battles;
+  return await fetchAndStoreSsAnne(client);
+}
+
+async function getTrainingChallengeIneligible(client) {
+  const cached = await getCachedPayload(TC_INELIGIBLE_KEY, TC_INELIGIBLE_TTL_MS);
+  if (cached?.payload?.list?.length) return cached.payload.list;
+  return await fetchAndStoreTrainingChallengeIneligible(client);
+}
+
+function getEtDateKey() {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function getEtHour() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hourPart = parts.find((p) => p.type === "hour");
+  return hourPart ? Number(hourPart.value) : null;
+}
+
+function scheduleTrainingChallengeIneligible(client) {
+  let lastRunDate = null;
+
+  async function tick() {
+    const hour = getEtHour();
+    if (hour == null || hour < 9) return;
+    const dateKey = getEtDateKey();
+    if (lastRunDate === dateKey) return;
+    lastRunDate = dateKey;
+
+    try {
+      const cached = await getLeaderboard({ challenge: TC_INELIGIBLE_KEY });
+      if (cached?.updatedAt && !isStale(cached.updatedAt, TC_INELIGIBLE_TTL_MS)) return;
+      await fetchAndStoreTrainingChallengeIneligible(client);
+    } catch (err) {
+      logger.error("rpginfo.tc.refresh.error", { error: logger.serializeError(err) });
+      console.error("[rpg] failed to refresh training challenge ineligible list:", err);
+    }
+  }
+
+  tick();
+  setInterval(tick, 10 * 60_000);
+}
+
+export function registerRpgInfo(register) {
+  const cmd = "!rpginfo";
+  const getClient = createRpgClientFactory();
+
+  register(
+    cmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!requireRpgCredentials(cmd)) {
+        await message.reply("❌ RPG credentials are not configured.");
+        return;
+      }
+
+      const raw = String(rest || "").trim();
+      const parts = raw.split(/\s+/).filter(Boolean);
+      const sub = String(parts[0] || "").toLowerCase();
+
+      if (!sub || sub === "help") {
+        await message.reply(
+          [
+            "**RPG info options:**",
+            `• \`${cmd} ssanne\` — SS Anne Golden Volcanion requirement`,
+            `• \`${cmd} tc\` — Training Challenge ineligible list`,
+            `• \`${cmd} tc iseligible <pokemon>\` — Check Training Challenge eligibility`,
+            `• \`${cmd} tc eligible <pokemon>\` — Check Training Challenge eligibility`,
+          ].join("\n")
+        );
+        return;
+      }
+
+      if (sub === "ssanne") {
+        try {
+          const battles = await getSsAnneBattles(getClient());
+          await message.reply(
+            `Number of battles required to win GoldenVolcanion: ${battles.toLocaleString("en-US")}`
+          );
+        } catch (err) {
+          logger.error("rpginfo.ssanne.error", { error: logger.serializeError(err) });
+          console.error("[rpg] failed to load SS Anne info:", err);
+          await message.reply("❌ Unable to load SS Anne info right now.");
+        }
+        return;
+      }
+
+      if (sub === "tc" || sub === "training" || sub === "trainingchallenge") {
+        const tail = parts.slice(1);
+        const tailLower = tail.map((t) => t.toLowerCase());
+        const isEligibleIndex = tailLower.indexOf("iseligible");
+        const eligibleIndex = tailLower.indexOf("eligible");
+        const markerIndex = isEligibleIndex >= 0 ? isEligibleIndex : eligibleIndex;
+        const client = getClient();
+
+        try {
+          if (markerIndex >= 0) {
+            const nameTokens = tail.slice(markerIndex + 1);
+            if (!nameTokens.length) {
+              await message.reply(`Usage: \`${cmd} tc iseligible <pokemon>\``);
+              return;
+            }
+            const nameRaw = nameTokens.join(" ").trim();
+            const resolved = await resolvePokemonName(nameRaw);
+            if (!resolved.name) {
+              await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+              return;
+            }
+
+            const baseByName = await loadEvolutionMap();
+            const baseName = baseByName?.[normalizeName(resolved.name)] || resolved.name;
+
+            const ineligible = await getTrainingChallengeIneligible(client);
+            const bannedSet = new Set(ineligible.map(normalizeName));
+            const normBase = normalizeName(baseName);
+            const isBase = normalizeName(resolved.name) === normBase;
+            const isBanned = bannedSet.has(normBase);
+
+            if (!isBase) {
+              if (isBanned) {
+                await message.reply(
+                  `No — **${resolved.name}**'s base evolution **${baseName}** is ineligible for this week's Training Challenge.`
+                );
+              } else {
+                await message.reply(
+                  `**${resolved.name}**'s base evolution **${baseName}** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center.`
+                );
+              }
+              return;
+            }
+
+            if (isBanned) {
+              await message.reply(
+                `No — **${baseName}** is ineligible for this week's Training Challenge.`
+              );
+              return;
+            }
+
+            await message.reply(
+              `**${baseName}** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center.`
+            );
+            return;
+          }
+
+          const list = await getTrainingChallengeIneligible(client);
+          await message.reply(
+            `Ineligible for this month's Training Challenge: ${list.join(", ")}`
+          );
+        } catch (err) {
+          logger.error("rpginfo.tc.error", { error: logger.serializeError(err) });
+          console.error("[rpg] failed to load Training Challenge info:", err);
+          await message.reply("❌ Unable to load Training Challenge info right now.");
+        }
+        return;
+      }
+
+      await message.reply(
+        `Usage: \`${cmd} ssanne|tc|trainingchallenge\` or \`${cmd} tc iseligible <pokemon>\``
+      );
+    },
+    `${cmd} <topic> — show SS Anne or Training Challenge info`
+  );
+}
+
+export function registerRpgInfoScheduler() {
+  registerScheduler("rpginfo_training_challenge", () => {
+    if (!hasRpgCredentials()) return;
+    const client = createRpgClientFactory()();
+    scheduleTrainingChallengeIneligible(client);
+  });
+}
+
+export const __testables = {
+  parseBattleThreshold,
+  parseTrainingChallengeIneligible,
+  isBaseEvolution,
+  normalizeName,
+};

@@ -9,6 +9,8 @@ async function loadRpg({ throwsAt = null } = {}) {
   const registerFindMyId = vi.fn();
   const registerViewbox = vi.fn();
   const registerPokedex = vi.fn();
+  const registerRpgInfo = vi.fn();
+  const registerRpgInfoScheduler = vi.fn();
 
   if (throwsAt === "leaderboard") registerLeaderboard.mockImplementation(() => {
     throw new Error("boom");
@@ -19,6 +21,7 @@ async function loadRpg({ throwsAt = null } = {}) {
   vi.doMock("../../rpg/findmyid.js", () => ({ registerFindMyId }));
   vi.doMock("../../rpg/viewbox.js", () => ({ registerViewbox }));
   vi.doMock("../../rpg/pokedex.js", () => ({ registerPokedex }));
+  vi.doMock("../../rpg/rpginfo.js", () => ({ registerRpgInfo, registerRpgInfoScheduler }));
 
   const mod = await import("../../rpg/rpg.js");
   return {
@@ -29,6 +32,8 @@ async function loadRpg({ throwsAt = null } = {}) {
     registerFindMyId,
     registerViewbox,
     registerPokedex,
+    registerRpgInfo,
+    registerRpgInfoScheduler,
   };
 }
 
@@ -39,7 +44,14 @@ afterEach(() => {
 describe("rpg registry", () => {
   it("lists modules in order", async () => {
     const { listRpgModules } = await loadRpg();
-    expect(listRpgModules()).toEqual(["leaderboard", "powerplant", "findmyid", "viewbox", "pokedex"]);
+    expect(listRpgModules()).toEqual([
+      "leaderboard",
+      "powerplant",
+      "findmyid",
+      "viewbox",
+      "pokedex",
+      "rpginfo",
+    ]);
   });
 
   it("registers all modules", async () => {
@@ -50,6 +62,7 @@ describe("rpg registry", () => {
       registerFindMyId,
       registerViewbox,
       registerPokedex,
+      registerRpgInfo,
     } = await loadRpg();
 
     const register = { info: vi.fn() };
@@ -60,6 +73,7 @@ describe("rpg registry", () => {
     expect(registerFindMyId).toHaveBeenCalledWith(register);
     expect(registerViewbox).toHaveBeenCalledWith(register);
     expect(registerPokedex).toHaveBeenCalledWith(register);
+    expect(registerRpgInfo).toHaveBeenCalledWith(register);
   });
 
   it("logs errors but continues registration", async () => {
@@ -70,6 +84,7 @@ describe("rpg registry", () => {
       registerFindMyId,
       registerViewbox,
       registerPokedex,
+      registerRpgInfo,
     } = await loadRpg({ throwsAt: "leaderboard" });
 
     const register = { info: vi.fn() };
@@ -83,5 +98,6 @@ describe("rpg registry", () => {
     expect(registerFindMyId).toHaveBeenCalledWith(register);
     expect(registerViewbox).toHaveBeenCalledWith(register);
     expect(registerPokedex).toHaveBeenCalledWith(register);
+    expect(registerRpgInfo).toHaveBeenCalledWith(register);
   });
 });
