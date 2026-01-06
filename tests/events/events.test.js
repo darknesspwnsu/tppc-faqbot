@@ -1,13 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../db.js", () => ({ getDb: vi.fn(() => ({ execute: vi.fn(async () => [[]]) })) }));
-vi.mock("../../shared/metrics.js", () => ({ metrics: { incrementSchedulerRun: vi.fn() } }));
+const dbExecute = vi.fn(async () => [[]]);
+vi.mock("../../db.js", () => ({ getDb: vi.fn(() => ({ execute: dbExecute })) }));
+vi.mock("../../shared/metrics.js", () => ({
+  metrics: { incrementSchedulerRun: vi.fn(), increment: vi.fn() },
+}));
 vi.mock("../../shared/dm.js", () => ({ sendDm: vi.fn(async () => ({ ok: true })) }));
 vi.mock("../../configs/rpg_event_channels.js", () => ({ RPG_EVENT_CHANNELS_BY_GUILD: {} }));
 vi.mock("../../configs/rpg_events.js", () => ({
   RPG_EVENT_TIMEZONE: "America/New_York",
   RPG_EVENT_OVERRIDES: {},
   RPG_EVENTS: [
+    {
+      id: "team_rocket",
+      name: "Team Rocket Takeover",
+      kind: "radio_tower",
+      description: "Rocket",
+    },
     {
       id: "soon",
       name: "Soon Event",
@@ -41,7 +50,7 @@ vi.mock("../../events/special_days.js", async () => {
   };
 });
 
-import { __testables } from "../../events/events.js";
+import { __testables, registerEvents } from "../../events/events.js";
 
 describe("events parsing helpers", () => {
   it("parses event ids and dedupes", () => {
@@ -55,6 +64,143 @@ describe("events parsing helpers", () => {
     expect(limited.upcoming.map((e) => e.id)).toEqual(["team_rocket", "soon"]);
 
     const all = await __testables.resolveEventsForList(now, { includeAll: true });
-    expect(all.upcoming.map((e) => e.id)).toEqual(["soon", "later"]);
+    expect(all.upcoming.map((e) => e.id)).toEqual(["soon", "later", "team_rocket"]);
+  });
+
+  it("formats weekly promo messages with promo text", () => {
+    const message = __testables.buildEventMessage(
+      { id: "weekly_promo", name: "Weekly Promo Refresh" },
+      new Date("2026-01-04T05:00:00Z"),
+      new Date("2026-01-11T05:00:00Z"),
+      { promo: "ShinyCarnivine" }
+    );
+    expect(message).toContain("Weekly TPPC promo has been refreshed.");
+    expect(message).toContain("Current promo: **ShinyCarnivine**.");
+    expect(message).toContain("Duration: **7 days**.");
+  });
+
+  it("formats standard event messages with duration", () => {
+    const message = __testables.buildEventMessage(
+      { id: "scatterbug", name: "Scatterbug Swarm", description: "Scatterbug swarm (24h)." },
+      new Date("2026-01-10T05:00:00Z"),
+      new Date("2026-01-11T05:00:00Z")
+    );
+    expect(message).toContain("Scatterbug Swarm");
+    expect(message).toContain("Duration: **24h 0m**.");
+  });
+
+  it("responds with help text for !events help", async () => {
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.mock.calls.find((call) => call[0] === "!events")?.[1];
+    expect(handler).toBeTypeOf("function");
+
+    const reply = vi.fn();
+    await handler({
+      message: { content: "!events help", reply },
+    });
+    expect(reply).toHaveBeenCalled();
+    const messageText = reply.mock.calls[0][0];
+    expect(messageText).toContain("!events help");
+    expect(messageText).toContain("/subscriptions subscribe");
+  });
+
+  it("handles /events list", async () => {
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "events")?.[1];
+    expect(handler).toBeTypeOf("function");
+
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        options: { getSubcommand: () => "list" },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+  });
+
+  it("rejects unknown subscription ids", async () => {
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    expect(handler).toBeTypeOf("function");
+
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: {
+          getSubcommand: () => "subscribe",
+          getString: () => "unknown_id",
+        },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("Unknown event IDs");
+  });
+
+  it("lists subscriptions with descriptions", async () => {
+    dbExecute.mockImplementation(async (sql) => {
+      if (sql.includes("FROM event_subscriptions")) {
+        return [[{ event_id: "soon" }]];
+      }
+      return [[]];
+    });
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: { getSubcommand: () => "list" },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("Soon");
+  });
+
+  it("subscribes to valid event ids", async () => {
+    dbExecute.mockImplementation(async () => [[]]);
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const handler = register.slash.mock.calls.find((call) => call[0]?.name === "subscriptions")?.[1];
+    const reply = vi.fn();
+    await handler({
+      interaction: {
+        user: { id: "u1" },
+        options: {
+          getSubcommand: () => "subscribe",
+          getString: () => "soon",
+        },
+        reply,
+      },
+    });
+    expect(reply).toHaveBeenCalled();
+    expect(reply.mock.calls[0][0].content).toContain("Subscribed");
   });
 });
