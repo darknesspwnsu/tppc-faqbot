@@ -501,6 +501,7 @@ export function registerEvents(register) {
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
       const embed = buildEventsEmbed({ active, upcoming, now });
+      void metrics.increment("events.list", { status: "ok", type: "bang" });
       await message.reply({ embeds: [embed] });
     },
     "!events — show active and upcoming TPPC events"
@@ -524,6 +525,7 @@ export function registerEvents(register) {
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
       const embed = buildEventsEmbed({ active, upcoming, now });
+      void metrics.increment("events.list", { status: "ok", type: "slash" });
       await interaction.reply({ embeds: [embed] });
     }
   );
@@ -578,6 +580,7 @@ export function registerEvents(register) {
 
       if (sub === "list") {
         const ids = await listSubscriptions(userId);
+        void metrics.increment("events.subscriptions.list", { status: "ok" });
         const content = ids.length
           ? `You are subscribed to:\n${ids.map((id) => describeEventId(id)).join("\n")}`
           : "You have no event subscriptions.";
@@ -587,6 +590,7 @@ export function registerEvents(register) {
 
       if (sub === "unsub_all") {
         await clearSubscriptions(userId);
+        void metrics.increment("events.subscriptions.clear", { status: "ok" });
         await interaction.reply({ content: "✅ Unsubscribed from all events.", flags: MessageFlags.Ephemeral });
         return;
       }
@@ -618,6 +622,7 @@ export function registerEvents(register) {
         for (const id of targetIds) {
           await addSubscription(userId, id);
         }
+        void metrics.increment("events.subscriptions.subscribe", { status: "ok" });
         await interaction.reply({
           content: `✅ Subscribed to ${targetIds.length} event(s).`,
           flags: MessageFlags.Ephemeral,
@@ -629,6 +634,7 @@ export function registerEvents(register) {
         for (const id of targetIds) {
           await removeSubscription(userId, id);
         }
+        void metrics.increment("events.subscriptions.unsubscribe", { status: "ok" });
         await interaction.reply({
           content: `✅ Unsubscribed from ${targetIds.length} event(s).`,
           flags: MessageFlags.Ephemeral,
