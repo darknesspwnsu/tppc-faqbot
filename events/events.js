@@ -19,6 +19,7 @@ const EVENT_SUB_LIMIT = 1000;
 const EVENT_NOTIFY_DELAY_MS = 1000;
 const MAX_TIMEOUT_MS = 2_000_000_000; // setTimeout limit safety
 const ADMIN_ANNOUNCEMENT_EVENT_ID = "discord_announcements";
+const SUBSCRIPTION_SNAPSHOT_INTERVAL_MS = 60 * 60_000;
 
 function mention(id) {
   return `<@${id}>`;
@@ -74,6 +75,69 @@ async function listSubscribers(eventId) {
     [String(eventId)]
   );
   return (rows || []).map((row) => String(row.user_id));
+}
+
+async function recordSubscriptionSnapshot() {
+  const db = getDb();
+  const allIds = await listAllEventIds();
+  const [[usersWithAny]] = await db.execute(
+    `SELECT COUNT(DISTINCT user_id) AS count FROM event_subscriptions`
+  );
+  const [[usersWithAll]] = await db.execute(
+    `
+    SELECT COUNT(*) AS count
+    FROM (
+      SELECT user_id
+      FROM event_subscriptions
+      GROUP BY user_id
+      HAVING COUNT(DISTINCT event_id) = ?
+    ) AS all_subs
+  `,
+    [allIds.length]
+  );
+  const [byEvent] = await db.execute(
+    `
+    SELECT event_id, COUNT(*) AS count
+    FROM event_subscriptions
+    GROUP BY event_id
+  `
+  );
+
+  void metrics.increment(
+    "events.subscriptions.snapshot",
+    { type: "users_with_any" },
+    Number(usersWithAny?.count || 0)
+  );
+  void metrics.increment(
+    "events.subscriptions.snapshot",
+    { type: "users_with_all" },
+    Number(usersWithAll?.count || 0)
+  );
+
+  for (const row of byEvent || []) {
+    void metrics.increment(
+      "events.subscriptions.by_event",
+      { event_id: String(row.event_id) },
+      Number(row.count || 0)
+    );
+  }
+}
+
+function scheduleSubscriptionSnapshots() {
+  const now = Date.now();
+  const next = new Date(now);
+  next.setUTCMinutes(0, 0, 0);
+  next.setUTCHours(next.getUTCHours() + 1);
+  let delay = next.getTime() - now;
+  if (!Number.isFinite(delay) || delay < 0) delay = 60_000;
+  scheduleTimeout(async function tick() {
+    try {
+      await recordSubscriptionSnapshot();
+    } catch (err) {
+      logger.warn("events.subscriptions.snapshot.failed", { error: logger.serializeError(err) });
+    }
+    scheduleTimeout(tick, SUBSCRIPTION_SNAPSHOT_INTERVAL_MS);
+  }, delay);
 }
 
 async function recordOccurrence({ eventId, startMs, endMs, source }) {

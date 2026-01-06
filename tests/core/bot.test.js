@@ -62,7 +62,10 @@ async function loadBotModule({
   });
 
   vi.doMock("../../commands.js", () => ({ buildCommandRegistry }));
-  vi.doMock("../../db.js", () => ({ initDb }));
+  vi.doMock("../../db.js", () => ({
+    initDb,
+    getDb: () => ({ execute: vi.fn(async () => [[]]) }),
+  }));
 
   await import("../../bot.js");
   const { __clients } = await import("discord.js");
