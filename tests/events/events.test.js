@@ -7,6 +7,9 @@ vi.mock("../../shared/metrics.js", () => ({
 }));
 vi.mock("../../shared/dm.js", () => ({ sendDm: vi.fn(async () => ({ ok: true })) }));
 vi.mock("../../configs/rpg_event_channels.js", () => ({ RPG_EVENT_CHANNELS_BY_GUILD: {} }));
+vi.mock("../../configs/admin_announcement_channels.js", () => ({
+  ADMIN_ANNOUNCEMENT_CHANNELS_BY_GUILD: { "329934860388925442": ["779468797009985576"] },
+}));
 vi.mock("../../configs/rpg_events.js", () => ({
   RPG_EVENT_TIMEZONE: "America/New_York",
   RPG_EVENT_OVERRIDES: {},
@@ -107,6 +110,7 @@ describe("events parsing helpers", () => {
     const messageText = reply.mock.calls[0][0];
     expect(messageText).toContain("!events help");
     expect(messageText).toContain("/subscriptions subscribe");
+    expect(messageText).toContain("discord_announcements");
   });
 
   it("handles /events list", async () => {
@@ -202,5 +206,43 @@ describe("events parsing helpers", () => {
     });
     expect(reply).toHaveBeenCalled();
     expect(reply.mock.calls[0][0].content).toContain("Subscribed");
+  });
+
+  it("forwards admin announcements to subscribers", async () => {
+    dbExecute.mockImplementation(async (sql) => {
+      if (sql.includes("FROM event_subscriptions")) {
+        return [[{ user_id: "u1" }]];
+      }
+      return [[]];
+    });
+    const register = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+    register.onMessage = vi.fn();
+
+    registerEvents(register);
+    const listener = register.listener.mock.calls[0][0];
+    const { sendDm } = await vi.importMock("../../shared/dm.js");
+    const client = {
+      users: { fetch: vi.fn(async () => ({ id: "u1" })) },
+    };
+    const message = {
+      id: "m1",
+      guildId: "329934860388925442",
+      channelId: "779468797009985576",
+      createdTimestamp: 1700000000000,
+      content: "New announcement!",
+      url: "https://discord.com/channels/329934860388925442/779468797009985576/1",
+      guild: { name: "TPPC" },
+      channel: { name: "announcements" },
+      embeds: [],
+      attachments: new Map(),
+      client,
+    };
+    await listener({ message });
+    expect(__testables.isAdminAnnouncementChannel(message)).toBe(true);
+    await __testables.forwardAdminAnnouncement(message);
+    expect(client.users.fetch).toHaveBeenCalled();
+    expect(sendDm).toHaveBeenCalled();
   });
 });

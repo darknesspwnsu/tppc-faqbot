@@ -9,6 +9,7 @@ import { metrics } from "../shared/metrics.js";
 import { sendDm } from "../shared/dm.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { RPG_EVENT_CHANNELS_BY_GUILD } from "../configs/rpg_event_channels.js";
+import { ADMIN_ANNOUNCEMENT_CHANNELS_BY_GUILD } from "../configs/admin_announcement_channels.js";
 import { RPG_EVENTS, RPG_EVENT_TIMEZONE, computeEventWindow, computeNextStart, startOfDayInZone } from "./rpg_events.js";
 import { loadSpecialDays, computeSpecialDayWindow } from "./special_days.js";
 import { detectRadioTower, buildRadioTowerMessage } from "../rpg/radio_tower.js";
@@ -17,6 +18,7 @@ import { getPromoForGuild } from "../tools/promo.js";
 const EVENT_SUB_LIMIT = 1000;
 const EVENT_NOTIFY_DELAY_MS = 1000;
 const MAX_TIMEOUT_MS = 2_000_000_000; // setTimeout limit safety
+const ADMIN_ANNOUNCEMENT_EVENT_ID = "discord_announcements";
 
 function mention(id) {
   return `<@${id}>`;
@@ -173,6 +175,9 @@ function getDefaultPromoGuildId(client) {
 }
 
 function describeEventId(id) {
+  if (id === ADMIN_ANNOUNCEMENT_EVENT_ID) {
+    return "• `discord_announcements` — Admin announcements forwarded from the official Discord announcements channel.";
+  }
   const entry = RPG_EVENTS.find((event) => event.id === id);
   if (!entry) return `• \`${id}\``;
   const desc = entry.description || entry.name;
@@ -192,6 +197,65 @@ function getAnnouncementChannels(client) {
     }
   }
   return output;
+}
+
+function isAdminAnnouncementChannel(message) {
+  if (!message?.guildId || !message?.channelId) return false;
+  const channels = ADMIN_ANNOUNCEMENT_CHANNELS_BY_GUILD?.[String(message.guildId)];
+  if (!Array.isArray(channels) || !channels.length) return false;
+  return channels.map(String).includes(String(message.channelId));
+}
+
+function buildAdminAnnouncementPayload(message) {
+  const guildName = message?.guild?.name || "the server";
+  const channelName = message?.channel?.name ? `#${message.channel.name}` : "a channel";
+  const link = message?.url || `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
+  const header = `📣 Admin Announcement (forwarded from **${guildName}** ${channelName})\n${link}`;
+  const body = message?.content?.trim();
+  const content = body ? `${header}\n\n${body}` : header;
+  const payload = { content };
+  if (message?.embeds?.length) payload.embeds = message.embeds;
+  if (message?.attachments?.size) payload.files = Array.from(message.attachments.values());
+  return payload;
+}
+
+async function forwardAdminAnnouncement(message) {
+  if (!message?.client) return;
+  const subscribers = await listSubscribers(ADMIN_ANNOUNCEMENT_EVENT_ID);
+  if (!subscribers.length) return;
+  const startMs = Number.isFinite(message.createdTimestamp) ? message.createdTimestamp : Date.now();
+  for (const userId of subscribers) {
+    try {
+      const already = await wasNotified({
+        eventId: ADMIN_ANNOUNCEMENT_EVENT_ID,
+        startMs,
+        targetType: "user",
+        targetId: userId,
+      });
+      if (already) continue;
+      const user = await message.client.users.fetch(userId);
+      if (!user) continue;
+      const res = await sendDm({
+        user,
+        payload: buildAdminAnnouncementPayload(message),
+        feature: "events.announcements",
+      });
+      await recordNotification({
+        eventId: ADMIN_ANNOUNCEMENT_EVENT_ID,
+        startMs,
+        targetType: "user",
+        targetId: userId,
+      });
+      void metrics.increment("events.announcements.forward", { status: res.ok ? "ok" : "error" });
+      if (!res.ok && res.code !== 50007) {
+        logger.warn("events.announcements.dm.failed", { userId, error: res.error });
+      }
+      await sleep(EVENT_NOTIFY_DELAY_MS);
+    } catch (err) {
+      void metrics.increment("events.announcements.forward", { status: "error" });
+      logger.warn("events.announcements.dm.failed", { userId, error: logger.serializeError(err) });
+    }
+  }
 }
 
 async function notifySubscribers({ client, event, start, end }) {
@@ -498,7 +562,7 @@ function formatUpcomingLine(event, now) {
 }
 
 async function listAllEventIds() {
-  return RPG_EVENTS.map((e) => e.id);
+  return [...RPG_EVENTS.map((e) => e.id), ADMIN_ANNOUNCEMENT_EVENT_ID];
 }
 
 async function resolveEventsForList(now = new Date(), { includeAll = false } = {}) {
@@ -596,6 +660,7 @@ export function registerEvents(register) {
             "• `!events` — list events in the next 2 months",
             "• `!events all` — list all possible events",
             "• `/subscriptions subscribe event_ids:<id[,id]>` — subscribe to event IDs",
+            "• `/subscriptions subscribe event_ids:discord_announcements` — forwarded admin announcements",
             "• `/subscriptions list` — list your subscriptions",
             "• `/subscriptions unsubscribe event_ids:<id[,id]>` — remove subscriptions",
             "• `/subscriptions unsub_all` — remove all subscriptions",
@@ -643,6 +708,12 @@ export function registerEvents(register) {
       await interaction.reply({ embeds: [embed] });
     }
   );
+
+  register.listener(async ({ message }) => {
+    if (!message) return;
+    if (!isAdminAnnouncementChannel(message)) return;
+    await forwardAdminAnnouncement(message);
+  });
 
   register.slash(
     {
@@ -766,4 +837,7 @@ export const __testables = {
   formatDuration,
   buildEventMessage,
   resolveEventsForList,
+  isAdminAnnouncementChannel,
+  buildAdminAnnouncementPayload,
+  forwardAdminAnnouncement,
 };
