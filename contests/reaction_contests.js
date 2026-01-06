@@ -484,7 +484,7 @@ export function registerReactionContests(register) {
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${displayNames.length} entrant(s))`
+          `━━━━━━━━━━━━━━\nEntrant(s): ${displayNames.length}\n${label}: **${picks.join(", ")}**${prizeLine}`
         );
         return;
       }
@@ -677,7 +677,7 @@ export function registerReactionContests(register) {
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${displayNames.length} entrant(s))`
+          `━━━━━━━━━━━━━━\nEntrant(s): ${displayNames.length}\n${label}: **${picks.join(", ")}**${prizeLine}`
         );
         return;
       }
