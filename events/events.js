@@ -513,15 +513,22 @@ export function registerEvents(register) {
       description: "Show active and upcoming TPPC events",
       options: [
         {
-          type: 5,
+          type: 1,
+          name: "list",
+          description: "Show events in the next 2 months",
+        },
+        {
+          type: 1,
           name: "all",
-          description: "Include all upcoming events",
-          required: false,
+          description: "Show all upcoming events",
         },
       ],
     },
     async ({ interaction }) => {
-      const includeAll = interaction.options?.getBoolean?.("all") || false;
+      let includeAll = false;
+      if (interaction.options?.getSubcommand) {
+        includeAll = interaction.options.getSubcommand() === "all";
+      }
       const now = new Date();
       const { active, upcoming } = await resolveEventsForList(now, { includeAll });
       const embed = buildEventsEmbed({ active, upcoming, now });
