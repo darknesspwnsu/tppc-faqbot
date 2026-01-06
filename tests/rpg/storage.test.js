@@ -114,4 +114,31 @@ describe("rpg/storage", () => {
       updatedAt: new Date(updatedAt).getTime(),
     });
   });
+
+  it("incrementLeaderboardHistory upserts win counts", async () => {
+    const { incrementLeaderboardHistory, execute } = await loadStorage();
+
+    await incrementLeaderboardHistory({ challenge: "ssanne", trainerId: "123" });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO rpg_leaderboard_history"),
+      ["ssanne", "123"]
+    );
+  });
+
+  it("getLeaderboardHistoryTop returns rows", async () => {
+    const rows = [
+      { trainer_id: "1", wins: 3 },
+      { trainer_id: "2", wins: 1 },
+    ];
+    const { getLeaderboardHistoryTop, execute } = await loadStorage({ rows });
+
+    const result = await getLeaderboardHistoryTop({ challenge: "ssanne", limit: 2 });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("FROM rpg_leaderboard_history"),
+      ["ssanne"]
+    );
+    expect(result).toEqual(rows);
+  });
 });

@@ -77,6 +77,7 @@ describe("rpg leaderboard parsing", () => {
     expect(rows[0]).toEqual({
       rank: "1",
       trainer: "Space Cowboy",
+      trainerId: null,
       pokemon: "Sunkern",
       points: "7,719,200",
     });

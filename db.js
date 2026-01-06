@@ -137,6 +137,21 @@ export async function initDb() {
     "init.rpg_pokedex"
   );
 
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS rpg_leaderboard_history (
+      challenge VARCHAR(32) NOT NULL,
+      trainer_id VARCHAR(32) NOT NULL,
+      wins INT UNSIGNED NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (challenge, trainer_id)
+    )
+  `,
+    [],
+    "init.rpg_leaderboard_history"
+  );
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS poll_contests (
       message_id VARCHAR(32) NOT NULL,

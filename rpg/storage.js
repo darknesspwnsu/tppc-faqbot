@@ -79,3 +79,33 @@ export async function getPokedexEntry({ entryKey }) {
     updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : null,
   };
 }
+
+export async function incrementLeaderboardHistory({ challenge, trainerId }) {
+  const db = getDb();
+  await db.execute(
+    `
+    INSERT INTO rpg_leaderboard_history (challenge, trainer_id, wins)
+    VALUES (?, ?, 1)
+    ON DUPLICATE KEY UPDATE
+      wins = wins + 1,
+      updated_at = CURRENT_TIMESTAMP
+  `,
+    [String(challenge), String(trainerId)]
+  );
+}
+
+export async function getLeaderboardHistoryTop({ challenge, limit = 5 }) {
+  const db = getDb();
+  const capped = Number.isInteger(limit) && limit > 0 ? limit : 5;
+  const [rows] = await db.execute(
+    `
+    SELECT trainer_id, wins
+    FROM rpg_leaderboard_history
+    WHERE challenge = ?
+    ORDER BY wins DESC, trainer_id ASC
+    LIMIT ${capped}
+  `,
+    [String(challenge)]
+  );
+  return rows || [];
+}

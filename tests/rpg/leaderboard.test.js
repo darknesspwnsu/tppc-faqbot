@@ -4,6 +4,8 @@ import { ButtonBuilder, ButtonStyle } from "discord.js";
 const storageMocks = vi.hoisted(() => ({
   getLeaderboard: vi.fn(),
   upsertLeaderboard: vi.fn(),
+  incrementLeaderboardHistory: vi.fn(),
+  getLeaderboardHistoryTop: vi.fn(),
 }));
 
 const pokedexMocks = vi.hoisted(() => ({
@@ -128,6 +130,31 @@ describe("rpg leaderboard register", () => {
     const body = message.reply.mock.calls[0][0];
     expect(body).toContain("🏆 **Top Trainers**");
     expect(body).toContain("Ash");
+  });
+
+  it("renders history for ssanne", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    storageMocks.getLeaderboardHistoryTop.mockResolvedValueOnce([
+      { trainer_id: "100", wins: 3 },
+      { trainer_id: "200", wins: 1 },
+    ]);
+
+    const message = makeMessage();
+    await handler({ message, rest: "ssanne history" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("🏆 **SS Anne — History**");
+    expect(body).toContain("1. 100 — 3 wins");
+    expect(body).toContain("2. 200 — 1 win");
   });
 
   it("offers pokemon suggestions with variant buttons", async () => {

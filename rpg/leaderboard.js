@@ -8,7 +8,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { createRpgClientFactory } from "./client_factory.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
-import { getLeaderboard, upsertLeaderboard } from "./storage.js";
+import { getLeaderboard, upsertLeaderboard, incrementLeaderboardHistory, getLeaderboardHistoryTop } from "./storage.js";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
@@ -176,9 +176,11 @@ function parseSafariZone(html) {
   return parseRanksTable(html, {
     minCells: 4,
     parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
       return {
         rank: getText(cells[0]),
-        trainer: getText(cells[1]),
+        trainer: name,
+        trainerId,
         pokemon: getText(cells[2]),
         points: getText(cells[3]),
       };
@@ -441,6 +443,87 @@ async function fetchAndStore(challenge, client) {
   return rows;
 }
 
+async function recordChallengeWinner({ challengeKey, rows }) {
+  if (!rows?.length) return false;
+  const winner = rows[0];
+  if (!winner?.trainerId) return false;
+  await incrementLeaderboardHistory({ challenge: challengeKey, trainerId: winner.trainerId });
+  return true;
+}
+
+function getEtDayOfWeek() {
+  const short = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).format(new Date());
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[short] ?? null;
+}
+
+function scheduleHistoryCapture(client) {
+  const schedules = [
+    { key: "ssanne", hour: 23, minute: 58 },
+    { key: "speedtower", hour: 23, minute: 58 },
+    { key: "roulette", hour: 23, minute: 58 },
+    { key: "safarizone", hour: 22, minute: 0, days: [6] },
+    { key: "roulette_weekly", hour: 23, minute: 58, days: [6] },
+  ];
+
+  const lastRunByKey = new Map();
+
+  function getEtTimeParts() {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === "hour")?.value);
+    const minute = Number(parts.find((p) => p.type === "minute")?.value);
+    return { hour, minute };
+  }
+
+  function getEtDateKey() {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }
+
+  async function tick() {
+    const { hour, minute } = getEtTimeParts();
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return;
+    const day = getEtDayOfWeek();
+    const dateKey = getEtDateKey();
+
+    for (const schedule of schedules) {
+      if (schedule.days && !schedule.days.includes(day)) continue;
+      if (hour < schedule.hour) continue;
+      if (hour === schedule.hour && minute < schedule.minute) continue;
+
+      const lastKey = lastRunByKey.get(schedule.key);
+      if (lastKey === dateKey) continue;
+      lastRunByKey.set(schedule.key, dateKey);
+
+      try {
+        const rows = await fetchAndStore(CHALLENGES[schedule.key], client);
+        await recordChallengeWinner({ challengeKey: schedule.key, rows });
+      } catch (err) {
+        logger.error("leaderboard.history.refresh.error", {
+          challenge: schedule.key,
+          error: logger.serializeError(err),
+        });
+        console.error(`[rpg] failed to refresh ${schedule.key} history:`, err);
+      }
+    }
+  }
+
+  tick();
+  setInterval(tick, 10 * 60_000);
+}
+
 async function getCachedOrFetch(challengeKey, client) {
   const challenge = CHALLENGES[challengeKey];
   if (!challenge) return null;
@@ -594,7 +677,11 @@ function scheduleTrainingChallenge(client) {
     if (lastRunDate === dateKey) return;
     lastRunDate = dateKey;
     try {
-      await fetchAndStore(CHALLENGES.tc, client);
+      const rows = await fetchAndStore(CHALLENGES.tc, client);
+      const day = getEtDayOfWeek();
+      if (day === 0) {
+        await recordChallengeWinner({ challengeKey: "tc", rows });
+      }
       void metrics.increment("leaderboard.refresh", { kind: "training", status: "ok" });
     } catch (err) {
       logger.error("leaderboard.training.refresh.error", {
@@ -625,7 +712,9 @@ export function registerLeaderboard(register) {
 
       const raw = String(rest || "").trim().toLowerCase();
       const parts = raw.split(/\s+/).filter(Boolean);
-      let sub = normalizeCommandToken(parts[0] || "");
+      const wantsHistory = parts[parts.length - 1] === "history";
+      const historyParts = wantsHistory ? parts.slice(0, -1) : parts;
+      let sub = normalizeCommandToken(historyParts[0] || "");
       if (sub === "poke") sub = "pokemon";
 
       if (!sub || sub === "help") {
@@ -641,6 +730,47 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
           ].join("\n")
         );
+        return;
+      }
+
+      if (wantsHistory) {
+        if (sub === "trainers" || sub === "pokemon") {
+          await message.reply("❌ History is not tracked for this challenge.");
+          return;
+        }
+
+        const isWeekly = historyParts[1] === "weekly";
+        const baseKey = ALIASES.get(sub);
+        const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
+        if (!key || !CHALLENGES[key]) {
+          await message.reply(
+            `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower history\``
+          );
+          return;
+        }
+        if (baseKey === "roulette" && historyParts.length > 2) {
+          await message.reply(
+            `Usage: \`${primaryCmd} roulette [weekly] history\``
+          );
+          return;
+        }
+        if (baseKey !== "roulette" && historyParts.length > 1) {
+          await message.reply(
+            `Usage: \`${primaryCmd} ssanne|safarizone|tc|speedtower history\``
+          );
+          return;
+        }
+
+        const rows = await getLeaderboardHistoryTop({ challenge: key, limit: 5 });
+        if (!rows.length) {
+          await message.reply(`No history recorded yet for ${CHALLENGES[key].name}.`);
+          return;
+        }
+
+        const lines = rows.map(
+          (row, i) => `${i + 1}. ${row.trainer_id} — ${row.wins} win${row.wins === 1 ? "" : "s"}`
+        );
+        await message.reply(`🏆 **${CHALLENGES[key].name} — History**\n` + lines.join("\n"));
         return;
       }
 
@@ -798,6 +928,7 @@ export function registerLeaderboardScheduler() {
     const initClient = createRpgClientFactory()();
     scheduleTrainingChallenge(initClient);
     schedulePokemonCacheRefresh(initClient);
+    scheduleHistoryCapture(initClient);
   });
 }
 
