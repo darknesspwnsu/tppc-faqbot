@@ -411,14 +411,14 @@ export function registerEventSchedulers({ client } = {}) {
   });
 }
 
-function buildEventsEmbed({ active, upcoming }) {
+function buildEventsEmbed({ active, upcoming, now }) {
   const embed = new EmbedBuilder().setTitle("TPPC Events");
 
   const activeLines = active.length
     ? active.map((e) => `• **${e.name}** — ends <t:${Math.floor(e.end.getTime() / 1000)}:R> \`(${e.id})\``)
     : ["(none)"];
   const upcomingLines = upcoming.length
-    ? upcoming.map((e) => `• **${e.name}** — starts <t:${Math.floor(e.start.getTime() / 1000)}:R> \`(${e.id})\``)
+    ? upcoming.map((e) => formatUpcomingLine(e, now))
     : ["(none)"];
 
   embed.addFields(
@@ -426,6 +426,23 @@ function buildEventsEmbed({ active, upcoming }) {
     { name: "Upcoming", value: upcomingLines.join("\n"), inline: false }
   );
   return embed;
+}
+
+function formatUpcomingLine(event, now) {
+  const baseDate = now instanceof Date ? now : new Date();
+  const longDate = event.start.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: RPG_EVENT_TIMEZONE,
+  });
+  const shortDate = event.start.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: RPG_EVENT_TIMEZONE,
+  });
+  const label = event.start.getFullYear() === baseDate.getFullYear() ? shortDate : longDate;
+  return `• **${event.name}** — starts <t:${Math.floor(event.start.getTime() / 1000)}:R> (${label}) (eventid: \`${event.id}\`)`;
 }
 
 async function listAllEventIds() {
@@ -481,8 +498,9 @@ export function registerEvents(register) {
     async ({ message }) => {
       const tokens = String(message.content || "").trim().split(/\s+/).slice(1);
       const includeAll = tokens.some((t) => t.toLowerCase() === "all");
-      const { active, upcoming } = await resolveEventsForList(new Date(), { includeAll });
-      const embed = buildEventsEmbed({ active, upcoming });
+      const now = new Date();
+      const { active, upcoming } = await resolveEventsForList(now, { includeAll });
+      const embed = buildEventsEmbed({ active, upcoming, now });
       await message.reply({ embeds: [embed] });
     },
     "!events — show active and upcoming TPPC events"
@@ -503,8 +521,9 @@ export function registerEvents(register) {
     },
     async ({ interaction }) => {
       const includeAll = interaction.options?.getBoolean?.("all") || false;
-      const { active, upcoming } = await resolveEventsForList(new Date(), { includeAll });
-      const embed = buildEventsEmbed({ active, upcoming });
+      const now = new Date();
+      const { active, upcoming } = await resolveEventsForList(now, { includeAll });
+      const embed = buildEventsEmbed({ active, upcoming, now });
       await interaction.reply({ embeds: [embed] });
     }
   );
