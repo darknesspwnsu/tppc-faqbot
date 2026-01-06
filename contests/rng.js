@@ -48,7 +48,15 @@ export function chooseOne(arr) {
  * Shared elimination runner (so reaction_contests can reuse it).
  * items are strings (usernames, IDs, whatever you want to print).
  */
-export async function runElimFromItems({ message, delayMs, delaySec, items, winnerSuffix = "" }) {
+export async function runElimFromItems({
+  message,
+  delayMs,
+  delaySec,
+  items,
+  winnerSuffix = "",
+  itemLabel = null,
+  winnerLabel = null,
+}) {
   if (!message.guild) return { ok: false, error: "No guild." };
 
   const guildId = message.guildId;
@@ -57,6 +65,8 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
   }
 
   let remaining = (items || []).slice().filter(Boolean);
+  const toLabel = typeof itemLabel === "function" ? itemLabel : (item) => String(item);
+  const toWinner = typeof winnerLabel === "function" ? winnerLabel : toLabel;
   if (remaining.length < 2) {
     return { ok: false, error: "You need at least 2 items to run an elimination." };
   }
@@ -70,7 +80,7 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
 
     if (remaining.length === 1) {
       const suffix = winnerSuffix ? ` ${winnerSuffix}` : "";
-      await message.channel.send(`${remaining[0]} wins!${suffix}`);
+      await message.channel.send(`${toWinner(remaining[0])} wins!${suffix}`);
     } else {
       await message.channel.send("Elimination ended with no winner.");
     }
@@ -88,7 +98,7 @@ export async function runElimFromItems({ message, delayMs, delaySec, items, winn
     const eliminated = remaining.splice(idx, 1)[0];
 
     await message.channel.send(
-      `${eliminated} has been eliminated! Remaining: ${remaining.join(", ")}\n______________________`
+      `${toLabel(eliminated)} has been eliminated! Remaining: ${remaining.map(toLabel).join(", ")}\n______________________`
     );
 
     if (remaining.length === 1) {

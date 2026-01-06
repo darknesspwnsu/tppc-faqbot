@@ -5,7 +5,7 @@
 // - Modes: list | choose | elim
 // - Scope: guild + channel (bound to the start message)
 import { isAdminOrPrivileged } from "../auth.js";
-import { formatUsersWithIds } from "./helpers.js";
+import { formatUserWithId, stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
@@ -40,6 +40,45 @@ function humanDuration(ms) {
 
 function mention(id) {
   return `<@${id}>`;
+}
+
+function camelizeIfNeeded(name) {
+  if (!name) return "";
+  if (!name.includes(" ")) return name;
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
+async function buildContestDisplay({ guild, guildId, userIds }) {
+  const ids = Array.isArray(userIds) ? userIds.map(String) : [];
+  let bulk = null;
+  if (guild?.members?.fetch && ids.length) {
+    try {
+      bulk = await guild.members.fetch({ user: ids });
+    } catch {}
+  }
+
+  const entries = ids.map((id) => {
+    const member = bulk?.get?.(id) || guild?.members?.cache?.get?.(id) || null;
+    const rawName = member?.displayName || member?.user?.username || "";
+    const cleaned = stripEmojisAndSymbols(rawName);
+    const label = camelizeIfNeeded(cleaned) || member?.user?.username || id;
+    return { id, label };
+  });
+
+  const winnerLabels = new Map();
+  for (const entry of entries) {
+    winnerLabels.set(entry.id, await formatUserWithId({ guildId, userId: entry.id }));
+  }
+
+  return {
+    entries,
+    displayNames: entries.map((entry) => entry.label),
+    winnerLabels,
+  };
 }
 
 function chooseMany(arr, count) {
@@ -415,31 +454,38 @@ export function registerReactionContests(register) {
       if (reason === "cancel") return;
 
       const ids = [...entrants];
-      const display = await formatUsersWithIds({ guildId: message.guildId, userIds: ids });
+      const { entries, displayNames, winnerLabels } = await buildContestDisplay({
+        guild: message.guild,
+        guildId: message.guildId,
+        userIds: ids,
+      });
 
-      if (!display.length) {
+      if (!displayNames.length) {
         await message.channel.send("No one reacted...");
         return;
       }
 
       if (mode === "list") {
-        await message.channel.send(`━━━━━━━━━━━━━━\n${display.length} entrant(s):\n\n${display.join(" ")}`);
+        await message.channel.send(
+          `━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):\n\n${displayNames.join(" ")}`
+        );
         return;
       }
 
       if (mode === "choose") {
-        if (winnerCount > display.length) {
+        if (winnerCount > displayNames.length) {
           await message.channel.send(
-            `Not enough entrants to pick ${winnerCount} winners (only ${display.length}).`
+            `Not enough entrants to pick ${winnerCount} winners (only ${displayNames.length}).`
           );
           return;
         }
 
-        const picks = winnerCount > 1 ? chooseMany(display, winnerCount) : [chooseOne(display)];
+        const winnerList = entries.map((entry) => winnerLabels.get(entry.id) || entry.label);
+        const picks = winnerCount > 1 ? chooseMany(winnerList, winnerCount) : [chooseOne(winnerList)];
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${display.length} entrant(s))`
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${displayNames.length} entrant(s))`
         );
         return;
       }
@@ -448,12 +494,14 @@ export function registerReactionContests(register) {
       const delayMs = delaySec * 1000;
       const winnerSuffix = prize ? `Prize: **${prize}**` : "";
 
-      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${display.length}** entrant(s)…`);
+      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${displayNames.length}** entrant(s)…`);
       const res = await runElimFromItems({
         message,
         delayMs,
         delaySec,
-        items: display,
+        items: entries,
+        itemLabel: (entry) => entry.label,
+        winnerLabel: (entry) => winnerLabels.get(entry.id) || entry.label,
         winnerSuffix,
       });
       if (!res.ok) {
@@ -600,31 +648,38 @@ export function registerReactionContests(register) {
       if (reason === "cancel") return;
 
       const ids = [...entrants];
-      const display = await formatUsersWithIds({ guildId: message.guildId, userIds: ids });
+      const { entries, displayNames, winnerLabels } = await buildContestDisplay({
+        guild: message.guild,
+        guildId: message.guildId,
+        userIds: ids,
+      });
 
-      if (!display.length) {
+      if (!displayNames.length) {
         await message.channel.send("No one reacted...");
         return;
       }
 
       if (mode === "list") {
-        await message.channel.send(`━━━━━━━━━━━━━━\n${display.length} entrant(s):\n\n${display.join(" ")}`);
+        await message.channel.send(
+          `━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):\n\n${displayNames.join(" ")}`
+        );
         return;
       }
 
       if (mode === "choose") {
-        if (winnerCount > display.length) {
+        if (winnerCount > displayNames.length) {
           await message.channel.send(
-            `Not enough entrants to pick ${winnerCount} winners (only ${display.length}).`
+            `Not enough entrants to pick ${winnerCount} winners (only ${displayNames.length}).`
           );
           return;
         }
 
-        const picks = winnerCount > 1 ? chooseMany(display, winnerCount) : [chooseOne(display)];
+        const winnerList = entries.map((entry) => winnerLabels.get(entry.id) || entry.label);
+        const picks = winnerCount > 1 ? chooseMany(winnerList, winnerCount) : [chooseOne(winnerList)];
         const label = winnerCount > 1 ? "Winners" : "Winner";
         const prizeLine = winnerCount === 1 && prize ? `\nPrize: **${prize}**` : "";
         await message.channel.send(
-          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${display.length} entrant(s))`
+          `━━━━━━━━━━━━━━\n${label}: **${picks.join(", ")}**${prizeLine}\n\n(From ${displayNames.length} entrant(s))`
         );
         return;
       }
@@ -635,12 +690,14 @@ export function registerReactionContests(register) {
       const delayMs = delaySec * 1000;
       const winnerSuffix = prize ? `Prize: **${prize}**` : "";
 
-      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${display.length}** entrant(s)…`);
+      await message.channel.send(`━━━━━━━━━━━━━━\nStarting elimination with **${displayNames.length}** entrant(s)…`);
       const res = await runElimFromItems({
         message,
         delayMs,
         delaySec,
-        items: display,
+        items: entries,
+        itemLabel: (entry) => entry.label,
+        winnerLabel: (entry) => winnerLabels.get(entry.id) || entry.label,
         winnerSuffix,
       });
       if (!res.ok) {
