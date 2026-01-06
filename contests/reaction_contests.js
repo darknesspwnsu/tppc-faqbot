@@ -466,9 +466,8 @@ export function registerReactionContests(register) {
       }
 
       if (mode === "list") {
-        await message.channel.send(
-          `━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):\n\n${displayNames.join(" ")}`
-        );
+        await message.channel.send(`━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):`);
+        await message.channel.send(displayNames.join(" "));
         return;
       }
 
@@ -660,9 +659,8 @@ export function registerReactionContests(register) {
       }
 
       if (mode === "list") {
-        await message.channel.send(
-          `━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):\n\n${displayNames.join(" ")}`
-        );
+        await message.channel.send(`━━━━━━━━━━━━━━\n${displayNames.length} entrant(s):`);
+        await message.channel.send(displayNames.join(" "));
         return;
       }
 
