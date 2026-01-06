@@ -450,6 +450,7 @@ export function buildCommandRegistry({ client } = {}) {
         if (helpTier !== "primary") continue;
       }
 
+      if (name === "events") continue;
       const line = `/${name} — ${desc}`;
       pushLine(cat, line);
     }

@@ -577,7 +577,7 @@ export function registerEvents(register) {
       void metrics.increment("events.list", { status: "ok", type: "bang" });
       await message.reply({ embeds: [embed] });
     },
-    "!events — list events (`!events all` for full list); subscribe via `/subscriptions` (subscribe/list/unsubscribe/unsub_all). DMs must be enabled."
+    "!events — view current and upcoming events on the RPG. Type `!events help` for more."
   );
 
   register.slash(
