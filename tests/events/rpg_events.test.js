@@ -8,9 +8,9 @@ import {
 } from "../../events/rpg_events.js";
 
 describe("rpg events date helpers", () => {
-  it("golden days window spans Dec 31 to Jan 1", () => {
+  it("winter golden days window spans Dec 31 to Jan 1", () => {
     const jan1 = new Date("2026-01-01T12:00:00Z");
-    const event = { id: "golden_days", kind: "golden_days" };
+    const event = { id: "winter_golden_day", kind: "winter_golden_days" };
     const window = computeEventWindow(event, jan1);
     expect(window).toBeTruthy();
     const startParts = __testables.getZonedDateParts(window.start, RPG_EVENT_TIMEZONE);

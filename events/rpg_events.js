@@ -177,12 +177,22 @@ function seasonalWindow({ now, timeZone, eventId }) {
   return { start, end };
 }
 
+function winterGoldenWindows({ year, timeZone, eventId }) {
+  const override = overrideWindow(eventId, year, timeZone);
+  if (override) return [override];
+
+  const dec25 = zonedTimeToUtc({ year, month: 12, day: 25, hour: 0, minute: 0 }, timeZone);
+  const dec31 = zonedTimeToUtc({ year, month: 12, day: 31, hour: 0, minute: 0 }, timeZone);
+  return [
+    { start: dec25, end: new Date(dec25.getTime() + 24 * 60 * 60_000) },
+    { start: dec31, end: new Date(dec31.getTime() + 48 * 60 * 60_000) },
+  ];
+}
+
 export function computeEventWindow(event, now = new Date()) {
   const timeZone = RPG_EVENT_TIMEZONE;
   const parts = getZonedDateParts(now, timeZone);
   switch (event.kind) {
-    case "golden_days":
-      return goldenDaysWindow({ now, timeZone });
     case "radio_tower":
       return null;
     case "monthly_first":
@@ -202,6 +212,13 @@ export function computeEventWindow(event, now = new Date()) {
       const end = new Date(start.getTime() + 24 * 60 * 60_000);
       return { start, end };
     }
+    case "winter_golden_days": {
+      const windows = [
+        ...winterGoldenWindows({ year: parts.year - 1, timeZone, eventId: event.id }),
+        ...winterGoldenWindows({ year: parts.year, timeZone, eventId: event.id }),
+      ];
+      return windows.find((window) => now >= window.start && now < window.end) || null;
+    }
     case "seasonal_marker":
       return seasonalWindow({ now, timeZone, eventId: event.id });
     default:
@@ -215,17 +232,6 @@ export function computeNextStart(event, now = new Date()) {
   const nowMs = now.getTime();
 
   switch (event.kind) {
-    case "golden_days": {
-      const start = zonedTimeToUtc(
-        { year: parts.year, month: 12, day: 31, hour: 0, minute: 0 },
-        timeZone
-      );
-      if (nowMs < start.getTime()) return start;
-      return zonedTimeToUtc(
-        { year: parts.year + 1, month: 12, day: 31, hour: 0, minute: 0 },
-        timeZone
-      );
-    }
     case "radio_tower":
       return null;
     case "monthly_first": {
@@ -277,6 +283,17 @@ export function computeNextStart(event, now = new Date()) {
         { year: nextYear, month: nextDate.month, day: nextDate.day, hour: 0, minute: 0 },
         timeZone
       );
+    }
+    case "winter_golden_days": {
+      const candidates = [];
+      for (const year of [parts.year, parts.year + 1]) {
+        const windows = winterGoldenWindows({ year, timeZone, eventId: event.id });
+        for (const window of windows) {
+          candidates.push(window.start.getTime());
+        }
+      }
+      const next = candidates.filter((ts) => ts > nowMs).sort((a, b) => a - b)[0];
+      return next ? new Date(next) : null;
     }
     case "seasonal_marker": {
       const markers = seasonalMarkerDates(parts.year);

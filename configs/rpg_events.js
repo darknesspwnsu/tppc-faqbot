@@ -6,10 +6,18 @@ export const RPG_EVENT_TIMEZONE = "America/New_York";
 
 export const RPG_EVENTS = [
   {
-    id: "golden_days",
-    name: "Golden Days",
-    kind: "golden_days",
-    description: "Goldenize your Pokémon during the holiday period.",
+    id: "august_golden_day",
+    name: "August Golden Day",
+    kind: "fixed_date",
+    month: 8,
+    day: 2,
+    description: "Goldenize your Pokémon on August 2nd.",
+  },
+  {
+    id: "winter_golden_day",
+    name: "Winter Golden Days",
+    kind: "winter_golden_days",
+    description: "Goldenize your Pokémon on Dec 25 and Dec 31–Jan 1.",
   },
   {
     id: "team_rocket",
