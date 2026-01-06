@@ -536,6 +536,13 @@ async function resolveEventsForList(now = new Date(), { includeAll = false } = {
         upcoming.push({ ...event, start: next });
       }
     }
+    upcoming.push({
+      id: "team_rocket",
+      name: "Team Rocket Takeover (random) *",
+      start: now,
+      kind: "radio_tower",
+      noDate: true,
+    });
     upcoming.sort((a, b) => a.start.getTime() - b.start.getTime());
   }
 

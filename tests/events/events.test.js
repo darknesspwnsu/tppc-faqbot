@@ -52,7 +52,7 @@ describe("events parsing helpers", () => {
   it("limits upcoming events to the next two months by default", async () => {
     const now = new Date("2026-01-01T12:00:00Z");
     const limited = await __testables.resolveEventsForList(now);
-    expect(limited.upcoming.map((e) => e.id)).toEqual(["soon"]);
+    expect(limited.upcoming.map((e) => e.id)).toEqual(["team_rocket", "soon"]);
 
     const all = await __testables.resolveEventsForList(now, { includeAll: true });
     expect(all.upcoming.map((e) => e.id)).toEqual(["soon", "later"]);
