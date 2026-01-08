@@ -258,11 +258,20 @@ export function registerHelpbox(register, { helpModel }) {
       ],
     },
     async ({ interaction }) => {
+      const canDefer = typeof interaction.deferReply === "function";
+      if (canDefer) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+      const respond =
+        canDefer && typeof interaction.editReply === "function"
+          ? (payload) => interaction.editReply(payload)
+          : (payload) => interaction.reply({ flags: MessageFlags.Ephemeral, ...payload });
       const pages = helpModel(interaction.guildId, messageLikeFromInteraction(interaction));
       if (!pages.length) {
-        await interaction.reply({
-          flags: MessageFlags.Ephemeral,
+        await respond({
           content: "No commands available.",
+          embeds: [],
+          components: [],
         });
         return;
       }
@@ -278,8 +287,7 @@ export function registerHelpbox(register, { helpModel }) {
       idx = clamp(idx, 0, pages.length - 1);
       rememberIndex(userId, idx);
 
-      await interaction.reply({
-        flags: MessageFlags.Ephemeral,
+      await respond({
         embeds: [embedForPage(pages, idx)],
         components: buildComponents(pages, idx),
       });
