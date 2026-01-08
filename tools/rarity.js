@@ -558,6 +558,10 @@ async function replyRarityHelp(message, cmd) {
   await message.reply(lines.join("\n"));
 }
 
+async function replyL4Help(message, cmd) {
+  await message.reply(`Usage: \`${cmd} <pokemon>\``);
+}
+
 async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
   if (!rarityNorm) await refresh();
 
@@ -719,8 +723,8 @@ export function registerLevel4Rarity(register) {
 
   const handleL4 = async ({ message, rest, cmd }) => {
     const qRaw = String(rest ?? "").trim();
-    if (!qRaw) {
-      await message.reply(`Usage: \`${cmd} <pokemon>\``);
+    if (!qRaw || qRaw.toLowerCase() === "help") {
+      await replyL4Help(message, cmd);
       return;
     }
 
