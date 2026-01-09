@@ -299,6 +299,15 @@ Multi-purpose calculations (game/tool specific). Follow prompts and usage output
 - `!calc la 100 200 300`
 - `!calc buy 500000000`
 
+### `/sortbox`
+Sorts a TPPC trainer box and DMs you BBCode as a text file.
+- **Input:** `id` or `ids` (comma/space-separated). If omitted, uses saved IDs for you (or `user`).
+- **Lookup:** `rpgusername` to resolve a trainer ID
+- **Multiple IDs:** set `all_saved` or pass `ids`
+- **Split output:** set `split_outputs` to DM one file per ID
+- **Options:** combine dupes, plain levels, combine Shiny/Dark, dedicated Unknown/Legends, filter junk maps/swaps
+- **Colors:** optional BBCode colors for gold/shiny/dark/normal names
+
 ### Message counts (`!count` / `!activity` / `!yap`)
 Tracks message counts in configured channels.
 - `!count` → your count
