@@ -527,7 +527,15 @@ function scheduleHistoryCapture(client) {
 
       try {
         const rows = await fetchAndStore(CHALLENGES[schedule.key], client);
-        await recordChallengeWinner({ challengeKey: schedule.key, rows });
+        const recorded = await recordChallengeWinner({ challengeKey: schedule.key, rows });
+        logger.info("leaderboard.history.refresh.ok", {
+          challenge: schedule.key,
+          rows: rows?.length || 0,
+          recorded,
+        });
+        if (!rows?.length) {
+          logger.warn("leaderboard.history.refresh.empty", { challenge: schedule.key });
+        }
       } catch (err) {
         logger.error("leaderboard.history.refresh.error", {
           challenge: schedule.key,

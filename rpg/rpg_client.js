@@ -6,6 +6,14 @@
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
 
+let rpgFetchQueue = Promise.resolve();
+
+function withRpgLock(fn) {
+  const next = rpgFetchQueue.then(fn, fn);
+  rpgFetchQueue = next.catch(() => {});
+  return next;
+}
+
 function ensureFetch() {
   if (typeof fetch !== "function") {
     throw new Error("Global fetch() not available. Use Node 18+ or add a fetch polyfill.");
@@ -165,98 +173,102 @@ export class RpgClient {
   }
 
   async fetchPage(pathOrUrl) {
-    await this.login();
-    const res = await this._fetch(pathOrUrl, { method: "GET" });
-    if (res.ok) return await res.text();
+    return withRpgLock(async () => {
+      await this.login();
+      const res = await this._fetch(pathOrUrl, { method: "GET" });
+      if (res.ok) return await res.text();
 
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers?.get?.("location");
-      if (location && /login\.php/i.test(location)) {
-        await this.login({ force: true });
-        const retry = await this._fetch(pathOrUrl, { method: "GET" });
-        if (!retry.ok) {
-          logger.error("rpg.fetch.error", {
-            status: retry.status,
-            reason: "retry-failed",
-            url: String(pathOrUrl),
-          });
-          throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers?.get?.("location");
+        if (location && /login\.php/i.test(location)) {
+          await this.login({ force: true });
+          const retry = await this._fetch(pathOrUrl, { method: "GET" });
+          if (!retry.ok) {
+            logger.error("rpg.fetch.error", {
+              status: retry.status,
+              reason: "retry-failed",
+              url: String(pathOrUrl),
+            });
+            throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+          }
+          return await retry.text();
         }
-        return await retry.text();
+
+        if (location) {
+          const nextRes = await this._fetch(location, { method: "GET" });
+          if (!nextRes.ok) {
+            logger.error("rpg.fetch.error", {
+              status: nextRes.status,
+              reason: "redirect-failed",
+              url: String(pathOrUrl),
+            });
+            throw new Error(`RPG fetch failed (HTTP ${nextRes.status}).`);
+          }
+          return await nextRes.text();
+        }
       }
 
-      if (location) {
-        const next = await this._fetch(location, { method: "GET" });
-        if (!next.ok) {
-          logger.error("rpg.fetch.error", {
-            status: next.status,
-            reason: "redirect-failed",
-            url: String(pathOrUrl),
-          });
-          throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
-        }
-        return await next.text();
-      }
-    }
-
-    logger.error("rpg.fetch.error", {
-      status: res.status,
-      reason: "http-error",
-      url: String(pathOrUrl),
+      logger.error("rpg.fetch.error", {
+        status: res.status,
+        reason: "http-error",
+        url: String(pathOrUrl),
+      });
+      throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
     });
-    throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
 
   async fetchForm(pathOrUrl, form) {
-    await this.login();
-    const body = typeof form === "string" ? form : form?.toString?.() ?? "";
-    const res = await this._fetch(pathOrUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-    });
-    if (res.ok) return await res.text();
+    return withRpgLock(async () => {
+      await this.login();
+      const body = typeof form === "string" ? form : form?.toString?.() ?? "";
+      const res = await this._fetch(pathOrUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      if (res.ok) return await res.text();
 
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers?.get?.("location");
-      if (location && /login\.php/i.test(location)) {
-        await this.login({ force: true });
-        const retry = await this._fetch(pathOrUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
-        });
-        if (!retry.ok) {
-          logger.error("rpg.fetch.error", {
-            status: retry.status,
-            reason: "retry-failed",
-            url: String(pathOrUrl),
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers?.get?.("location");
+        if (location && /login\.php/i.test(location)) {
+          await this.login({ force: true });
+          const retry = await this._fetch(pathOrUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
           });
-          throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+          if (!retry.ok) {
+            logger.error("rpg.fetch.error", {
+              status: retry.status,
+              reason: "retry-failed",
+              url: String(pathOrUrl),
+            });
+            throw new Error(`RPG fetch failed (HTTP ${retry.status}).`);
+          }
+          return await retry.text();
         }
-        return await retry.text();
+
+        if (location) {
+          const nextRes = await this._fetch(location, { method: "GET" });
+          if (!nextRes.ok) {
+            logger.error("rpg.fetch.error", {
+              status: nextRes.status,
+              reason: "redirect-failed",
+              url: String(pathOrUrl),
+            });
+            throw new Error(`RPG fetch failed (HTTP ${nextRes.status}).`);
+          }
+          return await nextRes.text();
+        }
       }
 
-      if (location) {
-        const next = await this._fetch(location, { method: "GET" });
-        if (!next.ok) {
-          logger.error("rpg.fetch.error", {
-            status: next.status,
-            reason: "redirect-failed",
-            url: String(pathOrUrl),
-          });
-          throw new Error(`RPG fetch failed (HTTP ${next.status}).`);
-        }
-        return await next.text();
-      }
-    }
-
-    logger.error("rpg.fetch.error", {
-      status: res.status,
-      reason: "http-error",
-      url: String(pathOrUrl),
+      logger.error("rpg.fetch.error", {
+        status: res.status,
+        reason: "http-error",
+        url: String(pathOrUrl),
+      });
+      throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
     });
-    throw new Error(`RPG fetch failed (HTTP ${res.status}).`);
   }
 }
 
