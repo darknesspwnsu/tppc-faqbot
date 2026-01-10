@@ -113,6 +113,33 @@ describe("RpgClient fetch helpers", () => {
     expect(client.login).toHaveBeenCalledTimes(2);
   });
 
+  it("follows redirect after login retry", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    const client = new RpgClient({ baseUrl: "https://example.test", username: "u", password: "p" });
+    client.login = vi.fn().mockResolvedValue(true);
+
+    const res1 = makeRes({
+      ok: false,
+      status: 302,
+      headers: makeHeaders({ get: () => "https://example.test/login.php" }),
+    });
+    const res2 = makeRes({
+      ok: false,
+      status: 302,
+      headers: makeHeaders({ get: () => "/team.php" }),
+    });
+    const res3 = makeRes({ status: 200, text: "TEAM" });
+    client._fetch = vi.fn().mockResolvedValueOnce(res1).mockResolvedValueOnce(res2).mockResolvedValueOnce(res3);
+
+    const text = await client.fetchPage("/foo");
+
+    expect(text).toBe("TEAM");
+    expect(client.login).toHaveBeenCalledTimes(2);
+    expect(client._fetch).toHaveBeenCalledTimes(3);
+    expect(client._fetch.mock.calls[2][0]).toBe("/team.php");
+  });
+
   it("follows redirect location on fetchPage", async () => {
     vi.stubGlobal("fetch", vi.fn());
 
