@@ -17,8 +17,13 @@ const rpgMocks = vi.hoisted(() => ({
   fetchPage: vi.fn(),
 }));
 
+const findMyIdMocks = vi.hoisted(() => ({
+  fetchFindMyIdMatches: vi.fn(),
+}));
+
 vi.mock("../../rpg/storage.js", () => storageMocks);
 vi.mock("../../rpg/pokedex.js", () => pokedexMocks);
+vi.mock("../../rpg/findmyid.js", () => findMyIdMocks);
 vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn(), incrementSchedulerRun: vi.fn() } }));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
@@ -28,7 +33,8 @@ vi.mock("../../rpg/rpg_client.js", () => ({
   },
 }));
 
-import { registerLeaderboard, handleLeaderboardInteraction } from "../../rpg/leaderboard.js";
+import { registerLeaderboard, handleLeaderboardInteraction, __testables } from "../../rpg/leaderboard.js";
+const { recordChallengeWinner } = __testables;
 
 function makeRegister() {
   const calls = [];
@@ -59,6 +65,7 @@ describe("rpg leaderboard register", () => {
     pokedexMocks.findPokedexEntry.mockReset();
     pokedexMocks.parsePokemonQuery.mockReset();
     rpgMocks.fetchPage.mockReset();
+    findMyIdMocks.fetchFindMyIdMatches.mockReset();
     process.env = { ...envSnapshot };
   });
 
@@ -179,6 +186,67 @@ describe("rpg leaderboard register", () => {
     const body = message.reply.mock.calls[0][0];
     expect(body).toContain("1. Ceci and Hailey — 2 wins");
     expect(body).toContain("2. 2 — 1 win");
+  });
+
+  it("resolves SS Anne winner IDs via findmyid", async () => {
+    const rows = [
+      { rank: "1", trainer: "mike123", trainerId: "" },
+    ];
+    findMyIdMocks.fetchFindMyIdMatches.mockResolvedValueOnce([
+      { name: "mike12345", id: "999" },
+      { name: "mike123", id: "123" },
+    ]);
+
+    const recorded = await recordChallengeWinner({
+      challengeKey: "ssanne",
+      rows,
+      client: {},
+    });
+
+    expect(recorded).toBe(true);
+    expect(storageMocks.incrementLeaderboardHistory).toHaveBeenCalledWith({
+      challenge: "ssanne",
+      trainerId: "123",
+      trainerName: "mike123",
+    });
+  });
+
+  it("does not record SS Anne history when no exact findmyid match", async () => {
+    const rows = [
+      { rank: "1", trainer: "mike123", trainerId: "" },
+    ];
+    findMyIdMocks.fetchFindMyIdMatches.mockResolvedValueOnce([
+      { name: "mike12345", id: "999" },
+    ]);
+
+    const recorded = await recordChallengeWinner({
+      challengeKey: "ssanne",
+      rows,
+      client: {},
+    });
+
+    expect(recorded).toBe(false);
+    expect(storageMocks.incrementLeaderboardHistory).not.toHaveBeenCalled();
+  });
+
+  it("records non-SS Anne winners by name when ID is missing", async () => {
+    const rows = [
+      { rank: "1", trainer: "Ace", trainerId: "" },
+    ];
+
+    const recorded = await recordChallengeWinner({
+      challengeKey: "safarizone",
+      rows,
+      client: {},
+    });
+
+    expect(recorded).toBe(true);
+    expect(storageMocks.incrementLeaderboardHistory).toHaveBeenCalledWith({
+      challenge: "safarizone",
+      trainerId: "",
+      trainerName: "Ace",
+    });
+    expect(findMyIdMocks.fetchFindMyIdMatches).not.toHaveBeenCalled();
   });
 
   it("offers pokemon suggestions with variant buttons", async () => {

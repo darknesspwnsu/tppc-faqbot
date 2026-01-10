@@ -7,6 +7,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { createRpgClientFactory } from "./client_factory.js";
+import { fetchFindMyIdMatches } from "./findmyid.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
 import { getLeaderboard, upsertLeaderboard, incrementLeaderboardHistory, getLeaderboardHistoryTop } from "./storage.js";
 import { logger } from "../shared/logger.js";
@@ -461,12 +462,35 @@ async function fetchAndStore(challenge, client) {
   return rows;
 }
 
-async function recordChallengeWinner({ challengeKey, rows }) {
+async function recordChallengeWinner({ challengeKey, rows, client }) {
   if (!rows?.length) return false;
   const winner = rows[0];
   const trainerId = winner?.trainerId ? String(winner.trainerId) : "";
   const trainerName = winner?.trainer ? String(winner.trainer) : "";
   if (!trainerId && !trainerName) return false;
+
+  if (!trainerId && challengeKey === "ssanne") {
+    if (!trainerName || !client) return false;
+    try {
+      const matches = await fetchFindMyIdMatches(client, trainerName);
+      const exact = matches.find((m) => String(m.name) === trainerName);
+      if (!exact?.id) return false;
+      await incrementLeaderboardHistory({
+        challenge: challengeKey,
+        trainerId: exact.id,
+        trainerName,
+      });
+      return true;
+    } catch (err) {
+      logger.warn("leaderboard.history.resolve_id.failed", {
+        challenge: challengeKey,
+        trainerName,
+        error: logger.serializeError(err),
+      });
+      return false;
+    }
+  }
+
   await incrementLeaderboardHistory({
     challenge: challengeKey,
     trainerId,
@@ -533,7 +557,7 @@ function scheduleHistoryCapture(client) {
 
       try {
         const rows = await fetchAndStore(CHALLENGES[schedule.key], client);
-        const recorded = await recordChallengeWinner({ challengeKey: schedule.key, rows });
+        const recorded = await recordChallengeWinner({ challengeKey: schedule.key, rows, client });
         logger.info("leaderboard.history.refresh.ok", {
           challenge: schedule.key,
           rows: rows?.length || 0,
@@ -1031,4 +1055,5 @@ export const __testables = {
   parsePokemonPageCount,
   renderTopRows,
   buildPokemonSuggestions,
+  recordChallengeWinner,
 };
