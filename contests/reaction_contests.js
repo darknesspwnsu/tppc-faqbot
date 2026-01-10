@@ -4,6 +4,8 @@
 // - Command: !conteststart [mode] <time> [quota] [winners]
 // - Modes: list | choose | elim
 // - Scope: guild + channel (bound to the start message)
+import { MessageFlags } from "discord.js";
+
 import { isAdminOrPrivileged } from "../auth.js";
 import { formatUserWithId, stripEmojisAndSymbols } from "./helpers.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
@@ -361,12 +363,12 @@ export function registerReactionContests(register) {
     },
     async ({ interaction }) => {
       if (!interaction.guildId || !interaction.channelId || !interaction.channel) {
-        await interaction.reply({ content: "This command only works in a server channel.", ephemeral: true });
+        await interaction.reply({ content: "This command only works in a server channel.", flags: MessageFlags.Ephemeral });
         return;
       }
 
       if (!canManageContest(interaction)) {
-        await interaction.reply({ content: "You do not have permission to run this command.", ephemeral: true });
+        await interaction.reply({ content: "You do not have permission to run this command.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -378,7 +380,7 @@ export function registerReactionContests(register) {
       const prize = prizeRaw.trim();
 
       if (!timeTok) {
-        await interaction.reply({ content: contestSlashHelpText(), ephemeral: true });
+        await interaction.reply({ content: contestSlashHelpText(), flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -386,14 +388,14 @@ export function registerReactionContests(register) {
       if (!ms) {
         await interaction.reply({
           content: "Invalid time. Examples: `30sec`, `5min`, `1hour`. Use `/contest` to see help.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       const existing = findCollectorForChannel(interaction.guildId, interaction.channelId);
       if (existing) {
-        await interaction.reply({ content: "⚠️ A reaction contest is already running in this channel.", ephemeral: true });
+        await interaction.reply({ content: "⚠️ A reaction contest is already running in this channel.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -402,14 +404,14 @@ export function registerReactionContests(register) {
 
       if (maxEntrants != null) {
         if (!Number.isInteger(maxEntrants) || maxEntrants <= 0 || maxEntrants > 1000) {
-          await interaction.reply({ content: "Invalid quota. Use a positive number (max 1000).", ephemeral: true });
+          await interaction.reply({ content: "Invalid quota. Use a positive number (max 1000).", flags: MessageFlags.Ephemeral });
           return;
         }
       }
 
       if (mode === "choose") {
         if (!Number.isInteger(winnerCount) || winnerCount <= 0 || winnerCount > 1000) {
-          await interaction.reply({ content: "Invalid winners count. Use a positive integer (max 1000).", ephemeral: true });
+          await interaction.reply({ content: "Invalid winners count. Use a positive integer (max 1000).", flags: MessageFlags.Ephemeral });
           return;
         }
       } else {
@@ -418,7 +420,7 @@ export function registerReactionContests(register) {
 
       const MAX_MS = 24 * 60 * 60_000;
       if (ms > MAX_MS) {
-        await interaction.reply({ content: "Time too large. Max is 24 hours.", ephemeral: true });
+        await interaction.reply({ content: "Time too large. Max is 24 hours.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -432,7 +434,7 @@ export function registerReactionContests(register) {
 
       await interaction.reply({
         content: `✅ Contest started in <#${interaction.channelId}>.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
 
       const message = {

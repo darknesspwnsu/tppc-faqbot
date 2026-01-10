@@ -11,7 +11,7 @@
 //
 // One game per guild, bound to starting channel.
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import {
   createBoard,
   createGameManager,
@@ -227,7 +227,7 @@ export function registerHigherOrLower(register) {
 
     if (interaction.user?.id !== st.playerId) {
       try {
-        await interaction.reply({ content: "Only the current contestant can use these buttons.", ephemeral: true });
+        await interaction.reply({ content: "Only the current contestant can use these buttons.", flags: MessageFlags.Ephemeral });
       } catch {}
       return;
     }
@@ -236,7 +236,7 @@ export function registerHigherOrLower(register) {
     const guess = id.endsWith(":hi") ? "hi" : id.endsWith(":lo") ? "lo" : null;
     if (!guess) {
       try {
-        await interaction.reply({ content: "Unknown button.", ephemeral: true });
+        await interaction.reply({ content: "Unknown button.", flags: MessageFlags.Ephemeral });
       } catch {}
       return;
     }

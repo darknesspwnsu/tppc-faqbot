@@ -24,7 +24,7 @@
  *  - onMessage/listener: handler({ message })
  */
 
-import { REST, Routes } from "discord.js";
+import { REST, Routes, MessageFlags } from "discord.js";
 
 import { registerContests } from "./contests/contests.js";
 import { registerTrades } from "./trades/trades.js";
@@ -658,7 +658,7 @@ export function buildCommandRegistry({ client } = {}) {
       if (interaction.guildId && slashExposureFor(interaction.guildId, key) === "off") {
         await interaction.reply({
           content: "This command isn’t allowed in this server.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }

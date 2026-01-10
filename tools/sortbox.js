@@ -4,6 +4,8 @@
 
 import fs from "node:fs/promises";
 
+import { MessageFlags } from "discord.js";
+
 import { sendDmBatch } from "../shared/dm.js";
 import { fetchFindMyIdMatches } from "../rpg/findmyid.js";
 import { createRpgClientFactory } from "../rpg/client_factory.js";
@@ -644,7 +646,7 @@ export function registerSortbox(register) {
     async ({ interaction }) => {
       async function ensureDeferred() {
         if (interaction.deferred || interaction.replied) return;
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       }
 
       async function editResponse(payload) {

@@ -851,7 +851,7 @@ export function registerPollContest(register) {
       if (sub === "cancel") {
         const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
         if (!messageId) {
-          await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
+          await interaction.reply({ content: "Please provide a poll message ID.", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -862,7 +862,7 @@ export function registerPollContest(register) {
         });
 
         if (res.ok) {
-          await interaction.reply({ content: "✅ Poll cancelled.", ephemeral: true });
+          await interaction.reply({ content: "✅ Poll cancelled.", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -870,14 +870,14 @@ export function registerPollContest(register) {
           res.reason === "not_found"
             ? "No active poll found for that message ID."
             : "You can only cancel polls you created.";
-        await interaction.reply({ content, ephemeral: true });
+        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
         return;
       }
 
       if (sub === "untrack") {
         const messageId = String(interaction.options?.getString?.("message_id") || "").trim();
         if (!messageId) {
-          await interaction.reply({ content: "Please provide a poll message ID.", ephemeral: true });
+          await interaction.reply({ content: "Please provide a poll message ID.", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -887,13 +887,13 @@ export function registerPollContest(register) {
         }
 
         if (!existing) {
-          await interaction.reply({ content: "No tracked poll found for that message ID.", ephemeral: true });
+          await interaction.reply({ content: "No tracked poll found for that message ID.", flags: MessageFlags.Ephemeral });
           return;
         }
 
         await deletePollRecord(messageId);
         await markPollUntracked(messageId);
-        await interaction.reply({ content: "✅ Poll untracked.", ephemeral: true });
+        await interaction.reply({ content: "✅ Poll untracked.", flags: MessageFlags.Ephemeral });
         return;
       }
 

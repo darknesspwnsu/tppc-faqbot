@@ -2,7 +2,7 @@
 //
 // Rock Paper Scissors (RPS)
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import {
   createBoard,
   createGameManager,
@@ -85,10 +85,10 @@ async function replyEphemeral(interaction, st, content) {
 
   if (interaction.replied || interaction.deferred) {
     await interaction.editReply({ content }).catch(async () => {
-      await interaction.followUp({ content, ephemeral: true }).catch(() => {});
+      await interaction.followUp({ content, flags: MessageFlags.Ephemeral }).catch(() => {});
     });
   } else {
-    await interaction.reply({ content, ephemeral: true });
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral });
   }
 
   if (userId) getEphemeralMap(st).set(userId, interaction);

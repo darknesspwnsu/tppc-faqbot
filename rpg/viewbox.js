@@ -2,7 +2,7 @@
 //
 // View a trainer's full Pokemon box (DM only).
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import { parse } from "node-html-parser";
 
 import { fetchFindMyIdMatches } from "./findmyid.js";
@@ -345,11 +345,11 @@ async function replyEphemeral(interaction, options) {
   }
 
   if (interaction.replied) {
-    await interaction.followUp({ ...options, ephemeral: true });
+    await interaction.followUp({ ...options, flags: MessageFlags.Ephemeral });
     return;
   }
 
-  await interaction.reply({ ...options, ephemeral: true });
+  await interaction.reply({ ...options, flags: MessageFlags.Ephemeral });
 }
 
 function buildViewboxHeader({ id, targetUserId, trainerName, label }) {
@@ -480,7 +480,7 @@ export function registerViewbox(register) {
     const labelInfo = extractViewboxLabel(interaction.message?.content);
 
     if (!interaction.user || interaction.user.id !== userId) {
-      await interaction.reply({ content: "This confirmation isn't for you.", ephemeral: true });
+      await interaction.reply({ content: "This confirmation isn't for you.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -554,7 +554,7 @@ export function registerViewbox(register) {
     async ({ interaction }) => {
       async function ensureDeferred() {
         if (interaction.deferred || interaction.replied) return;
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       }
 
       async function editResponse(payload) {

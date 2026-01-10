@@ -26,6 +26,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } from "discord.js";
 
 import { ForumClient } from "./forum_client.js";
@@ -428,13 +429,13 @@ export function registerVerifyMe(register) {
       const guildCfg = guildId ? getGuildVerifyConfig(guildId) : null;
 
       if (!guildId || !interaction.guild) {
-        await interaction.reply({ ephemeral: true, content: "This command must be used in a server." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "This command must be used in a server." });
         return;
       }
 
       if (!guildCfg) {
         await interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           content: "❌ Verification is not configured for this server yet.",
         });
         return;
@@ -448,7 +449,7 @@ export function registerVerifyMe(register) {
 
       if ((username && securitytoken) || (!username && !securitytoken)) {
         await interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           content:
             "Use **exactly one** option:\n" +
             "• `/verifyme username:<forums username>`\n" +
@@ -459,7 +460,7 @@ export function registerVerifyMe(register) {
 
       const member = await fetchGuildMember(interaction.guild, userId);
       if (!member) {
-        await interaction.reply({ ephemeral: true, content: "❌ Could not resolve your guild member record." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "❌ Could not resolve your guild member record." });
         return;
       }
 
@@ -470,7 +471,7 @@ export function registerVerifyMe(register) {
       // Block if they already have any approval role (no point)
       if (approvalRoleIds.length && memberHasAnyRole(member, approvalRoleIds)) {
         await interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           content: "✅ You already have a verified role here. No need to verify again.",
         });
         return;
@@ -491,7 +492,7 @@ export function registerVerifyMe(register) {
 
           if (!postRes.ok) {
             await interaction.reply({
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
               content:
                 `✅ You are linked as **${escapeDiscordMarkdown(existingForumUser)}**.\n` +
                 `❌ But I couldn't post the staff approval request. Ask staff to check the verification config.`,
@@ -500,7 +501,7 @@ export function registerVerifyMe(register) {
           }
 
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content:
               `✅ You are linked as forum user **${escapeDiscordMarkdown(existingForumUser)}**.\n` +
               `🛡️ Your approval request has been sent to staff.`,
@@ -510,7 +511,7 @@ export function registerVerifyMe(register) {
 
         const cleaned = String(username).trim();
         if (!cleaned || cleaned.length > 50) {
-          await interaction.reply({ ephemeral: true, content: "Please provide a valid forums username." });
+          await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Please provide a valid forums username." });
           return;
         }
 
@@ -526,7 +527,7 @@ export function registerVerifyMe(register) {
           if (Number.isFinite(lastSentAtMs) && nowMs() - lastSentAtMs < RESEND_COOLDOWN_MS) {
             const waitSec = Math.ceil((RESEND_COOLDOWN_MS - (nowMs() - lastSentAtMs)) / 1000);
             await interaction.reply({
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
               content: `⏳ A code was sent recently. Please wait ~${waitSec}s and try again.`,
             });
             return;
@@ -564,7 +565,7 @@ export function registerVerifyMe(register) {
           await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
 
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content:
               `❌ I couldn't send a forum PM to **${escapeDiscordMarkdown(cleaned)}**.\n` +
               (pmRes.error ? `Reason: ${escapeDiscordMarkdown(pmRes.error)}` : "Please try again later."),
@@ -574,7 +575,7 @@ export function registerVerifyMe(register) {
 
         const ttlMin = Math.round(TOKEN_TTL_MS / 60_000);
         await interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           content:
             `📩 I sent a verification code to **${escapeDiscordMarkdown(cleaned)}** via TPPC forums PM.\n` +
             `⏳ This code expires in ~${ttlMin} minutes.\n` +
@@ -587,7 +588,7 @@ export function registerVerifyMe(register) {
       if (securitytoken) {
         const token = String(securitytoken).trim();
         if (!token || token.length > 64) {
-          await interaction.reply({ ephemeral: true, content: "Please provide a valid security token." });
+          await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Please provide a valid security token." });
           return;
         }
 
@@ -596,7 +597,7 @@ export function registerVerifyMe(register) {
 
         if (!pending) {
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content: "❌ No pending verification found. Start with `/verifyme username:<forums username>`",
           });
           return;
@@ -605,7 +606,7 @@ export function registerVerifyMe(register) {
         if (isExpired(pending.expiresAtMs)) {
           await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content: "⌛ Your verification code expired. Please request a new one.",
           });
           return;
@@ -626,7 +627,7 @@ export function registerVerifyMe(register) {
 
         if (!ok) {
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content: "❌ Invalid code. Double-check the PM and try again.",
           });
           return;
@@ -643,7 +644,7 @@ export function registerVerifyMe(register) {
 
         if (!postRes.ok) {
           await interaction.reply({
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
             content:
               `✅ Verified and linked to forum user **${escapeDiscordMarkdown(forumUsername)}**.\n` +
               `⚠️ But I couldn't post the staff approval request. Ask staff to check the verification config.`,
@@ -652,7 +653,7 @@ export function registerVerifyMe(register) {
         }
 
         await interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           content:
             `✅ Verified and linked to forum user **${escapeDiscordMarkdown(forumUsername)}**.\n` +
             `🛡️ Your approval request has been sent to staff.`,
@@ -665,18 +666,18 @@ export function registerVerifyMe(register) {
   register.component("vfy:", async ({ interaction }) => {
     const guildId = interaction.guildId;
     if (!guildId || !interaction.guild) {
-      await interaction.reply({ ephemeral: true, content: "Invalid context." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Invalid context." });
       return;
     }
 
     const guildCfg = getGuildVerifyConfig(guildId);
     if (!guildCfg) {
-      await interaction.reply({ ephemeral: true, content: "Verification is not configured for this server." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Verification is not configured for this server." });
       return;
     }
 
     if (!canAdminAct(interaction, guildCfg)) {
-      await interaction.reply({ ephemeral: true, content: "❌ You do not have permission to review verifications." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "❌ You do not have permission to review verifications." });
       return;
     }
 
@@ -688,13 +689,13 @@ export function registerVerifyMe(register) {
     const roleId = parts[4];
 
     if (cidGuild !== String(guildId) || !targetUserId || !action) {
-      await interaction.reply({ ephemeral: true, content: "Invalid review action." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Invalid review action." });
       return;
     }
 
     const targetMember = await fetchGuildMember(interaction.guild, targetUserId);
     if (!targetMember) {
-      await interaction.reply({ ephemeral: true, content: "User is no longer in the server." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "User is no longer in the server." });
       await finalizeReviewMessage(interaction, `⚠️ Reviewed by ${interaction.user} — user not in server.`);
       return;
     }
@@ -705,7 +706,7 @@ export function registerVerifyMe(register) {
       const rid = String(roleId || "").trim();
       const allowed = (guildCfg.approvalRoles || []).some((r) => String(r?.id || "").trim() === rid);
       if (!allowed) {
-        await interaction.reply({ ephemeral: true, content: "That role is not configured for verification." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "That role is not configured for verification." });
         return;
       }
 
@@ -721,12 +722,12 @@ export function registerVerifyMe(register) {
     } else if (action === "reject") {
       outcomeLine = `❌ **Rejected** by ${interaction.user}.`;
     } else {
-      await interaction.reply({ ephemeral: true, content: "Unknown action." });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Unknown action." });
       return;
     }
 
     const dmNote = dmOk ? "" : " ⚠️ I couldn't DM the user (their DMs might be closed).";
-    await interaction.reply({ ephemeral: true, content: `Done.${dmNote}` });
+    await interaction.reply({ flags: MessageFlags.Ephemeral, content: `Done.${dmNote}` });
     await finalizeReviewMessage(interaction, outcomeLine);
   });
 }
@@ -749,18 +750,18 @@ export function registerUnverify(register) {
     async ({ interaction }) => {
       const guildId = interaction.guildId;
       if (!guildId || !interaction.guild) {
-        await interaction.reply({ ephemeral: true, content: "This command must be used in a server." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "This command must be used in a server." });
         return;
       }
 
       const guildCfg = getGuildVerifyConfig(guildId);
       if (!guildCfg) {
-        await interaction.reply({ ephemeral: true, content: "Verification is not configured for this server." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Verification is not configured for this server." });
         return;
       }
 
       if (!canAdminAct(interaction, guildCfg)) {
-        await interaction.reply({ ephemeral: true, content: "❌ You do not have permission to use /unverify." });
+        await interaction.reply({ flags: MessageFlags.Ephemeral, content: "❌ You do not have permission to use /unverify." });
         return;
       }
 
@@ -770,7 +771,7 @@ export function registerUnverify(register) {
       await deleteUserText({ guildId, userId, kind: K_VERIFIED }).catch(() => null);
       await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
 
-      await interaction.reply({ ephemeral: true, content: `✅ Removed verification linkage for ${target}.` });
+      await interaction.reply({ flags: MessageFlags.Ephemeral, content: `✅ Removed verification linkage for ${target}.` });
     },
     { admin: true }
   );

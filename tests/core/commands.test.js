@@ -322,7 +322,7 @@ describe("commands registry", () => {
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: "This command isn’t allowed in this server.",
-        ephemeral: true,
+        flags: 64,
       })
     );
   });

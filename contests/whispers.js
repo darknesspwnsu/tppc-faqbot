@@ -8,6 +8,8 @@
 // Behavior:
 // - Phrases are matched as whole words/phrases in public chat.
 // - When found, the phrase is announced and removed.
+import { MessageFlags } from "discord.js";
+
 import { getUserText, setUserText } from "../db.js";
 import { includesWholePhrase, normalizeForMatch } from "./helpers.js";
 
@@ -216,7 +218,7 @@ export function registerWhispers(register) {
     async ({ interaction }) => {
       const guildId = interaction.guild?.id;
       if (!guildId) {
-        await interaction.reply({ content: "This command only works in a server.", ephemeral: true });
+        await interaction.reply({ content: "This command only works in a server.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -230,7 +232,7 @@ export function registerWhispers(register) {
       if (mode === "list") {
         const mine = listWhispersForUser(state, ownerId);
         if (!mine.length) {
-          await interaction.reply({ content: "You have no active whispers in this server.", ephemeral: true });
+          await interaction.reply({ content: "You have no active whispers in this server.", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -245,13 +247,13 @@ export function registerWhispers(register) {
 
         await interaction.reply({
           content: `Your whispers in **${interaction.guild?.name ?? "this server"}**:\n${lines.join("\n")}${extra}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       if (!phrase) {
-        await interaction.reply({ content: "Please provide a phrase.", ephemeral: true });
+        await interaction.reply({ content: "Please provide a phrase.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -260,12 +262,12 @@ export function registerWhispers(register) {
         if (!res.ok && res.reason === "missing") {
           await interaction.reply({
             content: `You are not listening for: "${phrase}"`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
         if (!res.ok) {
-          await interaction.reply({ content: "Invalid phrase.", ephemeral: true });
+          await interaction.reply({ content: "Invalid phrase.", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -273,7 +275,7 @@ export function registerWhispers(register) {
 
         await interaction.reply({
           content: `🗑️ Removed whisper: "${phrase}"`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -282,12 +284,12 @@ export function registerWhispers(register) {
       if (!res.ok && res.reason === "exists") {
         await interaction.reply({
           content: `You are already listening for: "${phrase}"`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
       if (!res.ok) {
-        await interaction.reply({ content: "Invalid phrase.", ephemeral: true });
+        await interaction.reply({ content: "Invalid phrase.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -299,7 +301,7 @@ export function registerWhispers(register) {
           (prize ? `\nPrize: ${prize}` : "") +
           `\nUse \`/whisper list\` to see your phrases.` +
           `\nFor reminders/notifications, use \`/notifyme\` or \`/remindme\`.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   );

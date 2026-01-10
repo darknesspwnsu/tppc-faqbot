@@ -8,7 +8,7 @@
 // - Timers should be owned by TimerBag so manager.stop() is always safe.
 // - Helpers keep command UX consistent (help/rules/status, permission checks, etc.).
 
-import { PermissionsBitField } from "discord.js";
+import { MessageFlags, PermissionsBitField } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { CONTEST_ROLES_BY_GUILD } from "../configs/contest_roles.js";
 import { parseDurationSeconds, formatDurationSeconds } from "../shared/time_utils.js";
@@ -74,9 +74,9 @@ async function notifyRoleErrors(ctx, roleId, failedIds) {
   if (ctx?.interaction) {
     try {
       if (ctx.interaction.deferred || ctx.interaction.replied) {
-        await ctx.interaction.followUp({ content, ephemeral: true });
+        await ctx.interaction.followUp({ content, flags: MessageFlags.Ephemeral });
       } else {
-        await ctx.interaction.reply({ content, ephemeral: true });
+        await ctx.interaction.reply({ content, flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }
@@ -493,7 +493,7 @@ export async function guardBoardInteraction(
 
   if (!st) {
     try {
-      await interaction.reply({ content: "No active game.", ephemeral: true });
+      await interaction.reply({ content: "No active game.", flags: MessageFlags.Ephemeral });
     } catch {}
     return null;
   }
@@ -506,7 +506,7 @@ export async function guardBoardInteraction(
   const activeMsgId = st?.[messageIdField];
   if (activeMsgId && interaction.message?.id && interaction.message.id !== activeMsgId) {
     try {
-      await interaction.reply({ content: "These buttons aren’t for the current game message.", ephemeral: true });
+      await interaction.reply({ content: "These buttons aren’t for the current game message.", flags: MessageFlags.Ephemeral });
     } catch {}
     return null;
   }
@@ -517,7 +517,7 @@ export async function guardBoardInteraction(
       try {
         await interaction.reply({
           content: wrongUserText || "Only the active player(s) can use these buttons.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } catch {}
       return null;

@@ -2,6 +2,7 @@
 //
 // Slash-only helper to find RPG trainer IDs by name.
 
+import { MessageFlags } from "discord.js";
 import { parse } from "node-html-parser";
 
 import { createRpgClientFactory } from "./client_factory.js";
@@ -76,7 +77,7 @@ export function registerFindMyId(register) {
     async ({ interaction }) => {
       const name = String(interaction.options?.getString?.("name") || "").trim();
       if (!name) {
-        await interaction.reply({ content: "Please provide a trainer name.", ephemeral: true });
+        await interaction.reply({ content: "Please provide a trainer name.", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -84,7 +85,7 @@ export function registerFindMyId(register) {
         if (!requireRpgCredentials("/findmyid")) {
           await interaction.reply({
             content: "❌ RPG credentials are not configured.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
@@ -93,7 +94,7 @@ export function registerFindMyId(register) {
         if (!matches.length) {
           await interaction.reply({
             content: `❌ No trainer matches found for "${name}".`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
@@ -102,7 +103,7 @@ export function registerFindMyId(register) {
           const match = matches[0];
           await interaction.reply({
             content: `✅ Match found! ${match.name} — ${match.id}`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
@@ -110,13 +111,13 @@ export function registerFindMyId(register) {
         const lines = matches.map((m) => `• ${m.name} — ${m.id}`);
         await interaction.reply({
           content: `☑️ Matches found!\n${lines.join("\n")}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } catch (err) {
         console.error("[rpg] findmyid failed:", err);
         await interaction.reply({
           content: "Failed to fetch trainer matches. Please try again later.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
