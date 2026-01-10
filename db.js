@@ -163,15 +163,30 @@ export async function initDb() {
     "alter.rpg_leaderboard_history.trainer_id"
   );
 
-  await execDb(
+  const [historyCols] = await execDb(
     db,
     `
-    ALTER TABLE rpg_leaderboard_history
-      ADD COLUMN IF NOT EXISTS trainer_name VARCHAR(64) NULL
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema = DATABASE()
+      AND table_name = ?
+      AND column_name = ?
   `,
-    [],
-    "alter.rpg_leaderboard_history.trainer_name"
+    ["rpg_leaderboard_history", "trainer_name"],
+    "check.rpg_leaderboard_history.trainer_name"
   );
+
+  if (!historyCols?.length) {
+    await execDb(
+      db,
+      `
+      ALTER TABLE rpg_leaderboard_history
+        ADD COLUMN trainer_name VARCHAR(64) NULL
+    `,
+      [],
+      "alter.rpg_leaderboard_history.trainer_name"
+    );
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS poll_contests (
