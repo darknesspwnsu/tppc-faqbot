@@ -307,6 +307,93 @@ describe("rpg leaderboard register", () => {
     expect(body).toContain("Battle Roulette (Weekly)");
     expect(body).toContain("Ace");
   });
+
+  it("rejects invalid swarm row counts", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-06-15T16:00:00Z"));
+
+    const message = makeMessage();
+    await handler({ message, rest: "swarm 11" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      "❌ `num_rows` must be an integer between 1 and 10."
+    );
+    expect(rpgMocks.fetchPage).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it("renders swarm results with custom count", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr><td>1</td><td><a href="profile.php?id=1">silverdragon3</a></td><td>21</td></tr>
+          <tr><td>2</td><td><a href="profile.php?id=2">Mr Hax</a></td><td>11</td></tr>
+          <tr><td>3</td><td><a href="profile.php?id=3">Noxation</a></td><td>4</td></tr>
+        </tbody>
+      </table>
+    `;
+    rpgMocks.fetchPage.mockResolvedValueOnce(html);
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-06-15T16:00:00Z"));
+
+    const message = makeMessage();
+    await handler({ message, rest: "swarm 2" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("🏆 **Swarm** (top 2)");
+    expect(body).toContain("silverdragon3");
+    expect(body).toContain("Mr Hax");
+    expect(body).not.toContain("Noxation");
+
+    vi.useRealTimers();
+  });
+
+  it("blocks swarm outside Saturday", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-06-14T16:00:00Z"));
+
+    const message = makeMessage();
+    await handler({ message, rest: "swarm" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      "❌ Swarm leaderboard is only available on Saturdays."
+    );
+    expect(rpgMocks.fetchPage).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
 });
 
 describe("rpg leaderboard interaction", () => {

@@ -79,6 +79,7 @@ const ALIASES = new Map([
   ["roulette", "roulette"],
   ["battleroulette", "roulette"],
   ["br", "roulette"],
+  ["swarm", "swarm"],
 ]);
 
 function getText(node) {
@@ -286,6 +287,21 @@ function parseTrainerRanks(html) {
   });
 }
 
+function parseSwarm(html) {
+  return parseRanksTable(html, {
+    minCells: 3,
+    parseRow(cells) {
+      const { trainerId, name } = parseTrainerCell(cells[1]);
+      return {
+        rank: getText(cells[0]),
+        trainer: name,
+        trainerId,
+        spotted: getText(cells[2]),
+      };
+    },
+  });
+}
+
 function parsePokemonRanks(html) {
   return parseRanksTable(html, {
     minCells: 5,
@@ -399,6 +415,8 @@ function renderTopRows(challengeKey, rows, limit = 5) {
       out.push(
         `#${row.rank} — ${row.trainer} • ${row.pokemon} Lv${row.level} • ID ${row.number}`
       );
+    } else if (challengeKey === "swarm") {
+      out.push(`#${row.rank} — ${row.trainer} • ${row.spotted} spotted`);
     }
   }
   return out;
@@ -726,6 +744,7 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} tc\` — Training Challenge standings`,
             `• \`${primaryCmd} roulette [weekly]\` — Battle Roulette standings`,
             `• \`${primaryCmd} speedtower\` — Speed Tower standings`,
+            `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
             `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
           ].join("\n")
@@ -877,10 +896,51 @@ export function registerLeaderboard(register) {
         return;
       }
 
+      if (sub === "swarm") {
+        const day = getEtDayOfWeek();
+        if (day !== 6) {
+          await message.reply("❌ Swarm leaderboard is only available on Saturdays.");
+          return;
+        }
+
+        const countRaw = parts[1] || "";
+        const hasCount = countRaw !== "";
+        if (parts.length > 2) {
+          await message.reply(`Usage: \`${primaryCmd} swarm [1-10]\``);
+          return;
+        }
+        if (hasCount && !/^\d+$/.test(countRaw)) {
+          await message.reply("❌ `num_rows` must be an integer between 1 and 10.");
+          return;
+        }
+        const count = hasCount ? Number(countRaw) : 5;
+        if (!Number.isInteger(count) || count < 1 || count > 10) {
+          await message.reply("❌ `num_rows` must be an integer between 1 and 10.");
+          return;
+        }
+
+        const html = await getClient().fetchPage("https://www.tppcrpg.net/swarms.php");
+        const rows = parseSwarm(html);
+        if (!rows.length) {
+          await message.reply("There is currently no active swarm.");
+          return;
+        }
+
+        const lines = renderTopRows("swarm", rows, count);
+        if (!lines.length) {
+          await message.reply("There is currently no active swarm.");
+          return;
+        }
+
+        const body = `🏆 **Swarm** (top ${Math.min(count, lines.length)})\n` + lines.join("\n");
+        await message.reply(body);
+        return;
+      }
+
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|pokemon|poke <name> [1-20]\``
         );
         return;
       }
@@ -951,6 +1011,7 @@ export const __testables = {
   parseRoulette,
   parseTrainingChallenge,
   parseTrainerRanks,
+  parseSwarm,
   parsePokemonRanks,
   parsePokemonPageCount,
   renderTopRows,
