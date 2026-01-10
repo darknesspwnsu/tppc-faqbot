@@ -249,6 +249,7 @@ function describeEventId(id) {
 }
 
 function getAnnouncementChannels(client) {
+  if (!client?.guilds?.cache?.get) return [];
   const entries = Object.entries(RPG_EVENT_CHANNELS_BY_GUILD || {});
   const output = [];
   for (const [guildId, channelIds] of entries) {
