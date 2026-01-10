@@ -464,8 +464,14 @@ async function fetchAndStore(challenge, client) {
 async function recordChallengeWinner({ challengeKey, rows }) {
   if (!rows?.length) return false;
   const winner = rows[0];
-  if (!winner?.trainerId) return false;
-  await incrementLeaderboardHistory({ challenge: challengeKey, trainerId: winner.trainerId });
+  const trainerId = winner?.trainerId ? String(winner.trainerId) : "";
+  const trainerName = winner?.trainer ? String(winner.trainer) : "";
+  if (!trainerId && !trainerName) return false;
+  await incrementLeaderboardHistory({
+    challenge: challengeKey,
+    trainerId,
+    trainerName,
+  });
   return true;
 }
 
@@ -794,9 +800,10 @@ export function registerLeaderboard(register) {
           return;
         }
 
-        const lines = rows.map(
-          (row, i) => `${i + 1}. ${row.trainer_id} — ${row.wins} win${row.wins === 1 ? "" : "s"}`
-        );
+        const lines = rows.map((row, i) => {
+          const label = row.trainer_name || row.trainer_id;
+          return `${i + 1}. ${label} — ${row.wins} win${row.wins === 1 ? "" : "s"}`;
+        });
         await message.reply(`🏆 **${CHALLENGES[key].name} — History**\n` + lines.join("\n"));
         return;
       }

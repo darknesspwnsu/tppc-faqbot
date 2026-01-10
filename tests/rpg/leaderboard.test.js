@@ -157,6 +157,30 @@ describe("rpg leaderboard register", () => {
     expect(body).toContain("2. 200 — 1 win");
   });
 
+  it("renders history with trainer names when available", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    storageMocks.getLeaderboardHistoryTop.mockResolvedValueOnce([
+      { trainer_id: "1", trainer_name: "Ceci and Hailey", wins: 2 },
+      { trainer_id: "2", trainer_name: "", wins: 1 },
+    ]);
+
+    const message = makeMessage();
+    await handler({ message, rest: "ssanne history" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("1. Ceci and Hailey — 2 wins");
+    expect(body).toContain("2. 2 — 1 win");
+  });
+
   it("offers pokemon suggestions with variant buttons", async () => {
     delete process.env.RPG_USERNAME;
     delete process.env.RPG_PASSWORD;

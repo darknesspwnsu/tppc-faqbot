@@ -122,13 +122,28 @@ describe("rpg/storage", () => {
 
     expect(execute).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO rpg_leaderboard_history"),
-      ["ssanne", "123"]
+      ["ssanne", "123", null]
+    );
+  });
+
+  it("incrementLeaderboardHistory falls back to trainer name", async () => {
+    const { incrementLeaderboardHistory, execute } = await loadStorage();
+
+    await incrementLeaderboardHistory({
+      challenge: "ssanne",
+      trainerId: "",
+      trainerName: "Ceci and Hailey",
+    });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO rpg_leaderboard_history"),
+      ["ssanne", "Ceci and Hailey", "Ceci and Hailey"]
     );
   });
 
   it("getLeaderboardHistoryTop returns rows", async () => {
     const rows = [
-      { trainer_id: "1", wins: 3 },
+      { trainer_id: "1", trainer_name: "Ace", wins: 3 },
       { trainer_id: "2", wins: 1 },
     ];
     const { getLeaderboardHistoryTop, execute } = await loadStorage({ rows });

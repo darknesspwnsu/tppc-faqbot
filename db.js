@@ -142,7 +142,8 @@ export async function initDb() {
     `
     CREATE TABLE IF NOT EXISTS rpg_leaderboard_history (
       challenge VARCHAR(32) NOT NULL,
-      trainer_id VARCHAR(32) NOT NULL,
+      trainer_id VARCHAR(64) NOT NULL,
+      trainer_name VARCHAR(64) NULL,
       wins INT UNSIGNED NOT NULL DEFAULT 0,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (challenge, trainer_id)
@@ -150,6 +151,26 @@ export async function initDb() {
   `,
     [],
     "init.rpg_leaderboard_history"
+  );
+
+  await execDb(
+    db,
+    `
+    ALTER TABLE rpg_leaderboard_history
+      MODIFY COLUMN trainer_id VARCHAR(64) NOT NULL
+  `,
+    [],
+    "alter.rpg_leaderboard_history.trainer_id"
+  );
+
+  await execDb(
+    db,
+    `
+    ALTER TABLE rpg_leaderboard_history
+      ADD COLUMN IF NOT EXISTS trainer_name VARCHAR(64) NULL
+  `,
+    [],
+    "alter.rpg_leaderboard_history.trainer_name"
   );
 
   await db.execute(`

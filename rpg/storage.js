@@ -80,17 +80,21 @@ export async function getPokedexEntry({ entryKey }) {
   };
 }
 
-export async function incrementLeaderboardHistory({ challenge, trainerId }) {
+export async function incrementLeaderboardHistory({ challenge, trainerId, trainerName }) {
+  const id = String(trainerId || "").trim();
+  const name = String(trainerName || "").trim();
+  const key = id || name;
+  if (!key) return;
   const db = getDb();
   await db.execute(
     `
-    INSERT INTO rpg_leaderboard_history (challenge, trainer_id, wins)
-    VALUES (?, ?, 1)
+    INSERT INTO rpg_leaderboard_history (challenge, trainer_id, trainer_name, wins)
+    VALUES (?, ?, ?, 1)
     ON DUPLICATE KEY UPDATE
       wins = wins + 1,
       updated_at = CURRENT_TIMESTAMP
   `,
-    [String(challenge), String(trainerId)]
+    [String(challenge), key, name || null]
   );
 }
 
@@ -99,7 +103,7 @@ export async function getLeaderboardHistoryTop({ challenge, limit = 5 }) {
   const capped = Number.isInteger(limit) && limit > 0 ? limit : 5;
   const [rows] = await db.execute(
     `
-    SELECT trainer_id, wins
+    SELECT trainer_id, trainer_name, wins
     FROM rpg_leaderboard_history
     WHERE challenge = ?
     ORDER BY wins DESC, trainer_id ASC
