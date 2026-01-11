@@ -283,6 +283,68 @@ function pickSpriteUrl(sprites, variant) {
   return first || "";
 }
 
+function normalizeSpriteOptions(tokens, raw) {
+  const remaining = [];
+  let gender = "";
+  let library = "";
+  const options = [];
+
+  for (const token of tokens) {
+    const lower = String(token || "").trim().toLowerCase();
+    if (!lower) continue;
+    if (!gender && (lower === "m" || lower === "f")) {
+      gender = lower.toUpperCase();
+      options.push(gender);
+      continue;
+    }
+    if (!library && (lower === "xy" || lower === "hgss" || lower === "bw" || lower === "blackwhite")) {
+      library = lower === "bw" ? "blackwhite" : lower;
+      options.push(lower);
+      continue;
+    }
+    remaining.push(token);
+  }
+
+  const rawText = String(raw || "").toLowerCase();
+  const isMega = rawText.includes("(mega");
+
+  return {
+    gender: gender || "M",
+    library: library || "xy",
+    name: remaining.join(" ").trim(),
+    isMega,
+    options,
+  };
+}
+
+function applySpriteOptions(spriteUrl, { gender, library, isMega }) {
+  let url = String(spriteUrl || "");
+  if (!url) return "";
+
+  if (library && library !== "xy") {
+    url = url.replace("/xy/", `/${library}/`);
+  }
+
+  if (gender) {
+    const letter = gender.toUpperCase() === "F" ? "F" : "M";
+    url = url.replace(/\/(\d+)([MF])(-\d+)?\.gif/i, (_, dex, _current, form) => {
+      return `/${dex}${letter}${form || ""}.gif`;
+    });
+  }
+
+  if (isMega && library && library !== "xy") {
+    url = url.replace(/\/(\d+)([MF])-\d+\.gif/i, "/$1$2.gif");
+  }
+
+  return url;
+}
+
+function stripFormModifier(nameRaw) {
+  const raw = String(nameRaw || "");
+  const stripped = raw.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return { name: stripped, stripped: stripped !== raw.trim() };
+}
+
 function statsToFields(stats, variant) {
   if (!stats) return [{ name: "Stats", value: "Unknown" }];
   const modifier = statBonusLabel(variant);
@@ -387,10 +449,12 @@ function formatVariantName(variant, name) {
   return `${prefix}${name}`;
 }
 
-function buildPokedexSuggestions(suggestions, variant) {
+function buildPokedexSuggestions(suggestions, variant, suffix) {
+  const tail = String(suffix || "").trim();
   return suggestions.map((name) => {
     const label = formatVariantName(variant, name);
-    return { label, query: label };
+    const fullLabel = tail ? `${label} ${tail}` : label;
+    return { label: fullLabel, query: fullLabel };
   });
 }
 
@@ -418,7 +482,7 @@ function hasExplicitVariant(raw) {
   return /^[sdg][.\s]/.test(lower);
 }
 
-async function resolvePokedexEntryQuery(nameRaw, variant, message, command) {
+async function resolvePokedexEntryQuery(nameRaw, variant, message, command, options = {}) {
   const explicitVariant = hasExplicitVariant(nameRaw);
 
   if (variant && !explicitVariant) {
@@ -457,7 +521,7 @@ async function resolvePokedexEntryQuery(nameRaw, variant, message, command) {
   }
   if (!entry) {
     if (suggestions.length) {
-      const refined = buildPokedexSuggestions(suggestions, variant);
+      const refined = buildPokedexSuggestions(suggestions, variant, options.suggestionSuffix);
       await message.reply({
         content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
         components: buildPokedexDidYouMeanButtons(command, refined),
@@ -549,6 +613,7 @@ export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
   const statsCmd = "!stats";
   const eggCmd = "!eggtime";
+  const spriteCmd = "!sprite";
   const getClient = createRpgClientFactory();
 
   register(
@@ -705,6 +770,65 @@ export function registerPokedex(register) {
     },
     "!eggtime <pokemon> — show TPPC RPG egg breeding time",
     { helpTier: "primary", category: "RPG", aliases: ["!egg", "!eggtimes", "!breedtime", "!breedtimes"] }
+  );
+
+  register(
+    spriteCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!(await ensureRpgCredentials(message, spriteCmd))) return;
+
+      const rawText = String(rest || "").trim();
+      const parsed = normalizeSpriteOptions(rawText.split(/\s+/), rawText);
+      let nameRaw = parsed.name;
+      let strippedForm = false;
+      if (!nameRaw || nameRaw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${spriteCmd} <pokemon name> [xy|hgss|bw|blackwhite] [M|F]\``);
+        return;
+      }
+      if (parsed.library !== "xy") {
+        const stripped = stripFormModifier(nameRaw);
+        nameRaw = stripped.name;
+        strippedForm = stripped.stripped;
+      }
+
+      let { variant } = parsePokemonQuery(nameRaw);
+      if (!variant) variant = "normal";
+      const resolved = await resolvePokedexEntryQuery(nameRaw, variant, message, spriteCmd, {
+        suggestionSuffix: parsed.options?.length ? parsed.options.join(" ") : "",
+      });
+      if (!resolved) return;
+      const { entry } = resolved;
+      variant = resolved.variant;
+
+      try {
+        const { payload, error } = await fetchPokedexPayload(entry, getClient());
+        if (error) {
+          await message.reply(error);
+          return;
+        }
+        const title = String(payload?.title || entry.name || "");
+        const isMega =
+          parsed.isMega || /\(mega/i.test(title) || /\bmega\b/i.test(title);
+        const spriteUrl = applySpriteOptions(
+          pickSpriteUrl(payload?.sprites, variant),
+          { gender: parsed.gender, library: parsed.library, isMega }
+        );
+        if (!spriteUrl) {
+          await message.reply("❌ No sprite found for that Pokemon.");
+          return;
+        }
+        const footnote = strippedForm
+          ? "\n_(this sprite library does not support forms, falling back to displaying original sprite.)_"
+          : "";
+        await message.reply(`${spriteUrl}${footnote}`);
+      } catch (err) {
+        console.error("[rpg] pokedex sprite failed:", err);
+        await message.reply("❌ Failed to fetch sprite. Please try again later.");
+      }
+    },
+    "!sprite <pokemon> — show TPPC RPG sprite URL",
+    { helpTier: "primary", category: "RPG" }
   );
 }
 

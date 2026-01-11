@@ -183,6 +183,164 @@ describe("rpg pokedex command", () => {
     expect(hpField.value).toContain("(+15)");
   });
 
+  it("returns the sprite url for the requested variant", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#681 - Aegislash (Blade)</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>60</td><td>140</td><td>50</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>60</td><td>140</td><td>50</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Steel</td><td>Ghost</td><td>Mineral</td><td></td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/681M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/shiny/681M-1.gif')\"><p>Shiny &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Shiny Aegislash (Blade)" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/xy/shiny/681M-1.gif");
+  });
+
+  it("applies sprite library and gender options in any order", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#181 - Ampharos</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>90</td><td>75</td><td>85</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>55</td><td>115</td><td>90</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Electric</td><td></td><td>Monster</td><td>Field</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/181M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Ampharos hgss F" });
+
+    let replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/hgss/normal/181F-1.gif");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#181 - Ampharos</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>90</td><td>75</td><td>85</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>55</td><td>115</td><td>90</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Electric</td><td></td><td>Monster</td><td>Field</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/181M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message2 = makeMessage();
+    await handler({ message: message2, rest: "Ampharos F blackwhite" });
+
+    replyArg = message2.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/blackwhite/normal/181F-1.gif");
+  });
+
+  it("drops mega form suffix for hgss/bw sprites", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#181 - Ampharos (Mega)</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>90</td><td>75</td><td>85</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>55</td><td>115</td><td>90</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Electric</td><td></td><td>Monster</td><td>Field</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/181M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Ampharos (Mega) hgss" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/hgss/normal/181M.gif");
+  });
+
+  it("adds a footnote when forms are stripped for older sprite libraries", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#181 - Ampharos (Mega)</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>90</td><td>75</td><td>85</td></tr>",
+        "<tr><th>Speed</th><th>Spec Attack</th><th>Spec Defense</th></tr>",
+        "<tr><td>55</td><td>115</td><td>90</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Electric</td><td></td><td>Monster</td><td>Field</td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/181M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Ampharos (Mega) bw" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/blackwhite/normal/181M.gif");
+    expect(replyArg).toContain(
+      "_(this sprite library does not support forms, falling back to displaying original sprite.)_"
+    );
+  });
+
   it("renders dark stat bonuses", async () => {
     const register = makeRegister();
     registerPokedex(register);
@@ -461,6 +619,24 @@ describe("rpg pokedex command", () => {
     const button = row.components[0];
     const label = button.data?.label ?? button.label;
     expect(label).toBe("Gallade");
+  });
+
+  it("keeps sprite options in did you mean suggestions", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    const message = makeMessage();
+    await handler({ message, rest: "ampharis (mega) bw F" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toContain("Did you mean");
+    const row = replyArg.components[0];
+    const button = row.components[0];
+    const label = button.data?.label ?? button.label;
+    const customId = button.data?.custom_id ?? button.customId;
+    expect(label).toBe("Ampharos bw F");
+    expect(customId).toContain("pokedex_retry:!sprite:Ampharos%20bw%20F");
   });
 
   it("returns egg time as plain text", async () => {
