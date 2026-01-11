@@ -727,8 +727,8 @@ export function registerRarity(register) {
       await refresh();
       await message.reply("Rarity cache refreshed ✅");
     },
-    help: "?rarityreload — refreshes rarity cache (admin)",
-    opts: { admin: true, hideFromHelp: true }
+    help: "!rarityreload — refreshes rarity cache (admin)",
+    opts: { admin: true }
   });
 }
 
