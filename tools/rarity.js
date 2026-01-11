@@ -265,14 +265,24 @@ function mergeSuggestions(...lists) {
   return out;
 }
 
-function parseTwoArgs(rest) {
+function formatSuggestionsInline(list) {
+  return list.length ? `Did you mean: ${list.join(", ")}` : "";
+}
+
+function parseArgs(rest, max = 2) {
   const s = String(rest ?? "").trim();
   if (!s) return [];
 
-  const sepMatch = s.match(/\s*\|\s*|\s+vs\s+/i);
-  if (sepMatch) {
-    const parts = s.split(sepMatch[0]).map((x) => x.trim()).filter(Boolean);
-    return parts.slice(0, 2);
+  const pipeMatch = s.match(/\s*\|\s*/);
+  if (pipeMatch) {
+    const parts = s.split(/\s*\|\s*/).map((x) => x.trim()).filter(Boolean);
+    return parts.slice(0, max);
+  }
+
+  const vsMatch = s.match(/\s+vs\s+/i);
+  if (vsMatch) {
+    const parts = s.split(/\s+vs\s+/i).map((x) => x.trim()).filter(Boolean);
+    return parts.slice(0, max);
   }
 
   const out = [];
@@ -318,17 +328,25 @@ function parseTwoArgs(rest) {
       continue;
     }
 
-    if (merged.length < 2) {
+    if (merged.length < max) {
       merged.push(token);
       continue;
     }
   }
 
-  return merged.slice(0, 2);
+  return merged.slice(0, max);
+}
+
+function parseTwoArgs(rest) {
+  return parseArgs(rest, 2);
 }
 
 function cmpLine(a, b) {
   return `${fmt(a)} vs ${fmt(b)}`;
+}
+
+function cmpLine3(a, b, c) {
+  return `${fmt(a)} vs ${fmt(b)} vs ${fmt(c)}`;
 }
 
 /* --------------------------------- loading -------------------------------- */
@@ -794,10 +812,10 @@ export function registerLevel4Rarity(register) {
   register(
     "!rc",
     async ({ message, rest }) => {
-      const [q1, q2] = parseTwoArgs(rest);
+      const [q1, q2, q3] = parseArgs(rest, 3);
       if (!q1 || !q2) {
         await message.reply(
-          "Usage: `!rc <pokemon1> <pokemon2>` (tip: wrap names in quotes if they contain spaces)"
+          "Usage: `!rc <pokemon1> <pokemon2> [pokemon3]` (tip: wrap names in quotes if they contain spaces)"
         );
         return;
       }
@@ -805,15 +823,18 @@ export function registerLevel4Rarity(register) {
 
       const r1 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q1);
       const r2 = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q2);
+      const r3 = q3 ? findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, q3) : null;
 
-      if (!r1 || !r2) {
+      if (!r1 || !r2 || (q3 && !r3)) {
         if (!r1) {
           const s1 = getSuggestionsFromIndex(rarityNorm, q1, 5);
-          if (s1.length) {
+          if (s1.length && !q3) {
             await message.reply({
               content: `No exact match for \`${q1}\`.\nDid you mean:`,
               components: buildDidYouMeanButtons("!rc_left", s1, q2),
             });
+          } else if (s1.length) {
+            await message.reply(`No exact match for \`${q1}\`. ${formatSuggestionsInline(s1)}`);
           } else {
             await message.reply(`No exact match for \`${q1}\`.`);
           }
@@ -821,21 +842,34 @@ export function registerLevel4Rarity(register) {
 
         if (!r2) {
           const s2 = getSuggestionsFromIndex(rarityNorm, q2, 5);
-          if (s2.length) {
+          if (s2.length && !q3) {
             await message.reply({
               content: `No exact match for \`${q2}\`.\nDid you mean:`,
               components: buildDidYouMeanButtons("!rc_right", s2, q1),
             });
+          } else if (s2.length) {
+            await message.reply(`No exact match for \`${q2}\`. ${formatSuggestionsInline(s2)}`);
           } else {
             await message.reply(`No exact match for \`${q2}\`.`);
+          }
+        }
+
+        if (q3 && !r3) {
+          const s3 = getSuggestionsFromIndex(rarityNorm, q3, 5);
+          if (s3.length) {
+            await message.reply(`No exact match for \`${q3}\`. ${formatSuggestionsInline(s3)}`);
+          } else {
+            await message.reply(`No exact match for \`${q3}\`.`);
           }
         }
 
         return;
       }
 
-      if (normalizeKey(r1.name) === normalizeKey(r2.name)) {
-        await message.reply("You can’t compare a Pokémon to itself. Please pick two different Pokémon.");
+      const keys = [normalizeKey(r1.name), normalizeKey(r2.name)];
+      if (r3) keys.push(normalizeKey(r3.name));
+      if (new Set(keys).size !== keys.length) {
+        await message.reply("You can’t compare a Pokémon to itself. Please pick distinct Pokémon.");
         return;
       }
 
@@ -844,24 +878,44 @@ export function registerLevel4Rarity(register) {
         ? `Updated ${formatDurationAgoWithoutSeconds(updatedDate.getTime())} ago`
         : "";
 
+      if (!r3) {
+        await message.channel.send({
+          embeds: [
+            {
+              title: `${r1.name} vs ${r2.name}`,
+              color: 0xed8b2d,
+              fields: [
+                { name: "Total", value: cmpLine(r1.total, r2.total), inline: false },
+                { name: "♂", value: cmpLine(r1.male, r2.male), inline: true },
+                { name: "♀", value: cmpLine(r1.female, r2.female), inline: true },
+                { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
+                { name: "G", value: cmpLine(r1.genderless, r2.genderless), inline: true }
+              ],
+              footer: { text: updatedLine }
+            }
+          ]
+        });
+        return;
+      }
+
       await message.channel.send({
         embeds: [
           {
-            title: `${r1.name} vs ${r2.name}`,
+            title: `${r1.name} vs ${r2.name} vs ${r3.name}`,
             color: 0xed8b2d,
             fields: [
-              { name: "Total", value: cmpLine(r1.total, r2.total), inline: false },
-              { name: "♂", value: cmpLine(r1.male, r2.male), inline: true },
-              { name: "♀", value: cmpLine(r1.female, r2.female), inline: true },
-              { name: "(?)", value: cmpLine(r1.ungendered, r2.ungendered), inline: true },
-              { name: "G", value: cmpLine(r1.genderless, r2.genderless), inline: true }
+              { name: "Total", value: cmpLine3(r1.total, r2.total, r3.total), inline: false },
+              { name: "♂", value: cmpLine3(r1.male, r2.male, r3.male), inline: true },
+              { name: "♀", value: cmpLine3(r1.female, r2.female, r3.female), inline: true },
+              { name: "(?)", value: cmpLine3(r1.ungendered, r2.ungendered, r3.ungendered), inline: true },
+              { name: "G", value: cmpLine3(r1.genderless, r2.genderless, r3.genderless), inline: true }
             ],
             footer: { text: updatedLine }
           }
         ]
       });
     },
-    "!rc <pokemon1> <pokemon2> — compares rarity statistics",
+    "!rc <pokemon1> <pokemon2> [pokemon3] — compares rarity statistics",
     { aliases: ["!raritycompare", "!rarityc", "!rcompare", "!rcomp"] }
   );
 

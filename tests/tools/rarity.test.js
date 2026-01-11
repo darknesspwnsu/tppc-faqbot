@@ -444,6 +444,52 @@ describe("rarity.js", () => {
     );
   });
 
+  it("rarity comparison supports three-way comparisons", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "Pikachu s.pikachu g.meowth" });
+
+    const payload = message.channel.send.mock.calls[0][0];
+    expect(payload.embeds[0].title).toBe("Pikachu vs Shiny Pikachu vs Golden Meowth");
+    expect(payload.embeds[0].fields[0].value).toBe("10 vs 1 vs 5");
+  });
+
+  it("rarity comparison rejects duplicate entries in three-way mode", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "Pikachu Pikachu s.pikachu" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("distinct Pokémon")
+    );
+  });
+
   it("nextRunInEastern schedules same-day runs after offset conversion (standard time)", async () => {
     const { __testables } = await loadRarityModule();
     vi.setSystemTime(new Date("2026-01-01T11:45:00Z")); // 06:45 ET
