@@ -828,7 +828,7 @@ export function registerPokedex(register) {
       }
     },
     "!sprite <pokemon> — show TPPC RPG sprite URL",
-    { helpTier: "primary", category: "RPG" }
+    { helpTier: "primary", category: "RPG", aliases: ["!pokesprite", "!gif"] }
   );
 }
 
