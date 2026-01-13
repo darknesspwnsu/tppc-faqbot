@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../../db.js", () => ({
   getUserText: vi.fn(),
@@ -38,6 +38,10 @@ describe("registerWhispers", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("adds a whisper and saves it", async () => {
     const register = makeRegister();
     registerWhispers(register);
@@ -68,7 +72,10 @@ describe("registerWhispers", () => {
     expect(payload.kind).toBe("whisper");
 
     const saved = JSON.parse(payload.text);
-    expect(saved).toEqual([{ phrase: "secret", ownerId: "u1", prize: "candy" }]);
+    expect(saved).toEqual([
+      { phrase: "secret", ownerId: "u1", prize: "candy", createdAt: saved[0].createdAt },
+    ]);
+    expect(Number.isFinite(saved[0].createdAt)).toBe(true);
   });
 
   test("delete reports missing phrase without saving", async () => {
@@ -141,6 +148,9 @@ describe("registerWhispers", () => {
       userId: "u4",
     });
 
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-12T08:30:00Z"));
+
     await whisperSlash.handler({ interaction });
     setUserText.mockClear();
 
@@ -156,6 +166,7 @@ describe("registerWhispers", () => {
 
     expect(reply).toHaveBeenCalledTimes(1);
     expect(reply.mock.calls[0][0].content).toContain("hidden");
+    expect(reply.mock.calls[0][0].content).toContain("<t:1768206600:f>");
     expect(setUserText).toHaveBeenCalledTimes(1);
   });
 });

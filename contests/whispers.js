@@ -49,6 +49,12 @@ export function serializeItems(items) {
       phrase: String(x.phrase || ""),
       ownerId: String(x.ownerId || ""),
       prize: x.prize == null ? "" : String(x.prize || ""),
+      createdAt:
+        x?.createdAt == null
+          ? null
+          : Number.isFinite(Number(x.createdAt))
+            ? Number(x.createdAt)
+            : null,
     }))
   );
 }
@@ -62,12 +68,19 @@ export function deserializeItems(text) {
         phrase: norm(x?.phrase),
         ownerId: norm(x?.ownerId),
         prize: norm(x?.prize),
+        createdAt:
+          x?.createdAt == null
+            ? null
+            : Number.isFinite(Number(x?.createdAt))
+              ? Number(x.createdAt)
+              : null,
       }))
       .filter((x) => x.phrase && x.ownerId)
       .map((x) => ({
         phrase: x.phrase,
         ownerId: x.ownerId,
         prize: x.prize || "",
+        createdAt: x.createdAt,
       }));
   } catch {
     return [];
@@ -148,6 +161,7 @@ function addWhisper(state, phrase, ownerId, prize) {
     phrase: p,
     ownerId: String(ownerId || ""),
     prize: norm(prize),
+    createdAt: Date.now(),
   });
   return { ok: true };
 }
@@ -166,6 +180,13 @@ export function removeWhisper(state, phrase, ownerId) {
 
 function listWhispersForUser(state, ownerId) {
   return state.items.filter((x) => x.ownerId === ownerId);
+}
+
+function formatWhisperCreatedAt(ms) {
+  if (!Number.isFinite(ms)) return "";
+  const seconds = Math.floor(ms / 1000);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  return `<t:${seconds}:f>`;
 }
 
 /* -------------------------------- registry -------------------------------- */
@@ -330,10 +351,13 @@ export function registerWhispers(register) {
         if (includesWholePhrase(normalizedMessage, phrase)) {
           const ownerId = w.ownerId;
           const prize = norm(w.prize);
+          const createdAt = Number.isFinite(w.createdAt) ? w.createdAt : null;
 
           let msgOut =
             `🎉 Congratulations, you have found the hidden phrase "${phrase}" set by ${mention(ownerId)}!`;
           if (prize) msgOut += `\nYou have won: ${prize}`;
+          const when = formatWhisperCreatedAt(createdAt);
+          if (when) msgOut += `\n_Whisper set: ${when}_`;
 
           await message.reply({
             content: msgOut,

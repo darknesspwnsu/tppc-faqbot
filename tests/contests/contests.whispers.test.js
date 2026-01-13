@@ -5,8 +5,8 @@ import { serializeItems, deserializeItems, removeWhisper } from "../../contests/
 describe("whispers serialization", () => {
   test("serialize/deserialize round trip", () => {
     const items = [
-      { phrase: "hello world", ownerId: "1", prize: "candy" },
-      { phrase: "secret", ownerId: "2", prize: "" },
+      { phrase: "hello world", ownerId: "1", prize: "candy", createdAt: 123 },
+      { phrase: "secret", ownerId: "2", prize: "", createdAt: null },
     ];
 
     const text = serializeItems(items);
