@@ -5,6 +5,7 @@ import { buildCommandRegistry } from "./commands.js";
 import { initDb } from "./db.js";
 import { startSchedulers } from "./schedulers.js";
 import { handleGuildMemberAdd } from "./info/welcome.js";
+import { startAvatarRotation, stopAvatarRotation } from "./avatar_rotation.js";
 
 function mustEnv(name) {
   const v = process.env[name];
@@ -90,6 +91,7 @@ client.once(Events.ClientReady, async () => {
   }
 
   startSchedulers({ client });
+  startAvatarRotation({ client });
 });
 
 client.on("messageCreate", async (message) => {
@@ -124,6 +126,10 @@ client.on(Events.GuildMemberAdd, async (member) => {
   } catch (err) {
     console.error("guildMemberAdd error:", err);
   }
+});
+
+client.on(Events.ShardDisconnect, () => {
+  stopAvatarRotation();
 });
 
 client.login(TOKEN);

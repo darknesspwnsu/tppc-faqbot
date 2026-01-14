@@ -66,6 +66,10 @@ async function loadBotModule({
     initDb,
     getDb: () => ({ execute: vi.fn(async () => [[]]) }),
   }));
+  vi.doMock("../../avatar_rotation.js", () => ({
+    startAvatarRotation: vi.fn(),
+    stopAvatarRotation: vi.fn(),
+  }));
 
   await import("../../bot.js");
   const { __clients } = await import("discord.js");
