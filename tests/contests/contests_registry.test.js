@@ -7,6 +7,7 @@ vi.mock("../../contests/reading.js", () => ({ registerReading: vi.fn() }));
 vi.mock("../../contests/get_forum_list.js", () => ({ registerForumList: vi.fn() }));
 vi.mock("../../contests/pollcontest.js", () => ({ registerPollContest: vi.fn() }));
 vi.mock("../../contests/giveaway.js", () => ({ registerGiveaway: vi.fn() }));
+vi.mock("../../contests/lotto.js", () => ({ registerLotto: vi.fn() }));
 
 import { registerContests, listContests } from "../../contests/contests.js";
 import { registerRng } from "../../contests/rng.js";
@@ -16,6 +17,7 @@ import { registerReading } from "../../contests/reading.js";
 import { registerForumList } from "../../contests/get_forum_list.js";
 import { registerPollContest } from "../../contests/pollcontest.js";
 import { registerGiveaway } from "../../contests/giveaway.js";
+import { registerLotto } from "../../contests/lotto.js";
 
 describe("contests registry", () => {
   it("lists contest modules in order", () => {
@@ -27,6 +29,7 @@ describe("contests registry", () => {
       "forum_list",
       "pollcontest",
       "giveaway",
+      "lotto",
     ]);
   });
 
@@ -41,6 +44,7 @@ describe("contests registry", () => {
     expect(registerForumList).toHaveBeenCalledWith(register);
     expect(registerPollContest).toHaveBeenCalledWith(register);
     expect(registerGiveaway).toHaveBeenCalledWith(register);
+    expect(registerLotto).toHaveBeenCalledWith(register);
   });
 
   it("logs errors and continues registering other modules", () => {

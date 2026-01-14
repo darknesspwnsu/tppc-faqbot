@@ -10,6 +10,7 @@ import { registerReading } from "./reading.js";
 import { registerForumList } from "./get_forum_list.js";
 import { registerPollContest } from "./pollcontest.js";
 import { registerGiveaway } from "./giveaway.js";
+import { registerLotto } from "./lotto.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const CONTEST_MODULES = [
@@ -20,6 +21,7 @@ const CONTEST_MODULES = [
   { id: "forum_list", register: registerForumList },
   { id: "pollcontest", register: registerPollContest },
   { id: "giveaway", register: registerGiveaway },
+  { id: "lotto", register: registerLotto },
 ];
 
 export function registerContests(register) {

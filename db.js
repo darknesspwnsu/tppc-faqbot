@@ -239,6 +239,22 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS lotto_tracking (
+      guild_id VARCHAR(32) NOT NULL,
+      active TINYINT(1) NOT NULL DEFAULT 0,
+      thread_url TEXT,
+      start_post_id INT UNSIGNED,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id)
+    )
+  `,
+    [],
+    "init.lotto_tracking"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS notify_me (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       guild_id VARCHAR(32) NOT NULL,
