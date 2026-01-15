@@ -274,6 +274,49 @@ describe("rpg pokedex command", () => {
     expect(replyArg).toContain("https://graphics.tppcrpg.net/blackwhite/normal/181F-1.gif");
   });
 
+  it("keeps supported form modifiers for hgss/bw sprites", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    storageMocks.getPokedexEntry.mockResolvedValueOnce(null);
+    rpgMocks.fetchPage.mockResolvedValueOnce(
+      [
+        "<h3>#479 - Rotom (Heat)</h3>",
+        "<table class=\"dex\">",
+        "<tr><th>HP</th><th>Attack</th><th>Defense</th></tr>",
+        "<tr><td>50</td><td>65</td><td>107</td></tr>",
+        "</table>",
+        "<table>",
+        "<tr><th>Type 1</th><th>Type 2</th><th>Group 1</th><th>Group 2</th></tr>",
+        "<tr><td>Electric</td><td>Fire</td><td>Amorphous</td><td></td></tr>",
+        "</table>",
+        "<td class=\"w50 iBox\">",
+        "<div style=\"background-image:url('//graphics.tppcrpg.net/xy/normal/479M-1.gif')\"><p>Normal &#9794;</p></div>",
+        "</td>",
+      ].join("")
+    );
+
+    const message = makeMessage();
+    await handler({ message, rest: "Rotom (Heat) hgss" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg).toContain("https://graphics.tppcrpg.net/hgss/normal/479M-1.gif");
+    expect(replyArg).not.toContain("does not support forms");
+  });
+
+  it("rejects sprite libraries that do not cover the requested dex id", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!sprite");
+
+    const message = makeMessage();
+    await handler({ message, rest: "Grookey hgss" });
+
+    expect(message.reply).toHaveBeenCalledWith("❌ The hgss sprite library only covers up to #493.");
+    expect(rpgMocks.fetchPage).not.toHaveBeenCalled();
+  });
+
   it("drops mega form suffix for hgss/bw sprites", async () => {
     const register = makeRegister();
     registerPokedex(register);

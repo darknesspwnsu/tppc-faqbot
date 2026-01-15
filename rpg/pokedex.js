@@ -317,6 +317,21 @@ function normalizeSpriteOptions(tokens, raw) {
   };
 }
 
+function spriteLibraryLimit(library) {
+  if (library === "hgss") return 493;
+  if (library === "blackwhite") return 649;
+  return null;
+}
+
+function spriteLibraryCoverageError(library, entry) {
+  const limit = spriteLibraryLimit(library);
+  if (!limit) return null;
+  const { id } = parseEntryKey(entry?.key);
+  if (!Number.isFinite(id)) return null;
+  if (id <= limit) return null;
+  return `❌ The ${library} sprite library only covers up to #${limit}.`;
+}
+
 function applySpriteOptions(spriteUrl, { gender, library, isMega }) {
   let url = String(spriteUrl || "");
   if (!url) return "";
@@ -337,6 +352,34 @@ function applySpriteOptions(spriteUrl, { gender, library, isMega }) {
   }
 
   return url;
+}
+
+const LEGACY_FORM_BASE_NAMES = new Set(
+  [
+    "deoxys",
+    "shaymin",
+    "meloetta",
+    "kyurem",
+    "basculin",
+    "arceus",
+    "castform",
+    "deerling",
+    "sawsbuck",
+    "shellos",
+    "gastrodon",
+    "giratina",
+    "rotom",
+    "burmy",
+    "wormadam",
+  ].map((name) => name.toLowerCase())
+);
+
+function allowsLegacyForms(nameRaw) {
+  const parsed = parsePokemonQuery(nameRaw);
+  const base = String(parsed.base || nameRaw || "").trim();
+  const match = base.match(/^(.*?)\s*\(/);
+  const baseName = (match ? match[1] : base).trim().toLowerCase();
+  return LEGACY_FORM_BASE_NAMES.has(baseName);
 }
 
 function stripFormModifier(nameRaw) {
@@ -787,9 +830,11 @@ export function registerPokedex(register) {
         return;
       }
       if (parsed.library !== "xy") {
-        const stripped = stripFormModifier(nameRaw);
-        nameRaw = stripped.name;
-        strippedForm = stripped.stripped;
+        if (!allowsLegacyForms(nameRaw)) {
+          const stripped = stripFormModifier(nameRaw);
+          nameRaw = stripped.name;
+          strippedForm = stripped.stripped;
+        }
       }
 
       let { variant } = parsePokemonQuery(nameRaw);
@@ -802,6 +847,11 @@ export function registerPokedex(register) {
       variant = resolved.variant;
 
       try {
+        const coverageError = spriteLibraryCoverageError(parsed.library, entry);
+        if (coverageError) {
+          await message.reply(coverageError);
+          return;
+        }
         const { payload, error } = await fetchPokedexPayload(entry, getClient());
         if (error) {
           await message.reply(error);
