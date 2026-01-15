@@ -158,6 +158,19 @@ describe("rpg leaderboard parsing", () => {
     expect(lines[0]).toBe("#1 — blazinxd (Team TPPC) • 36");
   });
 
+  it("renders top rows for roulette weekly with battle date", () => {
+    const lines = renderTopRows("roulette_weekly", [
+      {
+        rank: "1",
+        trainer: "Anavel",
+        faction: "Team Magma",
+        wins: "64",
+        battleDate: "January 12, 2026",
+      },
+    ]);
+    expect(lines[0]).toBe("#1 — Anavel (Team Magma) • Jan 12, 2026 • 64");
+  });
+
   it("renders top rows for speed tower without floor label", () => {
     const lines = renderTopRows("speedtower", [
       {

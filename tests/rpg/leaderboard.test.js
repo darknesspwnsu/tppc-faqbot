@@ -386,7 +386,13 @@ describe("rpg leaderboard register", () => {
       challenge: "roulette_weekly",
       payload: {
         rows: [
-          { rank: "1", trainer: "Ace", faction: "Team TPPC", wins: "5" },
+          {
+            rank: "1",
+            trainer: "Ace",
+            faction: "Team TPPC",
+            wins: "5",
+            battleDate: "January 15, 2026",
+          },
         ],
       },
       updatedAt: Date.now(),
@@ -398,6 +404,7 @@ describe("rpg leaderboard register", () => {
     const body = message.reply.mock.calls[0][0];
     expect(body).toContain("Battle Roulette (Weekly)");
     expect(body).toContain("Ace");
+    expect(body).toContain("Jan 15, 2026");
   });
 
   it("rejects invalid swarm row counts", async () => {

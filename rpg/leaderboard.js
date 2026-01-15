@@ -388,6 +388,29 @@ async function disableInteractionButtons(interaction) {
   });
 }
 
+function formatRouletteDate(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  const match = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(text);
+  if (!match) return text;
+  const monthMap = {
+    January: "Jan",
+    February: "Feb",
+    March: "Mar",
+    April: "Apr",
+    May: "May",
+    June: "Jun",
+    July: "Jul",
+    August: "Aug",
+    September: "Sep",
+    October: "Oct",
+    November: "Nov",
+    December: "Dec",
+  };
+  const shortMonth = monthMap[match[1]] || match[1].slice(0, 3);
+  return `${shortMonth} ${match[2]}, ${match[3]}`;
+}
+
 function renderTopRows(challengeKey, rows, limit = 5) {
   const out = [];
   const top = rows.filter((row) => !isHeaderRow(row)).slice(0, limit);
@@ -398,7 +421,11 @@ function renderTopRows(challengeKey, rows, limit = 5) {
       );
     } else if (challengeKey === "ssanne") {
       out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
-    } else if (challengeKey === "roulette" || challengeKey === "roulette_weekly") {
+    } else if (challengeKey === "roulette_weekly") {
+      const dateText = row.battleDate ? formatRouletteDate(row.battleDate) : "";
+      const dateSuffix = dateText ? ` • ${dateText}` : "";
+      out.push(`#${row.rank} — ${row.trainer} (${row.faction})${dateSuffix} • ${row.wins}`);
+    } else if (challengeKey === "roulette") {
       out.push(`#${row.rank} — ${row.trainer} (${row.faction}) • ${row.wins}`);
     } else if (challengeKey === "safarizone") {
       out.push(
