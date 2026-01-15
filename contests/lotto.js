@@ -132,6 +132,14 @@ function extractPostId(postHtml) {
   return Number(m[1]);
 }
 
+function extractPostCount(postHtml) {
+  const byName = /id=["']postcount\d+["'][^>]*name=["'](\d+)["']/i.exec(postHtml);
+  if (byName) return Number(byName[1]);
+  const byStrong = /postcount[^>]*>(?:\s*<strong>)?(\d+)/i.exec(postHtml);
+  if (byStrong) return Number(byStrong[1]);
+  return null;
+}
+
 function comboKey(nums) {
   return nums.join("-");
 }
@@ -144,6 +152,24 @@ function parseLottoNumbersFromText(text) {
   const uniq = new Set(nums);
   if (uniq.size !== 3) return null;
   return nums.slice().sort((a, b) => a - b);
+}
+
+function extractBracketNumbers(text) {
+  const matches = [...String(text || "").matchAll(/\[(\d{1,2})\]/g)].map((m) => Number(m[1]));
+  return matches.length ? matches : null;
+}
+
+function invalidReasonForNumbers(nums) {
+  if (!nums || nums.length !== 3) return "expected exactly 3 numbers";
+  if (nums.some((n) => !Number.isInteger(n) || n < 1 || n > 10)) {
+    return "numbers must be between 1 and 10";
+  }
+  const uniq = new Set(nums);
+  if (uniq.size !== 3) return "numbers must be unique";
+  if (!(nums[0] < nums[1] && nums[1] < nums[2])) {
+    return "numbers must be in ascending order";
+  }
+  return null;
 }
 
 function parseNumbersFromInput(text) {
@@ -328,8 +354,9 @@ async function refreshThreadCombos(state, { force = false } = {}) {
         const posts = extractPostTables(html);
         for (const postHtml of posts) {
           const postId = extractPostId(postHtml);
+          const postCount = extractPostCount(postHtml);
           if (!postId) continue;
-          if (state.startPostId && postId < state.startPostId) continue;
+          if (state.startPostId && postCount && postCount < state.startPostId) continue;
 
           const nums = parseLottoNumbersFromText(extractPostMessageText(postHtml));
           if (!nums) continue;
@@ -341,6 +368,7 @@ async function refreshThreadCombos(state, { force = false } = {}) {
             nums,
             user: extractUsernameFromPostTable(postHtml) || "Unknown",
             postId,
+            postCount,
             postUrl: buildPostUrl(state.threadUrl, postId),
           });
         }
@@ -364,6 +392,60 @@ async function refreshThreadCombos(state, { force = false } = {}) {
   })();
 
   return state.inFlight;
+}
+
+async function scrapeInvalidEntries(state) {
+  if (!state.active) return { ok: false, reason: "inactive" };
+
+  try {
+    const page1Html = await fetchWithTimeout(state.threadUrl);
+    const pageCount = computePageCountFromHtml(page1Html);
+    const startPage = Math.min(Math.max(1, computeStartPage(state.startPostId)), pageCount);
+
+    const pages = [];
+    if (startPage === 1) {
+      pages.push({ html: page1Html, pageNum: 1 });
+    }
+
+    for (let page = Math.max(2, startPage); page <= pageCount; page += 1) {
+      await sleep(PAGE_DELAY_MS);
+      const html = await fetchWithTimeout(buildPageUrl(state.threadUrl, page));
+      pages.push({ html, pageNum: page });
+    }
+
+    const invalid = [];
+    const seen = new Set();
+    for (const { html } of pages) {
+      const posts = extractPostTables(html);
+      for (const postHtml of posts) {
+        const postId = extractPostId(postHtml);
+        const postCount = extractPostCount(postHtml);
+        if (!postId) continue;
+        if (state.startPostId && postCount && postCount < state.startPostId) continue;
+        if (seen.has(postId)) continue;
+        seen.add(postId);
+
+        const message = extractPostMessageText(postHtml);
+        const nums = extractBracketNumbers(message);
+        if (!nums) continue;
+        const reason = invalidReasonForNumbers(nums);
+        if (!reason) continue;
+
+        invalid.push({
+          postId,
+          postCount,
+          user: extractUsernameFromPostTable(postHtml) || "Unknown",
+          nums,
+          reason,
+        });
+      }
+    }
+
+    return { ok: true, invalid };
+  } catch (err) {
+    logger.warn("lotto.invalid.scrape_failed", { error: logger.serializeError(err) });
+    return { ok: false, reason: "fetch_failed" };
+  }
 }
 
 function formatActiveStateMessage(state) {
@@ -454,7 +536,10 @@ async function handleCheck({ message, state, input }) {
     return;
   }
 
-  const nums = parseNumbersFromInput(input);
+  const tokens = String(input || "").split(/\s+/).filter(Boolean);
+  const wantsLive = tokens.includes("--live") && isAdminOrPrivileged(message);
+  const cleaned = tokens.filter((t) => t !== "--live").join(" ");
+  const nums = parseNumbersFromInput(cleaned);
   if (!nums) {
     await message.reply("❌ Provide 3 unique numbers between 1-10. Example: `!lotto check 1 2 3`");
     return;
@@ -464,7 +549,7 @@ async function handleCheck({ message, state, input }) {
     await message.reply("⏳ Checking the lotto thread...");
   }
 
-  const refresh = await refreshThreadCombos(state);
+  const refresh = await refreshThreadCombos(state, { force: wantsLive });
   if (!refresh.ok) {
     await message.reply("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
     return;
@@ -515,6 +600,10 @@ async function handleRoll({ message, state }) {
 
 async function handleSet({ message, state, input }) {
   if (!isAdminOrPrivileged(message)) return;
+  if (state.active) {
+    await message.reply("⚠️ Lotto tracking is already active. Use `!lotto reset` first.");
+    return;
+  }
   const postId = Number(String(input || "").trim());
   if (!Number.isInteger(postId) || postId <= 0) {
     await message.reply("❌ Usage: `!lotto set <postnumber>`");
@@ -573,6 +662,7 @@ async function handleHelp({ message }) {
     "`!lotto` — generate a unique unused lotto combo (reserved ~10 min)",
     "`!lotto check 1 2 3` — check if a combo is already used",
     "`!lotto status` — view tracking status and entrant count",
+    "`!lotto invalid` — list invalid posts since the start post",
     "`!lotto roll` — roll winning numbers (admin)",
     "`!lotto set <postnumber>` — start tracking from a forum post number (admin)",
     "`!lotto reset` — stop tracking and clear cache (admin)",
@@ -618,6 +708,38 @@ async function handleStatus({ message, state }) {
   );
 }
 
+async function handleInvalid({ message, state }) {
+  const inactive = formatActiveStateMessage(state);
+  if (inactive) {
+    await message.reply(inactive);
+    return;
+  }
+
+  await message.reply("⏳ Scanning the lotto thread for invalid entries...");
+  const res = await scrapeInvalidEntries(state);
+  if (!res.ok) {
+    await message.reply("❌ Unable to scan the lotto thread right now. Try again in a bit.");
+    return;
+  }
+
+  if (!res.invalid.length) {
+    await message.reply("✅ No invalid entries detected in the scanned range.");
+    return;
+  }
+
+  const lines = res.invalid.map((entry) => {
+    const nums = entry.nums.map((n) => `[${n}]`).join(" ");
+    const id = entry.postCount ? `#${entry.postCount}` : `post${entry.postId}`;
+    return `${id} — ${entry.user} — ${nums} (${entry.reason})`;
+  });
+
+  await sendChunked({
+    send: (content) => message.reply(content),
+    header: `⚠️ Invalid entries (${res.invalid.length}):`,
+    lines,
+  });
+}
+
 function parseSubcommand(rest) {
   const trimmed = String(rest || "").trim();
   if (!trimmed) return { cmd: "generate", arg: "" };
@@ -631,6 +753,7 @@ function parseSubcommand(rest) {
   if (head === "rules") return { cmd: "rules", arg: "" };
   if (head === "roll") return { cmd: "roll", arg: "" };
   if (head === "status") return { cmd: "status", arg: "" };
+  if (head === "invalid") return { cmd: "invalid", arg: "" };
   if (head === "check") return { cmd: "check", arg: tail };
 
   // If the rest looks like numbers, treat as a check.
@@ -660,6 +783,7 @@ export function registerLotto(register) {
       if (cmd === "rules") return handleRules({ message });
       if (cmd === "roll") return handleRoll({ message, state });
       if (cmd === "status") return handleStatus({ message, state });
+      if (cmd === "invalid") return handleInvalid({ message, state });
       if (cmd === "check") return handleCheck({ message, state, input: arg });
       return handleGenerate({ message, state });
     },
@@ -675,4 +799,7 @@ export const __testables = {
   allCombos,
   buildPostUrl,
   computeStartPage,
+  extractPostCount,
+  extractBracketNumbers,
+  invalidReasonForNumbers,
 };
