@@ -468,13 +468,22 @@ async function handleGenerate({ message, state }) {
     return;
   }
 
+  let loadingMessage = null;
   if (needsRefresh(state)) {
-    await message.reply("⏳ Checking the lotto thread for unused combos...");
+    loadingMessage = await message.reply("⏳ Checking the lotto thread for unused combos...");
   }
+
+  const respond = async (content) => {
+    if (loadingMessage) {
+      await loadingMessage.edit(content);
+      return;
+    }
+    await message.reply(content);
+  };
 
   const refresh = await refreshThreadCombos(state);
   if (!refresh.ok) {
-    await message.reply("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
+    await respond("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
     return;
   }
 
@@ -483,7 +492,7 @@ async function handleGenerate({ message, state }) {
   if (existing) {
     const remainingMs = existing.expiresAt - Date.now();
     const remainingMin = Math.max(1, Math.ceil(remainingMs / 60_000));
-    await message.reply(
+    await respond(
       `🎟️ Your reserved combo (valid for ~${remainingMin} min): ${existing.key
         .split("-")
         .map((n) => `[${n}]`)
@@ -498,7 +507,7 @@ async function handleGenerate({ message, state }) {
     const remainingMs = nextAllowed - Date.now();
     if (remainingMs > 0) {
       const remainingMin = Math.ceil(remainingMs / 60_000);
-      await message.reply(
+      await respond(
         `⏳ Please wait about ${remainingMin} minute(s) before generating another lotto combo.`
       );
       return;
@@ -513,7 +522,7 @@ async function handleGenerate({ message, state }) {
   });
 
   if (!available.length) {
-    await message.reply("❌ No unused lotto combinations are available right now.");
+    await respond("❌ No unused lotto combinations are available right now.");
     return;
   }
 
@@ -521,7 +530,7 @@ async function handleGenerate({ message, state }) {
   const key = reserveCombo(state, message.author.id, comboKey(pick));
   state.lastGenerateByUser.set(message.author.id, Date.now());
 
-  await message.reply(
+  await respond(
     `🎟️ Your unique lotto combo (reserved for ~10 min): ${key
       .split("-")
       .map((n) => `[${n}]`)
@@ -545,25 +554,34 @@ async function handleCheck({ message, state, input }) {
     return;
   }
 
+  let loadingMessage = null;
   if (needsRefresh(state)) {
-    await message.reply("⏳ Checking the lotto thread...");
+    loadingMessage = await message.reply("⏳ Checking the lotto thread...");
   }
+
+  const respond = async (content) => {
+    if (loadingMessage) {
+      await loadingMessage.edit(content);
+      return;
+    }
+    await message.reply(content);
+  };
 
   const refresh = await refreshThreadCombos(state, { force: wantsLive });
   if (!refresh.ok) {
-    await message.reply("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
+    await respond("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
     return;
   }
 
   const key = comboKey(nums);
   const hit = state.usedByKey.get(key);
   if (!hit) {
-    await message.reply(`✅ ${formatCombo(nums)} is currently unused.`);
+    await respond(`✅ ${formatCombo(nums)} is currently unused.`);
     return;
   }
 
   const note = hit.postUrl ? `\nPost: ${hit.postUrl}` : "";
-  await message.reply(`❌ ${formatCombo(nums)} was already claimed by **${hit.user}**.${note}`);
+  await respond(`❌ ${formatCombo(nums)} was already claimed by **${hit.user}**.${note}`);
 }
 
 async function handleRoll({ message, state }) {
@@ -574,13 +592,22 @@ async function handleRoll({ message, state }) {
     return;
   }
 
+  let loadingMessage = null;
   if (needsRefresh(state)) {
-    await message.reply("⏳ Checking the lotto thread before rolling...");
+    loadingMessage = await message.reply("⏳ Checking the lotto thread before rolling...");
   }
+
+  const respond = async (content) => {
+    if (loadingMessage) {
+      await loadingMessage.edit(content);
+      return;
+    }
+    await message.reply(content);
+  };
 
   const refresh = await refreshThreadCombos(state);
   if (!refresh.ok) {
-    await message.reply("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
+    await respond("❌ Unable to refresh the lotto thread right now. Try again in a bit.");
     return;
   }
 
@@ -588,14 +615,12 @@ async function handleRoll({ message, state }) {
   const key = comboKey(pick);
   const hit = state.usedByKey.get(key);
   if (!hit) {
-    await message.reply(`🎲 Winning numbers: ${formatCombo(pick)}\nNo winner this week.`);
+    await respond(`🎲 Winning numbers: ${formatCombo(pick)}\nNo winner this week.`);
     return;
   }
 
   const note = hit.postUrl ? `\nPost: ${hit.postUrl}` : "";
-  await message.reply(
-    `🎲 Winning numbers: ${formatCombo(pick)}\nWinner: **${hit.user}**.${note}`
-  );
+  await respond(`🎲 Winning numbers: ${formatCombo(pick)}\nWinner: **${hit.user}**.${note}`);
 }
 
 async function handleSet({ message, state, input }) {
@@ -715,15 +740,15 @@ async function handleInvalid({ message, state }) {
     return;
   }
 
-  await message.reply("⏳ Scanning the lotto thread for invalid entries...");
+  const loadingMessage = await message.reply("⏳ Scanning the lotto thread for invalid entries...");
   const res = await scrapeInvalidEntries(state);
   if (!res.ok) {
-    await message.reply("❌ Unable to scan the lotto thread right now. Try again in a bit.");
+    await loadingMessage.edit("❌ Unable to scan the lotto thread right now. Try again in a bit.");
     return;
   }
 
   if (!res.invalid.length) {
-    await message.reply("✅ No invalid entries detected in the scanned range.");
+    await loadingMessage.edit("✅ No invalid entries detected in the scanned range.");
     return;
   }
 
@@ -733,8 +758,16 @@ async function handleInvalid({ message, state }) {
     return `${id} — ${entry.user} — ${nums} (${entry.reason})`;
   });
 
+  let first = true;
   await sendChunked({
-    send: (content) => message.reply(content),
+    send: async (content) => {
+      if (first) {
+        first = false;
+        await loadingMessage.edit(content);
+        return;
+      }
+      await message.reply(content);
+    },
     header: `⚠️ Invalid entries (${res.invalid.length}):`,
     lines,
   });
