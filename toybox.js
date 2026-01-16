@@ -2,9 +2,11 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { isAdminOrPrivileged } from "./auth.js";
 import { logger } from "./shared/logger.js";
 
 const M8BALL_CONFIG_PATH = path.resolve("configs", "m8ball_config.json");
+const M8BALL_COOLDOWN_MS = 15_000;
 let m8ballConfigCache = null;
 
 /* ------------------------------- small helpers ------------------------------ */
@@ -69,6 +71,7 @@ async function buildM8BallReply(entry) {
 /* -------------------------------- registry -------------------------------- */
 
 export function registerToybox(register) {
+  const m8ballCooldowns = new Map();
   // ------------------------------- Bang: rig --------------------------------
   register(
     "!rig",
@@ -122,6 +125,19 @@ export function registerToybox(register) {
     if (!question) {
       await message.reply("Usage: `!m8ball <question>`");
       return;
+    }
+
+    const bypassCooldown = isAdminOrPrivileged(message);
+    const userId = message.author?.id;
+    const now = Date.now();
+    if (!bypassCooldown && userId) {
+      const last = m8ballCooldowns.get(userId) || 0;
+      if (now - last < M8BALL_COOLDOWN_MS) {
+        const remaining = Math.ceil((M8BALL_COOLDOWN_MS - (now - last)) / 1000);
+        await message.reply(`⚠️ This command is on cooldown for another ${remaining}s!`);
+        return;
+      }
+      m8ballCooldowns.set(userId, now);
     }
 
     const config = await loadM8BallConfig();

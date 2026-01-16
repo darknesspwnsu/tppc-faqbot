@@ -117,6 +117,30 @@ describe("toybox commands", () => {
     expect(replyArg.content).toBe("🎱 It is certain");
     rand.mockRestore();
   });
+
+  it("m8ball enforces a cooldown for normal users", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const now = vi
+      .spyOn(Date, "now")
+      .mockReturnValueOnce(100_000)
+      .mockReturnValueOnce(101_000);
+
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
+    const first = makeMessage({ authorId: "u1" });
+    await handlers["!m8ball"]({ message: first, rest: "Will I win?" });
+
+    const second = makeMessage({ authorId: "u1" });
+    await handlers["!m8ball"]({ message: second, rest: "Again?" });
+
+    expect(second.reply).toHaveBeenCalledWith(
+      "⚠️ This command is on cooldown for another 14s!"
+    );
+
+    rand.mockRestore();
+    now.mockRestore();
+  });
 });
 
 describe("toybox listener", () => {
