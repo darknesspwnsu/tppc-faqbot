@@ -6,6 +6,7 @@ import { initDb } from "./db.js";
 import { startSchedulers } from "./schedulers.js";
 import { handleGuildMemberAdd } from "./info/welcome.js";
 import { startAvatarRotation, stopAvatarRotation } from "./avatar_rotation.js";
+import { migrateWhispersToEncrypted } from "./contests/whispers.js";
 
 function mustEnv(name) {
   const v = process.env[name];
@@ -37,6 +38,15 @@ const ALLOWED_CHANNEL_IDS = (process.env.ALLOWED_CHANNEL_IDS || "")
 
 await initDbWithRetry();
 console.log("DB ready ✅");
+
+try {
+  const res = await migrateWhispersToEncrypted();
+  if (res.ok && res.migrated) {
+    console.log(`[whispers] encrypted ${res.migrated} guild record(s) ✅`);
+  }
+} catch (err) {
+  console.warn("[whispers] encryption migration failed:", err?.message ?? err);
+}
 
 // If set, slash commands are registered ONLY to this guild (recommended for dev).
 // If empty, slash commands are registered globally.

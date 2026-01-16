@@ -9,8 +9,9 @@
 // - Phrases are matched as whole words/phrases in public chat.
 // - When found, the phrase is announced and removed.
 import { MessageFlags } from "discord.js";
+import crypto from "node:crypto";
 
-import { getUserText, setUserText } from "../db.js";
+import { getDb, getUserText, setUserText } from "../db.js";
 import { includesWholePhrase, normalizeForMatch } from "./helpers.js";
 
 /* ------------------------------- small helpers ------------------------------ */
@@ -21,6 +22,60 @@ function mention(id) {
 
 function norm(s) {
   return String(s ?? "").trim();
+}
+
+function getWhisperKey() {
+  return getWhisperKeyById(getActiveKeyId());
+}
+
+function getActiveKeyId() {
+  const raw = String(process.env.WHISPER_ENC_KEY_ID || "").trim();
+  return raw || "v1";
+}
+
+function parseKeyConfig() {
+  const raw = String(process.env.WHISPER_ENC_KEYS || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+    // ignore and fall back to key=value parsing below
+  }
+  const pairs = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!pairs.length) return null;
+  const out = {};
+  for (const pair of pairs) {
+    const idx = pair.indexOf(":");
+    if (idx === -1) continue;
+    const id = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    if (id && value) out[id] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function decodeKeyMaterial(raw) {
+  if (!raw) return null;
+  if (/^[0-9a-fA-F]{64}$/.test(raw)) {
+    return Buffer.from(raw, "hex");
+  }
+  try {
+    const buf = Buffer.from(raw, "base64");
+    return buf.length === 32 ? buf : null;
+  } catch {
+    return null;
+  }
+}
+
+function getWhisperKeyById(keyId) {
+  const keys = parseKeyConfig();
+  if (keys && keyId && keys[keyId]) {
+    return decodeKeyMaterial(String(keys[keyId]));
+  }
+
+  const raw = String(process.env.WHISPER_ENC_KEY || "").trim();
+  return decodeKeyMaterial(raw);
 }
 
 
@@ -35,6 +90,8 @@ const WHISPER_USER_ID = "__guild__"; // sentinel
 const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, ownerId, prize? }], dbOk?: boolean, lastDbFailMs?: number }
 
 const DB_RETRY_COOLDOWN_MS = 60_000;
+const WHISPER_ENCRYPTION_VERSION = 1;
+const WHISPER_ENCRYPTION_ALG = "aes-256-gcm";
 
 function getGuildState(guildId) {
   if (!guildWhispers.has(guildId)) {
@@ -87,6 +144,67 @@ export function deserializeItems(text) {
   }
 }
 
+function isEncryptedPayload(text) {
+  try {
+    const parsed = JSON.parse(String(text || ""));
+    return (
+      parsed &&
+      typeof parsed === "object" &&
+      parsed.v === WHISPER_ENCRYPTION_VERSION &&
+      parsed.alg === WHISPER_ENCRYPTION_ALG &&
+      typeof parsed.kid === "string" &&
+      typeof parsed.iv === "string" &&
+      typeof parsed.tag === "string" &&
+      typeof parsed.data === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function encryptPayload(plaintext) {
+  const keyId = getActiveKeyId();
+  const key = getWhisperKeyById(keyId);
+  if (!key) throw new Error("Missing whisper encryption key");
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(WHISPER_ENCRYPTION_ALG, key, iv);
+  const ciphertext = Buffer.concat([cipher.update(String(plaintext), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return JSON.stringify({
+    v: WHISPER_ENCRYPTION_VERSION,
+    kid: keyId,
+    alg: WHISPER_ENCRYPTION_ALG,
+    iv: iv.toString("base64"),
+    tag: tag.toString("base64"),
+    data: ciphertext.toString("base64"),
+  });
+}
+
+function decryptPayload(text) {
+  const parsed = JSON.parse(String(text || ""));
+  if (!parsed || parsed.v !== WHISPER_ENCRYPTION_VERSION || parsed.alg !== WHISPER_ENCRYPTION_ALG) {
+    throw new Error("Unsupported whisper payload");
+  }
+  const keyId = String(parsed.kid || "").trim() || "v1";
+  const key = getWhisperKeyById(keyId);
+  if (!key) throw new Error("Missing whisper encryption key");
+  const iv = Buffer.from(parsed.iv, "base64");
+  const tag = Buffer.from(parsed.tag, "base64");
+  const data = Buffer.from(parsed.data, "base64");
+  const decipher = crypto.createDecipheriv(WHISPER_ENCRYPTION_ALG, key, iv);
+  decipher.setAuthTag(tag);
+  const plaintext = Buffer.concat([decipher.update(data), decipher.final()]);
+  return plaintext.toString("utf8");
+}
+
+function decodeStoredItems(text) {
+  if (!isEncryptedPayload(text)) {
+    return { items: deserializeItems(text), encrypted: false };
+  }
+  const plaintext = decryptPayload(text);
+  return { items: deserializeItems(plaintext), encrypted: true };
+}
+
 async function tryLoadGuildFromDb(guildId) {
   const state = getGuildState(guildId);
   if (state.dbOk === false) {
@@ -96,10 +214,12 @@ async function tryLoadGuildFromDb(guildId) {
 
   try {
     const t = await getUserText({ guildId, userId: WHISPER_USER_ID, kind: WHISPER_KIND });
-    state.items = deserializeItems(t);
+    const { items, encrypted } = decodeStoredItems(t);
+    state.items = items;
     state.loaded = true;
     state.dbOk = true;
     state.lastDbFailMs = null;
+
     return true;
   } catch {
     state.dbOk = false;
@@ -116,11 +236,14 @@ async function trySaveGuildToDb(guildId) {
   }
 
   try {
+    const raw = serializeItems(state.items);
+    const key = getWhisperKey();
+    const text = key ? encryptPayload(raw) : raw;
     await setUserText({
       guildId,
       userId: WHISPER_USER_ID,
       kind: WHISPER_KIND,
-      text: serializeItems(state.items),
+      text,
     });
     state.dbOk = true;
     state.lastDbFailMs = null;
@@ -374,4 +497,47 @@ export function registerWhispers(register) {
       // keep failures isolated
     }
   });
+}
+
+export const __testables = {
+  encryptPayload,
+  decryptPayload,
+  isEncryptedPayload,
+  decodeStoredItems,
+  getActiveKeyId,
+  getWhisperKeyById,
+};
+
+export async function migrateWhispersToEncrypted() {
+  const key = getWhisperKey();
+  if (!key) return { ok: false, reason: "missing_key" };
+
+  const db = getDb();
+  const [rows] = await db.execute(
+    `
+    SELECT guild_id, text
+    FROM user_texts
+    WHERE kind = ? AND user_id = ?
+  `,
+    [WHISPER_KIND, WHISPER_USER_ID]
+  );
+
+  let migrated = 0;
+  for (const row of rows || []) {
+    const text = String(row?.text ?? "");
+    const trimmed = text.trim();
+    if (!trimmed || trimmed === "[]") continue;
+    if (isEncryptedPayload(text)) continue;
+
+    const encryptedText = encryptPayload(text);
+    await setUserText({
+      guildId: row.guild_id,
+      userId: WHISPER_USER_ID,
+      kind: WHISPER_KIND,
+      text: encryptedText,
+    });
+    migrated += 1;
+  }
+
+  return { ok: true, migrated };
 }

@@ -3,10 +3,11 @@ import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 vi.mock("../../db.js", () => ({
   getUserText: vi.fn(),
   setUserText: vi.fn(),
+  getDb: vi.fn(),
 }));
 
-import { getUserText, setUserText } from "../../db.js";
-import { registerWhispers } from "../../contests/whispers.js";
+import { getUserText, setUserText, getDb } from "../../db.js";
+import { registerWhispers, __testables, migrateWhispersToEncrypted } from "../../contests/whispers.js";
 
 function makeRegister() {
   const calls = { slash: [], listener: [] };
@@ -34,12 +35,20 @@ function makeInteraction({ guildId, guildName, phrase, prize, mode, userId }) {
 }
 
 describe("registerWhispers", () => {
+  const envSnapshot = { ...process.env };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env = {
+      ...envSnapshot,
+      WHISPER_ENC_KEY_ID: "v1",
+      WHISPER_ENC_KEYS: JSON.stringify({ v1: "a".repeat(64) }),
+    };
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    process.env = { ...envSnapshot };
   });
 
   test("adds a whisper and saves it", async () => {
@@ -71,7 +80,8 @@ describe("registerWhispers", () => {
     expect(payload.userId).toBe("__guild__");
     expect(payload.kind).toBe("whisper");
 
-    const saved = JSON.parse(payload.text);
+    const decoded = __testables.decodeStoredItems(payload.text);
+    const saved = decoded.items;
     expect(saved).toEqual([
       { phrase: "secret", ownerId: "u1", prize: "candy", createdAt: saved[0].createdAt },
     ]);
@@ -108,12 +118,13 @@ describe("registerWhispers", () => {
 
     const listSlash = register.calls.slash.find((call) => call.config.name === "whisper");
 
-    getUserText.mockResolvedValue(
+    const encrypted = __testables.encryptPayload(
       JSON.stringify([
         { phrase: "alpha", ownerId: "u3", prize: "" },
         { phrase: "beta", ownerId: "u3", prize: "ticket" },
       ])
     );
+    getUserText.mockResolvedValue(encrypted);
 
     const interaction = {
       guild: { id: "g3", name: "Guild Three" },
@@ -168,5 +179,26 @@ describe("registerWhispers", () => {
     expect(reply.mock.calls[0][0].content).toContain("hidden");
     expect(reply.mock.calls[0][0].content).toContain("<t:1768206600:f>");
     expect(setUserText).toHaveBeenCalledTimes(1);
+  });
+
+  test("migration encrypts plaintext rows and skips encrypted rows", async () => {
+    const encrypted = __testables.encryptPayload(
+      JSON.stringify([{ phrase: "alpha", ownerId: "u1", prize: "" }])
+    );
+    getDb.mockReturnValue({
+      execute: vi.fn(async () => [
+        [
+          { guild_id: "g1", text: JSON.stringify([{ phrase: "beta", ownerId: "u2", prize: "" }]) },
+          { guild_id: "g2", text: encrypted },
+          { guild_id: "g3", text: "[]" },
+        ],
+      ]),
+    });
+
+    const res = await migrateWhispersToEncrypted();
+    expect(res.ok).toBe(true);
+    expect(res.migrated).toBe(1);
+    expect(setUserText).toHaveBeenCalledTimes(1);
+    expect(setUserText.mock.calls[0][0].guildId).toBe("g1");
   });
 });
