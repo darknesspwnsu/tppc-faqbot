@@ -13,6 +13,11 @@ export const AVATAR_ROTATION_RULES = [
     file: "assets/avatars/new_year.png",
   },
   {
+    id: "valentines_day",
+    ranges: [{ start: { month: 1, day: 14 }, end: { month: 1, day: 14 } }],
+    file: "assets/avatars/valentines_day.png",
+  },
+  {
     id: "st_patricks_day",
     ranges: [{ start: { month: 2, day: 17 }, end: { month: 2, day: 17 } }],
     file: "assets/avatars/st_patricks.png",
