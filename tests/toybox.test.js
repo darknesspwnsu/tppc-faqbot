@@ -7,6 +7,17 @@ function makeRegister() {
   const register = (cmd, handler) => {
     handlers[cmd] = handler;
   };
+  register.expose = ({ name, handler, opts = {} }) => {
+    handlers[`!${name}`] = handler;
+    handlers[`?${name}`] = handler;
+    const aliases = Array.isArray(opts.aliases) ? opts.aliases : [];
+    for (const alias of aliases) {
+      const base = String(alias || "").trim().replace(/^!|\?/, "");
+      if (!base) continue;
+      handlers[`!${base}`] = handler;
+      handlers[`?${base}`] = handler;
+    }
+  };
   register.listener = (fn) => {
     listener = fn;
   };
@@ -69,6 +80,42 @@ describe("toybox commands", () => {
     expect(message.channel.send).toHaveBeenCalledWith(
       "_<@u1> slaps <@u2> around a bit with a large trout._"
     );
+  });
+
+  it("m8ball requires a question", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const message = makeMessage({ authorId: "u1" });
+    await handlers["!m8ball"]({ message, rest: "" });
+
+    expect(message.reply).toHaveBeenCalledWith("Usage: `!m8ball <question>`");
+  });
+
+  it("m8ball replies with a configured response", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
+    const message = makeMessage({ authorId: "u1" });
+    await handlers["!m8ball"]({ message, rest: "Will I win?" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toBe("🎱 It is certain");
+    rand.mockRestore();
+  });
+
+  it("m8ball supports the 8ball alias", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const rand = vi.spyOn(Math, "random").mockReturnValue(0);
+    const message = makeMessage({ authorId: "u1" });
+    await handlers["!8ball"]({ message, rest: "Will I win?" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toBe("🎱 It is certain");
+    rand.mockRestore();
   });
 });
 

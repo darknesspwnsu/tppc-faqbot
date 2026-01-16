@@ -1,5 +1,12 @@
 // toybox.js
 
+import fs from "fs/promises";
+import path from "path";
+import { logger } from "./shared/logger.js";
+
+const M8BALL_CONFIG_PATH = path.resolve("configs", "m8ball_config.json");
+let m8ballConfigCache = null;
+
 /* ------------------------------- small helpers ------------------------------ */
 
 function targetUser(message) {
@@ -16,6 +23,47 @@ function norm(s) {
 
 function lc(s) {
   return String(s ?? "").toLowerCase();
+}
+
+async function loadM8BallConfig() {
+  if (m8ballConfigCache) return m8ballConfigCache;
+
+  try {
+    const raw = await fs.readFile(M8BALL_CONFIG_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    const responses = Array.isArray(parsed?.responses) ? parsed.responses : [];
+    m8ballConfigCache = { responses };
+  } catch (err) {
+    logger.warn("toybox.m8ball.config_failed", { error: logger.serializeError(err) });
+    m8ballConfigCache = { responses: [] };
+  }
+
+  return m8ballConfigCache;
+}
+
+async function buildM8BallReply(entry) {
+  const content = `🎱 ${entry.text}`;
+  if (!entry.file) return { content };
+
+  const filePath = path.resolve(process.cwd(), entry.file);
+  try {
+    await fs.access(filePath);
+    return {
+      content,
+      files: [
+        {
+          attachment: filePath,
+          name: path.basename(filePath),
+        },
+      ],
+    };
+  } catch (err) {
+    logger.warn("toybox.m8ball.asset_missing", {
+      file: entry.file,
+      error: logger.serializeError(err),
+    });
+    return { content };
+  }
 }
 
 /* -------------------------------- registry -------------------------------- */
@@ -67,6 +115,34 @@ export function registerToybox(register) {
     },
     "!slap @user — slaps someone around with a large trout"
   );
+
+  // ------------------------------ Bang: m8ball ------------------------------
+  const handleM8Ball = async ({ message, rest }) => {
+    const question = norm(rest);
+    if (!question) {
+      await message.reply("Usage: `!m8ball <question>`");
+      return;
+    }
+
+    const config = await loadM8BallConfig();
+    const responses = config.responses;
+    if (!responses.length) {
+      await message.reply("❌ No m8ball responses are configured yet.");
+      return;
+    }
+
+    const pick = responses[Math.floor(Math.random() * responses.length)];
+    const payload = await buildM8BallReply(pick);
+    await message.reply(payload);
+  };
+
+  register.expose({
+    logicalId: "toybox.m8ball",
+    name: "m8ball",
+    handler: handleM8Ball,
+    help: "!m8ball <question> — ask the magic 8-ball",
+    opts: { aliases: ["8ball"] },
+  });
 
   /* ---------------------------- Passive listeners --------------------------- */
   // Keep ONLY the intbkty boot reaction listener here.

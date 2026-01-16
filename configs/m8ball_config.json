@@ -1,0 +1,24 @@
+{
+  "responses": [
+    { "text": "It is certain", "file": "assets/m8ball/it_is_certain.png" },
+    { "text": "It is decidedly so", "file": "assets/m8ball/it_is_decidedly_so.png" },
+    { "text": "Without a doubt", "file": "assets/m8ball/without_a_doubt.png" },
+    { "text": "Yes definitely", "file": "assets/m8ball/yes_definitely.png" },
+    { "text": "You may rely on it", "file": "assets/m8ball/you_may_rely_on_it.png" },
+    { "text": "As I see it, yes", "file": "assets/m8ball/as_i_see_it_yes.png" },
+    { "text": "Most likely", "file": "assets/m8ball/most_likely.png" },
+    { "text": "Outlook good", "file": "assets/m8ball/outlook_good.png" },
+    { "text": "Yes", "file": "assets/m8ball/yes.png" },
+    { "text": "Signs point to yes", "file": "assets/m8ball/signs_point_to_yes.png" },
+    { "text": "Reply hazy, try again", "file": "assets/m8ball/reply_hazy_try_again.png" },
+    { "text": "Ask again later", "file": "assets/m8ball/ask_again_later.png" },
+    { "text": "Better not tell you now", "file": "assets/m8ball/better_not_tell_you_now.png" },
+    { "text": "Cannot predict now", "file": "assets/m8ball/cannot_predict_now.png" },
+    { "text": "Concentrate and ask again", "file": "assets/m8ball/concentrate_and_ask_again.png" },
+    { "text": "Don't count on it", "file": "assets/m8ball/dont_count_on_it.png" },
+    { "text": "My reply is no", "file": "assets/m8ball/my_reply_is_no.png" },
+    { "text": "My sources say no", "file": "assets/m8ball/my_sources_say_no.png" },
+    { "text": "Outlook not so good", "file": "assets/m8ball/outlook_not_so_good.png" },
+    { "text": "Very doubtful", "file": "assets/m8ball/very_doubtful.png" }
+  ]
+}

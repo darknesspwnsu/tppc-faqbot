@@ -65,5 +65,9 @@ export const COMMAND_CHANNEL_POLICY_BY_GUILD = {
       allow: ["331114564966154240", "551243336187510784"],
       silent: true, // awesome should just do nothing if used elsewhere
     },
+    "toybox.m8ball": {
+      allow: ["331114564966154240"],
+      silent: true,
+    },
   },
 };
