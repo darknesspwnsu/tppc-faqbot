@@ -400,9 +400,9 @@ function statsToFields(stats, variant) {
     { name: "HP", value: fmt(stats.hp), inline: true },
     { name: "Atk", value: fmt(stats.attack), inline: true },
     { name: "Def", value: fmt(stats.defense), inline: true },
-    { name: "Spd", value: fmt(stats.speed), inline: true },
     { name: "SpA", value: fmt(stats.spAttack), inline: true },
     { name: "SpD", value: fmt(stats.spDefense), inline: true },
+    { name: "Spd", value: fmt(stats.speed), inline: true },
   ];
 }
 
