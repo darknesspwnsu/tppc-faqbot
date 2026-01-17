@@ -255,6 +255,47 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS custom_leaderboards (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      guild_id VARCHAR(32) NOT NULL,
+      name VARCHAR(64) NOT NULL,
+      name_norm VARCHAR(64) NOT NULL,
+      metric VARCHAR(64) NOT NULL,
+      host_id VARCHAR(32) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY custom_leaderboard_name_idx (guild_id, name_norm)
+    )
+  `,
+    [],
+    "init.custom_leaderboards"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS custom_leaderboard_entries (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      leaderboard_id BIGINT UNSIGNED NOT NULL,
+      participant_type VARCHAR(16) NOT NULL,
+      participant_key VARCHAR(64) NOT NULL,
+      name VARCHAR(128) NOT NULL,
+      name_norm VARCHAR(128) NOT NULL,
+      score BIGINT NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY custom_lb_entries_lb_idx (leaderboard_id),
+      UNIQUE KEY custom_lb_entries_key_idx (leaderboard_id, participant_type, participant_key),
+      UNIQUE KEY custom_lb_entries_name_idx (leaderboard_id, participant_type, name_norm)
+    )
+  `,
+    [],
+    "init.custom_leaderboard_entries"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS notify_me (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       guild_id VARCHAR(32) NOT NULL,

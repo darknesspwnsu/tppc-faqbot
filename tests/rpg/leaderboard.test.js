@@ -21,9 +21,16 @@ const findMyIdMocks = vi.hoisted(() => ({
   fetchFindMyIdMatches: vi.fn(),
 }));
 
+const customLbMocks = vi.hoisted(() => ({
+  fetchCustomLeaderboardForGuild: vi.fn(),
+  fetchCustomLeaderboardEntries: vi.fn(),
+  fetchCustomLeaderboardEntry: vi.fn(),
+}));
+
 vi.mock("../../rpg/storage.js", () => storageMocks);
 vi.mock("../../rpg/pokedex.js", () => pokedexMocks);
 vi.mock("../../rpg/findmyid.js", () => findMyIdMocks);
+vi.mock("../../contests/custom_leaderboard.js", () => customLbMocks);
 vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn(), incrementSchedulerRun: vi.fn() } }));
 vi.mock("../../rpg/rpg_client.js", () => ({
   RpgClient: class {
@@ -66,6 +73,10 @@ describe("rpg leaderboard register", () => {
     pokedexMocks.parsePokemonQuery.mockReset();
     rpgMocks.fetchPage.mockReset();
     findMyIdMocks.fetchFindMyIdMatches.mockReset();
+    customLbMocks.fetchCustomLeaderboardForGuild.mockReset();
+    customLbMocks.fetchCustomLeaderboardEntries.mockReset();
+    customLbMocks.fetchCustomLeaderboardEntry.mockReset();
+    customLbMocks.fetchCustomLeaderboardForGuild.mockResolvedValue(null);
     process.env = { ...envSnapshot };
   });
 
@@ -89,6 +100,35 @@ describe("rpg leaderboard register", () => {
 
     expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Leaderboard options:"));
     expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("pokemon|poke"));
+  });
+
+  it("renders custom leaderboards without RPG credentials", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    customLbMocks.fetchCustomLeaderboardForGuild.mockResolvedValue({
+      id: 1,
+      name: "shop",
+      metric: "Coins",
+    });
+    customLbMocks.fetchCustomLeaderboardEntries.mockResolvedValue([
+      {
+        participantType: "text",
+        participantKey: "haunter",
+        name: "Haunter",
+        score: 3,
+      },
+    ]);
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    const message = makeMessage();
+    await handler({ message, rest: "shop" });
+
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("shop"));
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter"));
   });
 
   it("rejects invalid trainer counts", async () => {

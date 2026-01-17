@@ -14,6 +14,12 @@ import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { hasRpgCredentials, requireRpgCredentials } from "./credentials.js";
+import {
+  fetchCustomLeaderboardForGuild,
+  fetchCustomLeaderboardEntries,
+  fetchCustomLeaderboardEntry,
+} from "../contests/custom_leaderboard.js";
+import { isAdminOrPrivileged } from "../auth.js";
 
 const CHALLENGES = {
   ssanne: {
@@ -788,16 +794,12 @@ export function registerLeaderboard(register) {
     primaryCmd,
     async ({ message, rest }) => {
       if (!message.guildId) return;
-      if (!requireRpgCredentials(primaryCmd)) {
-        await message.reply("❌ RPG leaderboard credentials are not configured.");
-        return;
-      }
 
-      const raw = String(rest || "").trim().toLowerCase();
+      const raw = String(rest || "").trim();
       const parts = raw.split(/\s+/).filter(Boolean);
-      const wantsHistory = parts[parts.length - 1] === "history";
+      const wantsHistory = parts[parts.length - 1]?.toLowerCase() === "history";
       const historyParts = wantsHistory ? parts.slice(0, -1) : parts;
-      let sub = normalizeCommandToken(historyParts[0] || "");
+      let sub = normalizeCommandToken((historyParts[0] || "").toLowerCase());
       if (sub === "poke") sub = "pokemon";
 
       if (!sub || sub === "help") {
@@ -812,8 +814,80 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
             `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
+            `• \`${primaryCmd} <customlb> [participant]\` — Custom leaderboard (top 5)`,
           ].join("\n")
         );
+        return;
+      }
+
+      const custom = await fetchCustomLeaderboardForGuild({
+        guildId: message.guildId,
+        name: sub,
+      });
+      if (custom) {
+        const restAfterName = raw.slice(parts[0].length).trim();
+        const isAdmin = isAdminOrPrivileged(message);
+        let limit = 5;
+        let participantLookup = null;
+
+        if (restAfterName) {
+          const flagMatch = /^--(all|\d+)\b/i.exec(restAfterName);
+          if (flagMatch && isAdmin) {
+            if (flagMatch[1] === "all") {
+              limit = null;
+            } else {
+              const parsed = Number(flagMatch[1]);
+              limit = Number.isInteger(parsed) ? Math.min(parsed, 50) : 5;
+            }
+          } else {
+            if (restAfterName.startsWith('"')) {
+              const endIdx = restAfterName.indexOf('"', 1);
+              participantLookup =
+                endIdx > 1 ? restAfterName.slice(1, endIdx) : restAfterName.slice(1);
+            } else {
+              participantLookup = restAfterName;
+            }
+          }
+        }
+
+        if (participantLookup) {
+          const entry = await fetchCustomLeaderboardEntry({
+            leaderboardId: custom.id,
+            participantInput: participantLookup,
+          });
+          if (!entry) {
+            await message.reply(`❌ No entry found for "${participantLookup}".`);
+            return;
+          }
+          const label =
+            entry.participantType === "discord" ? `<@${entry.participantKey}>` : entry.name;
+          await message.reply(
+            `**${custom.name}** (${custom.metric})\n${label}: ${entry.score}`
+          );
+          return;
+        }
+
+        const entries = await fetchCustomLeaderboardEntries({ leaderboardId: custom.id });
+        if (!entries.length) {
+          await message.reply(`No leaderboard entries found for ${custom.name}.`);
+          return;
+        }
+
+        const shown = limit ? entries.slice(0, limit) : entries;
+        const lines = shown.map((row, idx) => {
+          const label = row.participantType === "discord" ? `<@${row.participantKey}>` : row.name;
+          return `#${idx + 1} — ${label} • ${row.score}`;
+        });
+        const body =
+          `🏆 **${custom.name}** (${custom.metric}) ` +
+          `(top ${Math.min(shown.length, limit || shown.length)})\n` +
+          lines.join("\n");
+        await message.reply(body);
+        return;
+      }
+
+      if (!requireRpgCredentials(primaryCmd)) {
+        await message.reply("❌ RPG leaderboard credentials are not configured.");
         return;
       }
 
