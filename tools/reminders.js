@@ -414,8 +414,12 @@ export function registerReminders(register) {
             `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.\n${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`,
           feature: "notifyme",
         });
-        void metrics.increment("notifyme.trigger", { status: res.ok ? "ok" : "error" });
-        if (!res.ok && res.code !== 50007) {
+        if (res.ok) {
+          void metrics.increment("notifyme.trigger", { status: "ok" });
+        } else if (res.code === 50007) {
+          void metrics.increment("notifyme.trigger", { status: "blocked" });
+        } else {
+          void metrics.increment("notifyme.trigger", { status: "error" });
           console.warn("[notifyme] DM failed:", res.error);
         }
       } catch (err) {
