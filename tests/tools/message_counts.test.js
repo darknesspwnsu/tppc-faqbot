@@ -6,7 +6,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock("../../db.js", () => dbMocks);
 vi.mock("../../configs/message_count_channels.js", () => ({
-  MESSAGE_COUNT_CHANNELS_BY_GUILD: { g1: ["c1"] },
+  MESSAGE_COUNT_CHANNELS_BY_GUILD: { g1: { channels: ["c1"], parentIds: ["p1"] } },
 }));
 vi.mock("node:fs/promises", () => ({
   default: {
@@ -30,14 +30,22 @@ function makeRegister() {
 function makeMessage({
   guildId = "g1",
   channelId = "c1",
+  parentId = null,
+  isThread = false,
   content = "",
   authorId = "u1",
   bot = false,
   mentions = [],
+  viewable = true,
 } = {}) {
   return {
     guildId,
     channelId,
+    channel: {
+      viewable,
+      parentId,
+      isThread: () => Boolean(isThread),
+    },
     content,
     author: { id: authorId, bot },
     mentions: {
@@ -77,6 +85,27 @@ describe("tools/message_counts", () => {
 
     await listener({ message: tracked });
     await listener({ message: untracked });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO message_counts"),
+      ["g1", "u1"]
+    );
+  });
+
+  it("counts messages in tracked forum threads", async () => {
+    const execute = vi.fn(async () => [[]]);
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerMessageCounts(register);
+
+    const listener = register.calls.listener[0];
+    const thread = makeMessage({ channelId: "t1", isThread: true, parentId: "p1" });
+    const otherThread = makeMessage({ channelId: "t2", isThread: true, parentId: "p2" });
+
+    await listener({ message: thread });
+    await listener({ message: otherThread });
 
     expect(execute).toHaveBeenCalledTimes(1);
     expect(execute).toHaveBeenCalledWith(

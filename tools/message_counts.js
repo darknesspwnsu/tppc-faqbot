@@ -17,8 +17,23 @@ let flareonCounts = null;
 let flareonLoadAttempted = false;
 
 function trackedChannelsForGuild(guildId) {
-  const channels = MESSAGE_COUNT_CHANNELS_BY_GUILD?.[String(guildId || "")];
-  return Array.isArray(channels) ? new Set(channels.map(String)) : new Set();
+  const config = MESSAGE_COUNT_CHANNELS_BY_GUILD?.[String(guildId || "")];
+  if (Array.isArray(config)) {
+    return { channels: new Set(config.map(String)), parents: new Set() };
+  }
+  const channels = Array.isArray(config?.channels) ? config.channels.map(String) : [];
+  const parents = Array.isArray(config?.parentIds) ? config.parentIds.map(String) : [];
+  return { channels: new Set(channels), parents: new Set(parents) };
+}
+
+function isTrackedChannel(message, tracked) {
+  if (!tracked) return false;
+  if (tracked.channels?.has(String(message.channelId))) return true;
+  if (tracked.parents?.size && message.channel?.isThread?.()) {
+    const parentId = message.channel.parentId ? String(message.channel.parentId) : "";
+    if (parentId && tracked.parents.has(parentId)) return true;
+  }
+  return false;
 }
 
 function mention(id) {
@@ -192,7 +207,7 @@ export function registerMessageCounts(register) {
     if (isCommand) return;
 
     const tracked = trackedChannelsForGuild(message.guildId);
-    if (!tracked.size || !tracked.has(String(message.channelId))) return;
+    if (!isTrackedChannel(message, tracked)) return;
 
     await incrementMessageCount({
       guildId: message.guildId,
