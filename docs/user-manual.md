@@ -353,6 +353,7 @@ Hosts multiple contest types with subcommands.
 Subcommands: `create`, `list`, `end`, `delete`, `reroll`
 - Button-based entry
 - Admin/privileged only for create/end/delete/reroll
+- `/giveaway create` supports `require_verified` to require verified role + saved ID
 - `/giveaway list` shows active giveaways with links
 - Reroll does not re-upload summary file
 

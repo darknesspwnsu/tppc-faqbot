@@ -13,8 +13,13 @@ vi.mock("../../db.js", () => ({
   getSavedId: vi.fn(async () => null),
 }));
 
+vi.mock("../../shared/dm.js", () => ({
+  sendDm: vi.fn(async () => ({ ok: true })),
+}));
+
 import { registerGiveaway, _test } from "../../contests/giveaway.js";
 import { isAdminOrPrivileged } from "../../auth.js";
+import { sendDm } from "../../shared/dm.js";
 
 function buildRegister() {
   const handlers = new Map();
@@ -45,6 +50,7 @@ function mockInteraction(overrides = {}) {
       getSubcommand: vi.fn(() => "create"),
       getString: vi.fn(() => ""),
       getFocused: vi.fn(() => ""),
+      getBoolean: vi.fn(() => null),
     },
     showModal: vi.fn(async () => {}),
     reply: vi.fn(async () => {}),
@@ -79,13 +85,22 @@ function buildClient(channel) {
   };
 }
 
-async function createGiveaway({ handlers, channel, client, prize = "Prize", winners = "1" } = {}) {
+async function createGiveaway({
+  handlers,
+  channel,
+  client,
+  prize = "Prize",
+  winners = "1",
+  requireVerified = false,
+  guildId = "g1",
+} = {}) {
   const interaction = mockInteraction({
     client,
     channel,
+    guildId,
     isModalSubmit: () => true,
     isButton: () => false,
-    customId: "giveaway:modal:abc",
+    customId: `giveaway:modal:abc${requireVerified ? ":verified" : ""}`,
     fields: {
       getTextInputValue: vi.fn((key) => {
         if (key === "duration") return "10m";
@@ -120,6 +135,29 @@ describe("giveaway slash + modal", () => {
     await handler({ interaction });
 
     expect(interaction.showModal).toHaveBeenCalledTimes(1);
+  });
+
+  test("rejects require_verified when no roles are configured", async () => {
+    const { handlers, register } = buildRegister();
+    registerGiveaway(register);
+
+    const interaction = mockInteraction({
+      guildId: "g1",
+      options: {
+        getSubcommand: vi.fn(() => "create"),
+        getBoolean: vi.fn(() => true),
+      },
+    });
+    const handler = handlers.get("/giveaway")?.handler;
+    await handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "❌ No verified roles are configured for this server.",
+        flags: expect.any(Number),
+      })
+    );
+    expect(interaction.showModal).not.toHaveBeenCalled();
   });
 
   test("rejects invalid duration in modal submit", async () => {
@@ -415,6 +453,47 @@ describe("giveaway buttons", () => {
         flags: expect.any(Number),
       })
     );
+  });
+
+  test("joins and DMs when require_verified is enabled", async () => {
+    sendDm.mockClear();
+
+    const { handlers, register } = buildRegister();
+    registerGiveaway(register);
+
+    const channel = buildChannel();
+    const client = buildClient(channel);
+    const giveawayMessage = { id: "m1", edit: vi.fn(async () => {}) };
+    channel.messages.fetch = vi.fn(async () => giveawayMessage);
+    channel.send = vi.fn(async (payload) => (payload?.embeds ? giveawayMessage : {}));
+
+    await createGiveaway({
+      handlers,
+      channel,
+      client,
+      requireVerified: true,
+      guildId: "329934860388925442",
+    });
+
+    isAdminOrPrivileged.mockReturnValue(false);
+
+    const joinInteraction = mockInteraction({
+      client,
+      guildId: "329934860388925442",
+      guild: { name: "TPPC Official Discord" },
+      member: { roles: { cache: new Set() } },
+      user: { id: "u2" },
+      isModalSubmit: () => false,
+      isButton: () => true,
+      customId: "giveaway:join:m1",
+      message: giveawayMessage,
+    });
+
+    const componentHandler = handlers.get("component:giveaway:")?.handler;
+    await componentHandler({ interaction: joinInteraction });
+
+    expect(sendDm).toHaveBeenCalledTimes(1);
+    isAdminOrPrivileged.mockReturnValue(true);
   });
 });
 

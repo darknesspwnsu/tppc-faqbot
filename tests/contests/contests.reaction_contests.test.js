@@ -8,7 +8,13 @@ vi.mock("../../db.js", () => ({
   getSavedId: vi.fn(async () => null),
 }));
 
+vi.mock("../../shared/dm.js", () => ({
+  sendDm: vi.fn(async () => ({ ok: true })),
+}));
+
 import { isAdminOrPrivileged } from "../../auth.js";
+import { getSavedId } from "../../db.js";
+import { sendDm } from "../../shared/dm.js";
 import * as reactionContests from "../../contests/reaction_contests.js";
 import * as rng from "../../contests/rng.js";
 const { collectEntrantsByReactions, registerReactionContests } = reactionContests;
@@ -86,6 +92,40 @@ describe("collectEntrantsByReactions", () => {
 
     const res = await p;
     expect([...res.entrants]).toEqual(["u1", "u2"]);
+  });
+
+  test("DMs ineligible entrants when eligibility is required", async () => {
+    isAdminOrPrivileged.mockReturnValue(false);
+    sendDm.mockClear();
+
+    const joinMsg = mockJoinMessage();
+    const message = mockMessage(joinMsg, sharedClient);
+    message.guildId = "329934860388925442";
+    message.guild = {
+      name: "TPPC Official Discord",
+      members: {
+        fetch: vi.fn(async () => ({ roles: { cache: new Set() } })),
+      },
+    };
+
+    const p = collectEntrantsByReactions({
+      message,
+      promptText: "join",
+      durationMs: 1000,
+      maxEntrants: 2,
+      emoji: "👍",
+      eligibility: { requireVerified: true },
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+    await add({ message: { id: "m1", guildId: "329934860388925442", partial: false }, partial: false }, { id: "u1", bot: false });
+
+    await p;
+    expect(sendDm).toHaveBeenCalledTimes(1);
+    isAdminOrPrivileged.mockReturnValue(true);
   });
 
   test("blocks conteststart when a collector is already active in the channel", async () => {
@@ -190,6 +230,56 @@ describe("conteststart validation and outputs", () => {
 
     expect(send.mock.calls.some((call) => call[0]?.includes("Not enough entrants"))).toBe(true);
     vi.useRealTimers();
+  });
+
+  test("filters entrants when require=verified is set", async () => {
+    isAdminOrPrivileged.mockImplementation((msg) => msg?.author?.id === "host");
+    getSavedId.mockImplementation(async ({ userId }) => (userId === "u1" ? 123 : null));
+    sendDm.mockClear();
+
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const conteststart = register.handlers.get("!conteststart");
+    vi.useFakeTimers();
+
+    const joinMsg = mockJoinMessage();
+    const send = vi.fn().mockResolvedValue(joinMsg);
+    const verifiedRoleId = "331095682335375361";
+    const message = {
+      guildId: "329934860388925442",
+      channelId: "2",
+      author: { id: "host" },
+      client: sharedClient,
+      channel: { send },
+      reply: vi.fn(async () => {}),
+      guild: {
+        members: {
+          fetch: vi.fn(async () =>
+            new Map([
+              ["u1", { displayName: "Alpha", roles: { cache: new Set([verifiedRoleId]) } }],
+              ["u2", { displayName: "Beta", roles: { cache: new Set() } }],
+            ])
+          ),
+        },
+      },
+    };
+
+    const startPromise = conteststart({ message, rest: "list 1sec require=verified" });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const add = sharedClient.__handlers.get("messageReactionAdd");
+    await add({ message: { id: joinMsg.id, guildId: "329934860388925442", partial: false }, partial: false }, { id: "u1", bot: false });
+    await add({ message: { id: joinMsg.id, guildId: "329934860388925442", partial: false }, partial: false }, { id: "u2", bot: false });
+
+    vi.advanceTimersByTime(1000);
+    await startPromise;
+
+    expect(send.mock.calls.some((call) => String(call[0]).includes("1 entrant(s)"))).toBe(true);
+    vi.useRealTimers();
+    isAdminOrPrivileged.mockReturnValue(true);
   });
 
   test("includes prize for single-winner choose mode", async () => {

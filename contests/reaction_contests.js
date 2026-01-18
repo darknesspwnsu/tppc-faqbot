@@ -8,14 +8,23 @@ import { MessageFlags } from "discord.js";
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { formatUserWithId, stripEmojisAndSymbols } from "./helpers.js";
+import { sendDm } from "../shared/dm.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 import { chooseOne, runElimFromItems } from "./rng.js";
+import {
+  buildEligibilityDm,
+  checkEligibility,
+  filterEligibleEntrants,
+  getVerifiedRoleIds,
+  resolveMember,
+} from "./eligibility.js";
 
-// messageId -> { guildId, channelId, creatorId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone? }
+// messageId -> { guildId, channelId, creatorId, endsAtMs, timeout, entrants:Set<string>, entrantReactionCounts:Map<string,number>, maxEntrants?, onDone?, eligibility?, notifiedIneligible? }
 const activeCollectorsByMessage = new Map();
 
 let reactionHooksInstalled = false;
+
 
 function parseDurationToMs(raw) {
   const s = String(raw ?? "").trim();
@@ -152,6 +161,9 @@ function contestStartHelpText() {
     "**Prize (choose 1 / elim only):**",
     "• `prize=<text>` (text can include spaces/symbols)",
     "",
+    "**Eligibility (optional):**",
+    "• `require=verified` — only verified users with a saved ID qualify",
+    "",
     "**Examples:**",
     "• `!conteststart 2min`",
     "• `!conteststart list 1min 20`",
@@ -159,6 +171,7 @@ function contestStartHelpText() {
     "• `!conteststart choose 30sec winners=3`",
     "• `!conteststart choose 30sec prize=$$$ Shiny Klink!!!`",
     "• `!conteststart elim 2min 10`",
+    "• `!conteststart list 1min require=verified`",
     ""
   ].join("\n");
 }
@@ -183,6 +196,9 @@ function contestSlashHelpText() {
     "",
     "**Prize (choose 1 / elim only):**",
     "• Prize text shown alongside the winner",
+    "",
+    "**Eligibility (optional):**",
+    "• `require_verified` — only verified users with a saved ID qualify",
     ""
   ].join("\n");
 }
@@ -228,6 +244,26 @@ export function installReactionHooks(client) {
     counts.set(user.id, prev + 1);
     collector.entrants.add(user.id);
 
+    if (collector.eligibility?.requireVerified && !collector.notifiedIneligible?.has(user.id)) {
+      const member = await resolveMember({ guild: msg.guild, userId: user.id });
+      const result = await checkEligibility({
+        guild: msg.guild,
+        guildId: msg.guildId,
+        userId: user.id,
+        member,
+        requireVerified: true,
+        allowAdminBypass: true,
+      });
+      if (!result.ok) {
+        collector.notifiedIneligible?.add(user.id);
+        await sendDm({
+          user,
+          payload: buildEligibilityDm({ guildName: msg.guild?.name, reasons: result.reasons }),
+          feature: "reaction_contest.eligibility",
+        });
+      }
+    }
+
     if (collector.maxEntrants && collector.entrants.size >= collector.maxEntrants) {
       clearTimer(collector.timeout, `reaction_contest:${msg.id}`);
       await finalizeCollector(msg.id, "max");
@@ -266,6 +302,7 @@ export async function collectEntrantsByReactions({
   durationMs,
   maxEntrants = null,
   emoji = "👍",
+  eligibility = null,
 }) {
   installReactionHooks(message.client);
 
@@ -289,6 +326,8 @@ export async function collectEntrantsByReactions({
       entrants: new Set(),
       entrantReactionCounts: new Map(),
       maxEntrants,
+      eligibility,
+      notifiedIneligible: new Set(),
       onDone: (set, reason) => resolve({ entrants: set, reason, messageId: joinMsg.id }),
     });
   });
@@ -359,6 +398,12 @@ export function registerReactionContests(register) {
           description: "Prize text (choose one or elim only)",
           required: false,
         },
+        {
+          type: 5, // BOOLEAN
+          name: "require_verified",
+          description: "Require verified role + saved ID",
+          required: false,
+        },
       ],
     },
     async ({ interaction }) => {
@@ -378,6 +423,7 @@ export function registerReactionContests(register) {
       const winnersRaw = interaction.options?.getInteger?.("winners");
       const prizeRaw = interaction.options?.getString?.("prize") || "";
       const prize = prizeRaw.trim();
+      const requireVerified = Boolean(interaction.options?.getBoolean?.("require_verified"));
 
       if (!timeTok) {
         await interaction.reply({ content: contestSlashHelpText(), flags: MessageFlags.Ephemeral });
@@ -418,6 +464,17 @@ export function registerReactionContests(register) {
         winnerCount = 1;
       }
 
+      if (requireVerified) {
+        const verifiedRoles = getVerifiedRoleIds(interaction.guildId);
+        if (!verifiedRoles.length) {
+          await interaction.reply({
+            content: "❌ No verified roles are configured for this server.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      }
+
       const MAX_MS = 24 * 60 * 60_000;
       if (ms > MAX_MS) {
         await interaction.reply({ content: "Time too large. Max is 24 hours.", flags: MessageFlags.Ephemeral });
@@ -430,7 +487,10 @@ export function registerReactionContests(register) {
           : null;
       const modeLabel = mode === "list" ? "list" : mode === "choose" ? chooseLabel : "run an elimination";
       const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
-      const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}`;
+      const eligibilityNote = requireVerified
+        ? "\nEligibility: verified role + Spectreon ID required."
+        : "";
+      const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}${eligibilityNote}`;
 
       await interaction.reply({
         content: `✅ Contest started in <#${interaction.channelId}>.`,
@@ -452,10 +512,20 @@ export function registerReactionContests(register) {
         durationMs: ms,
         maxEntrants,
         emoji: "👍",
+        eligibility: requireVerified ? { requireVerified: true } : null,
       });
       if (reason === "cancel") return;
 
-      const ids = [...entrants];
+      let ids = [...entrants];
+      if (requireVerified) {
+        const filtered = await filterEligibleEntrants({
+          guild: message.guild,
+          guildId: message.guildId,
+          userIds: ids,
+          requireVerified: true,
+        });
+        ids = filtered.eligibleIds;
+      }
       const { entries, displayNames, winnerLabels } = await buildContestDisplay({
         guild: message.guild,
         guildId: message.guildId,
@@ -463,7 +533,7 @@ export function registerReactionContests(register) {
       });
 
       if (!displayNames.length) {
-        await message.channel.send("No one reacted...");
+        await message.channel.send(requireVerified ? "No eligible entrants..." : "No one reacted...");
         return;
       }
 
@@ -585,10 +655,16 @@ export function registerReactionContests(register) {
       let maxEntrants = null;
       let winnerCount = 1;
       let winnerExplicit = false;
+      let requireVerified = false;
 
       for (const tok of extras) {
         const t = String(tok).trim();
         if (!t) continue;
+
+        if (["require=verified", "require=eligible", "verified", "eligible"].includes(t.toLowerCase())) {
+          requireVerified = true;
+          continue;
+        }
 
         const winnerMatch = /^(winners?|pick|picks?)=(\d+)$/i.exec(t);
         if (winnerMatch) {
@@ -625,6 +701,14 @@ export function registerReactionContests(register) {
         }
       }
 
+      if (requireVerified) {
+        const verifiedRoles = getVerifiedRoleIds(message.guildId);
+        if (!verifiedRoles.length) {
+          await message.reply("❌ No verified roles are configured for this server.");
+          return;
+        }
+      }
+
       const MAX_MS = 24 * 60 * 60_000;
       if (ms > MAX_MS) {
         await message.reply("Time too large. Max is 24 hours.");
@@ -637,7 +721,10 @@ export function registerReactionContests(register) {
           : null;
       const modeLabel = mode === "list" ? "list" : mode === "choose" ? chooseLabel : "run an elimination";
       const maxNote = maxEntrants ? ` (max **${maxEntrants}** entrants — ends early if reached)` : "";
-      const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}`;
+      const eligibilityNote = requireVerified
+        ? "\nEligibility: verified role + Spectreon ID required."
+        : "";
+      const prompt = `React to this message to enter! I will **${modeLabel}** in **${humanDuration(ms)}**...${maxNote}${eligibilityNote}`;
 
       const { entrants, reason } = await collectEntrantsByReactions({
         message,
@@ -645,10 +732,20 @@ export function registerReactionContests(register) {
         durationMs: ms,
         maxEntrants,
         emoji: "👍",
+        eligibility: requireVerified ? { requireVerified: true } : null,
       });
       if (reason === "cancel") return;
 
-      const ids = [...entrants];
+      let ids = [...entrants];
+      if (requireVerified) {
+        const filtered = await filterEligibleEntrants({
+          guild: message.guild,
+          guildId: message.guildId,
+          userIds: ids,
+          requireVerified: true,
+        });
+        ids = filtered.eligibleIds;
+      }
       const { entries, displayNames, winnerLabels } = await buildContestDisplay({
         guild: message.guild,
         guildId: message.guildId,
@@ -656,7 +753,7 @@ export function registerReactionContests(register) {
       });
 
       if (!displayNames.length) {
-        await message.channel.send("No one reacted...");
+        await message.channel.send(requireVerified ? "No eligible entrants..." : "No one reacted...");
         return;
       }
 

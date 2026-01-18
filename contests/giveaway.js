@@ -18,9 +18,16 @@ import {
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { getDb } from "../db.js";
+import { sendDm } from "../shared/dm.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 import { stripEmojisAndSymbols, formatUserWithId, formatUsersWithIds } from "./helpers.js";
+import {
+  buildEligibilityDm,
+  checkEligibility,
+  filterEligibleEntrants,
+  getVerifiedRoleIds,
+} from "./eligibility.js";
 
 const MAX_DURATION_SECONDS = 3 * 24 * 60 * 60;
 const MAX_WINNERS = 50;
@@ -88,17 +95,19 @@ async function saveGiveawayRecord(record) {
       description,
       winners_count,
       ends_at_ms,
+      require_verified,
       entrants_json,
       winners_json,
       ended_at_ms,
       summary_message_id,
       canceled
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       prize = VALUES(prize),
       description = VALUES(description),
       winners_count = VALUES(winners_count),
       ends_at_ms = VALUES(ends_at_ms),
+      require_verified = VALUES(require_verified),
       entrants_json = VALUES(entrants_json),
       winners_json = VALUES(winners_json),
       ended_at_ms = VALUES(ended_at_ms),
@@ -114,6 +123,7 @@ async function saveGiveawayRecord(record) {
       String(record.description || ""),
       Number(record.winnersCount),
       Number(record.endsAtMs),
+      record.requireVerified ? 1 : 0,
       serializeIds(record.entrants || []),
       serializeIds(record.winners || []),
       record.endedAtMs == null ? null : Number(record.endedAtMs),
@@ -134,6 +144,7 @@ async function updateGiveawayFields(messageId, fields) {
     ended_at_ms: "ended_at_ms",
     summary_message_id: "summary_message_id",
     canceled: "canceled",
+    require_verified: "require_verified",
   };
 
   for (const [key, col] of Object.entries(mapping)) {
@@ -188,6 +199,10 @@ function buildGiveawayEmbed(record, { ended = false, canceled = false, winners =
     `Entries: ${entriesCount}`,
     `Winners: ${winnersLine}`,
   ];
+
+  if (record.requireVerified) {
+    metaLines.push("Eligibility: verified role + Spectreon ID required.");
+  }
 
   if (canceled) {
     metaLines.splice(1, 0, "Status: Cancelled");
@@ -422,15 +437,6 @@ async function finalizeGiveaway(messageId) {
 
   clearGiveawayTimer(messageId);
 
-  const entrants = [...record.entrants];
-  const winners = chooseMany(entrants, record.winnersCount);
-  const endedAtMs = Date.now();
-  record.endedAtMs = endedAtMs;
-  record.winners = winners;
-  const winnerLabels = winners.length
-    ? await formatUsersWithIds({ guildId: record.guildId, userIds: winners })
-    : [];
-
   let channel = null;
   let giveawayMessage = null;
   try {
@@ -443,6 +449,27 @@ async function finalizeGiveaway(messageId) {
     }
     return;
   }
+
+  const entrants = [...record.entrants];
+  let eligibleEntrants = entrants;
+  if (record.requireVerified) {
+    const filtered = await filterEligibleEntrants({
+      guild: channel?.guild || null,
+      guildId: record.guildId,
+      userIds: entrants,
+      requireVerified: true,
+      allowAdminBypass: true,
+    });
+    eligibleEntrants = filtered.eligibleIds;
+  }
+
+  const winners = chooseMany(eligibleEntrants, record.winnersCount);
+  const endedAtMs = Date.now();
+  record.endedAtMs = endedAtMs;
+  record.winners = winners;
+  const winnerLabels = winners.length
+    ? await formatUsersWithIds({ guildId: record.guildId, userIds: winners })
+    : [];
 
   let summaryMessageId = null;
   try {
@@ -468,7 +495,10 @@ async function finalizeGiveaway(messageId) {
         `Congratulations ${winnerLabels.join(", ")}! You won the **${record.prize}**!`
       );
     } else {
-      await channel.send(`No valid entries for **${record.prize}**.`);
+      const emptyNote = record.requireVerified
+        ? `No eligible entries for **${record.prize}**.`
+        : `No valid entries for **${record.prize}**.`;
+      await channel.send(emptyNote);
     }
   }
 }
@@ -522,10 +552,29 @@ async function rerollGiveaway(messageId) {
       return { ok: false, reason: "no_client" };
     }
 
+    const channel = await clientRef.channels.fetch(record.channel_id);
+    if (!channel?.isTextBased?.()) throw new Error("Channel not text-based");
+
+    const requireVerified = Boolean(Number(record.require_verified));
     const entrants = parseJsonIds(record.entrants_json);
+    let eligibleEntrants = entrants;
+    if (requireVerified) {
+      const filtered = await filterEligibleEntrants({
+        guild: channel?.guild || null,
+        guildId: record.guild_id,
+        userIds: entrants,
+        requireVerified: true,
+        allowAdminBypass: true,
+      });
+      eligibleEntrants = filtered.eligibleIds;
+    }
+
     const prevWinners = new Set(parseJsonIds(record.winners_json));
-    const pool = entrants.filter((id) => !prevWinners.has(String(id)));
-    const winners = chooseMany(pool.length ? pool : entrants, Number(record.winners_count));
+    const pool = eligibleEntrants.filter((id) => !prevWinners.has(String(id)));
+    const winners = chooseMany(
+      pool.length ? pool : eligibleEntrants,
+      Number(record.winners_count)
+    );
 
     const giveawayState = {
       messageId: record.message_id,
@@ -537,10 +586,9 @@ async function rerollGiveaway(messageId) {
       endsAtMs: Number(record.ends_at_ms),
       endedAtMs: Number(record.ended_at_ms),
       entrants: new Set(entrants),
+      requireVerified,
     };
 
-    const channel = await clientRef.channels.fetch(record.channel_id);
-    if (!channel?.isTextBased?.()) throw new Error("Channel not text-based");
     const message = await channel.messages.fetch(record.message_id);
     const summaryUrl = message?.components?.[0]?.components?.[0]?.url || null;
     const winnerLabels = winners.length
@@ -556,7 +604,10 @@ async function rerollGiveaway(messageId) {
           `${hostLabel} rerolled the giveaway. Congratulations ${winnerLabels.join(", ")}!`
         );
       } else {
-        await channel.send(`No valid entries to reroll for **${giveawayState.prize}**.`);
+        const emptyNote = giveawayState.requireVerified
+          ? `No eligible entries to reroll for **${giveawayState.prize}**.`
+          : `No valid entries to reroll for **${giveawayState.prize}**.`;
+        await channel.send(emptyNote);
       }
     }
 
@@ -592,8 +643,10 @@ async function boot(client) {
         description: row.description,
         winnersCount: Number(row.winners_count),
         endsAtMs,
+        requireVerified: Boolean(Number(row.require_verified)),
         entrants: new Set(parseJsonIds(row.entrants_json)),
         winners: parseJsonIds(row.winners_json),
+        notifiedIneligible: new Set(),
       };
 
       if (endsAtMs <= Date.now()) {
@@ -622,6 +675,7 @@ export function registerGiveaway(register) {
       if (arg !== "help") return;
       await message.reply(
         "Use `/giveaway create` to start a giveaway (modal). " +
+          "Optional: set `require_verified` to require verified role + saved ID. " +
           "Manage with `/giveaway list`, `/giveaway end message_id:<id>`, " +
           "`/giveaway delete message_id:<id>`, or `/giveaway reroll message_id:<id>`."
       );
@@ -639,6 +693,14 @@ export function registerGiveaway(register) {
           type: 1,
           name: "create",
           description: "Create a giveaway (modal)",
+          options: [
+            {
+              type: 5,
+              name: "require_verified",
+              description: "Require verified role + saved ID",
+              required: false,
+            },
+          ],
         },
         {
           type: 1,
@@ -712,8 +774,20 @@ export function registerGiveaway(register) {
           return;
         }
 
+        const requireVerified = Boolean(interaction.options?.getBoolean?.("require_verified"));
+        if (requireVerified) {
+          const verifiedRoles = getVerifiedRoleIds(interaction.guildId);
+          if (!verifiedRoles.length) {
+            await interaction.reply({
+              content: "❌ No verified roles are configured for this server.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+        }
+
         const modal = new ModalBuilder()
-          .setCustomId(`giveaway:modal:${interaction.id}`)
+          .setCustomId(`giveaway:modal:${interaction.id}${requireVerified ? ":verified" : ""}`)
           .setTitle("Create a Giveaway");
 
         const durationInput = new TextInputBuilder()
@@ -1008,11 +1082,23 @@ export function registerGiveaway(register) {
       if (!customId.startsWith("giveaway:modal:")) {
         return;
       }
+      const requireVerified = customId.split(":").includes("verified");
 
       const durationRaw = interaction.fields?.getTextInputValue?.("duration");
       const winnersRaw = interaction.fields?.getTextInputValue?.("winners");
       const prize = String(interaction.fields?.getTextInputValue?.("prize") || "").trim();
       const description = String(interaction.fields?.getTextInputValue?.("description") || "").trim();
+
+      if (requireVerified) {
+        const verifiedRoles = getVerifiedRoleIds(interaction.guildId);
+        if (!verifiedRoles.length) {
+          await interaction.reply({
+            content: "❌ No verified roles are configured for this server.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+      }
 
       const durationSeconds = parseDurationSeconds(durationRaw, null);
       if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
@@ -1058,10 +1144,12 @@ export function registerGiveaway(register) {
         description,
         winnersCount,
         endsAtMs,
+        requireVerified,
         entrants: new Set(),
         winners: [],
         endedAtMs: null,
         canceled: false,
+        notifiedIneligible: new Set(),
       };
 
       if (!interaction.channel?.send) {
@@ -1118,6 +1206,28 @@ export function registerGiveaway(register) {
         }
 
         record.entrants.add(interaction.user?.id);
+        if (record.requireVerified) {
+          record.notifiedIneligible = record.notifiedIneligible || new Set();
+          const result = await checkEligibility({
+            guild: interaction.guild,
+            guildId: interaction.guildId,
+            userId: interaction.user?.id,
+            member: interaction.member || null,
+            requireVerified: true,
+            allowAdminBypass: true,
+          });
+          if (!result.ok && !record.notifiedIneligible.has(interaction.user?.id)) {
+            record.notifiedIneligible.add(interaction.user?.id);
+            await sendDm({
+              user: interaction.user,
+              payload: buildEligibilityDm({
+                guildName: interaction.guild?.name,
+                reasons: result.reasons,
+              }),
+              feature: "giveaway.eligibility",
+            });
+          }
+        }
         await updateGiveawayFields(messageId, {
           entrants_json: serializeIds(record.entrants),
         });

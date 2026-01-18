@@ -223,6 +223,7 @@ export async function initDb() {
       description TEXT NOT NULL,
       winners_count INT UNSIGNED NOT NULL,
       ends_at_ms BIGINT UNSIGNED NOT NULL,
+      require_verified TINYINT(1) NOT NULL DEFAULT 0,
       entrants_json LONGTEXT NOT NULL,
       winners_json LONGTEXT NOT NULL,
       ended_at_ms BIGINT UNSIGNED,
@@ -235,6 +236,33 @@ export async function initDb() {
     [],
     "init.giveaways"
   );
+  {
+    const { DB_NAME } = process.env;
+    const [rows] = await execDb(
+      db,
+      `
+      SELECT COUNT(*) AS total
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'giveaways'
+        AND COLUMN_NAME = 'require_verified'
+    `,
+      [DB_NAME],
+      "init.giveaways_require_verified_check"
+    );
+    const total = Number(rows?.[0]?.total || 0);
+    if (!total) {
+      await execDb(
+        db,
+        `
+        ALTER TABLE giveaways
+        ADD COLUMN require_verified TINYINT(1) NOT NULL DEFAULT 0
+      `,
+        [],
+        "init.giveaways_require_verified"
+      );
+    }
+  }
 
   await execDb(
     db,
