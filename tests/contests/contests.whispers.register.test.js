@@ -1,5 +1,9 @@
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 
+vi.mock("../../auth.js", () => ({
+  isAdminOrPrivileged: vi.fn(() => false),
+}));
+
 vi.mock("../../db.js", () => ({
   getUserText: vi.fn(),
   setUserText: vi.fn(),
@@ -86,6 +90,65 @@ describe("registerWhispers", () => {
       { phrase: "secret", ownerId: "u1", prize: "candy", createdAt: saved[0].createdAt },
     ]);
     expect(Number.isFinite(saved[0].createdAt)).toBe(true);
+  });
+
+  test("rejects phrases longer than 256 characters", async () => {
+    const register = makeRegister();
+    registerWhispers(register);
+
+    const whisperSlash = register.calls.slash.find((call) => call.config.name === "whisper");
+
+    getUserText.mockResolvedValue("[]");
+
+    const interaction = makeInteraction({
+      guildId: "g1",
+      guildName: "Guild One",
+      phrase: "a".repeat(257),
+      prize: "",
+      mode: "add",
+      userId: "u1",
+    });
+
+    await whisperSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Phrases must be 256 characters or fewer.",
+      })
+    );
+    expect(setUserText).not.toHaveBeenCalled();
+  });
+
+  test("limits whispers to 5 per user for non-admins", async () => {
+    const register = makeRegister();
+    registerWhispers(register);
+
+    const whisperSlash = register.calls.slash.find((call) => call.config.name === "whisper");
+
+    const existing = Array.from({ length: 5 }, (_, i) => ({
+      phrase: `phrase${i + 1}`,
+      ownerId: "u1",
+      prize: "",
+    }));
+    getUserText.mockResolvedValue(JSON.stringify(existing));
+
+    const interaction = makeInteraction({
+      guildId: "g5",
+      guildName: "Guild Five",
+      phrase: "secret",
+      prize: "",
+      mode: "add",
+      userId: "u1",
+    });
+
+    await whisperSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "You can only have 5 active whispers.",
+      })
+    );
+    expect(setUserText).not.toHaveBeenCalled();
   });
 
   test("delete reports missing phrase without saving", async () => {

@@ -12,6 +12,7 @@ import { MessageFlags } from "discord.js";
 import crypto from "node:crypto";
 
 import { getDb, getUserText, setUserText } from "../db.js";
+import { isAdminOrPrivileged } from "../auth.js";
 import { includesWholePhrase, normalizeForMatch } from "./helpers.js";
 
 /* ------------------------------- small helpers ------------------------------ */
@@ -71,11 +72,21 @@ function decodeKeyMaterial(raw) {
 function getWhisperKeyById(keyId) {
   const keys = parseKeyConfig();
   if (keys && keyId && keys[keyId]) {
-    return decodeKeyMaterial(String(keys[keyId]));
+    const key = decodeKeyMaterial(String(keys[keyId]));
+    if (!key) warnMissingWhisperKey();
+    return key;
   }
 
   const raw = String(process.env.WHISPER_ENC_KEY || "").trim();
-  return decodeKeyMaterial(raw);
+  const key = decodeKeyMaterial(raw);
+  if (!key) warnMissingWhisperKey();
+  return key;
+}
+
+function warnMissingWhisperKey() {
+  if (missingWhisperKeyWarned) return;
+  missingWhisperKeyWarned = true;
+  console.error("[whisper] Missing encryption key; whispers will be stored in plaintext.");
 }
 
 
@@ -92,6 +103,9 @@ const guildWhispers = new Map(); // guildId -> { loaded, items: [{ phrase, owner
 const DB_RETRY_COOLDOWN_MS = 60_000;
 const WHISPER_ENCRYPTION_VERSION = 1;
 const WHISPER_ENCRYPTION_ALG = "aes-256-gcm";
+const MAX_WHISPERS_PER_USER = 5;
+const MAX_WHISPER_LENGTH = 256;
+let missingWhisperKeyWarned = false;
 
 function getGuildState(guildId) {
   if (!guildWhispers.has(guildId)) {
@@ -422,6 +436,25 @@ export function registerWhispers(register) {
           flags: MessageFlags.Ephemeral,
         });
         return;
+      }
+
+      if (phrase.length > MAX_WHISPER_LENGTH) {
+        await interaction.reply({
+          content: `Phrases must be ${MAX_WHISPER_LENGTH} characters or fewer.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (!isAdminOrPrivileged(interaction)) {
+        const mine = listWhispersForUser(state, ownerId);
+        if (mine.length >= MAX_WHISPERS_PER_USER) {
+          await interaction.reply({
+            content: `You can only have ${MAX_WHISPERS_PER_USER} active whispers.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
       }
 
       const res = addWhisper(state, phrase, ownerId, prize);
