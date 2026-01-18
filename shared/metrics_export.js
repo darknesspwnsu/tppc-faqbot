@@ -51,21 +51,48 @@ function scrubGitArgs(args) {
   return (args || []).map((arg) => scrubRepoUrl(String(arg)));
 }
 
+function logGitFailure(args, err, repoLabel) {
+  logger.warn("metrics.export.git.failed", {
+    repo: repoLabel,
+    args: scrubGitArgs(args).join(" "),
+    error: logger.serializeError(err),
+  });
+}
+
+function isNonFastForwardPush(err) {
+  const msg = `${err?.message || ""} ${err?.stderr || ""}`.toLowerCase();
+  return (
+    msg.includes("fetch first") ||
+    msg.includes("non-fast-forward") ||
+    msg.includes("rejected")
+  );
+}
+
+async function hasRebaseInProgress(dir) {
+  try {
+    await fs.stat(path.join(dir, ".git", "rebase-merge"));
+    return true;
+  } catch {}
+  try {
+    await fs.stat(path.join(dir, ".git", "rebase-apply"));
+    return true;
+  } catch {}
+  return false;
+}
+
 function isMissingRemoteRef(err) {
   const msg = String(err?.message || "").toLowerCase();
   return msg.includes("couldn't find remote ref");
 }
 
-async function runGit(args, { cwd, repoLabel } = {}) {
+async function runGit(args, { cwd, repoLabel, logFailure = true } = {}) {
   try {
     const { stdout, stderr } = await execFileAsync("git", args, { cwd });
     return { ok: true, stdout: stdout?.trim?.() || "", stderr: stderr?.trim?.() || "" };
   } catch (err) {
-    logger.warn("metrics.export.git.failed", {
-      repo: repoLabel,
-      args: scrubGitArgs(args).join(" "),
-      error: logger.serializeError(err),
-    });
+    if (logFailure) {
+      logGitFailure(args, err, repoLabel);
+    }
     return { ok: false, error: err };
   }
 }
@@ -271,8 +298,29 @@ async function commitAndPush({ dir, branch, filePath, repoLabel }) {
   const commit = await runGit(["commit", "-m", msg], { cwd: dir, repoLabel });
   if (!commit.ok) return { ok: false, reason: "commit_failed" };
 
-  const push = await runGit(["push", "origin", branch], { cwd: dir, repoLabel });
-  if (!push.ok) return { ok: false, reason: "push_failed" };
+  const push = await runGit(["push", "origin", branch], { cwd: dir, repoLabel, logFailure: false });
+  if (!push.ok) {
+    if (isNonFastForwardPush(push.error)) {
+      const pull = await runGit(["pull", "--rebase", "origin", branch], { cwd: dir, repoLabel });
+      if (!pull.ok) {
+        if (await hasRebaseInProgress(dir)) {
+          await runGit(["rebase", "--abort"], { cwd: dir, repoLabel, logFailure: false });
+        }
+        return { ok: false, reason: "push_rebase_failed" };
+      }
+
+      const retry = await runGit(["push", "origin", branch], { cwd: dir, repoLabel, logFailure: false });
+      if (!retry.ok) {
+        logGitFailure(["push", "origin", branch], retry.error, repoLabel);
+        return { ok: false, reason: "push_failed" };
+      }
+
+      return { ok: true, reason: "push_retried" };
+    }
+
+    logGitFailure(["push", "origin", branch], push.error, repoLabel);
+    return { ok: false, reason: "push_failed" };
+  }
 
   return { ok: true };
 }
