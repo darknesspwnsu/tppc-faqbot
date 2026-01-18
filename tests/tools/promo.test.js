@@ -64,7 +64,11 @@ describe("tools/promo.js", () => {
     await handlers.get("!promo")({ message: msg });
 
     expect(getUserTextRow).toHaveBeenCalledTimes(1);
-    expect(getUserTextRow).toHaveBeenCalledWith({ guildId: "g1", userId: "__guild__", kind: "promo" });
+    expect(getUserTextRow).toHaveBeenCalledWith({
+      guildId: "__global__",
+      userId: "__guild__",
+      kind: "promo",
+    });
     expect(msg.reply).toHaveBeenCalledTimes(1);
   });
 
@@ -109,7 +113,7 @@ describe("tools/promo.js", () => {
 
     expect(setUserText).toHaveBeenCalledTimes(1);
     expect(setUserText).toHaveBeenCalledWith({
-      guildId: "g1",
+      guildId: "__global__",
       userId: "__guild__",
       kind: "promo",
       text: "NEW PROMO",
@@ -133,7 +137,7 @@ describe("tools/promo.js", () => {
     await handlers.get("!promo")({ message: msg });
     expect(setUserText).toHaveBeenCalledTimes(1);
     expect(setUserText).toHaveBeenCalledWith({
-      guildId: "g1",
+      guildId: "__global__",
       userId: "__guild__",
       kind: "promo",
       text: "ShinyCarnivine",
