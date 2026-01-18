@@ -4,6 +4,7 @@
 
 import { MessageFlags } from "discord.js";
 import { getSavedId, setSavedId, deleteSavedId, getUserText, setUserText, deleteUserText } from "../db.js";
+import { getMentionedUsers, parseMentionIdsInOrder } from "../shared/mentions.js";
 
 const IDS_KIND = "ids";
 const MAX_IDS = 5;
@@ -39,20 +40,6 @@ function formatAddUsage(prefix) {
 
 function mention(id) {
   return `<@${id}>`;
-}
-
-function parseMentions(message) {
-  return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
-}
-
-function parseMentionIds(text) {
-  const ids = [];
-  const re = /<@!?(\d+)>/g;
-  let m;
-  while ((m = re.exec(String(text ?? ""))) !== null) {
-    ids.push(m[1]);
-  }
-  return ids;
 }
 
 function normalizeCommandArg(rest) {
@@ -232,7 +219,7 @@ async function handleIdMessage({ message, rest, cmd }) {
   const raw = normalizeCommandArg(rest);
   const lower = raw.toLowerCase();
   const tokens = raw.split(/\s+/).filter(Boolean);
-  const mentionUsers = parseMentions(message);
+  const mentionUsers = getMentionedUsers(message);
   const mentionTokens = new Set(
     mentionUsers.flatMap((u) => [`<@${u.id}>`, `<@!${u.id}>`])
   );
@@ -399,7 +386,7 @@ async function handleIdSlash({ interaction }) {
 
   const ids = new Set();
   if (userOpt?.id) ids.add(userOpt.id);
-  for (const id of parseMentionIds(usersText)) ids.add(id);
+  for (const id of parseMentionIdsInOrder(usersText)) ids.add(id);
   if (ids.size === 0) ids.add(interaction.user.id);
 
   const lines = [];

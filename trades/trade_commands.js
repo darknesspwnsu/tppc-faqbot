@@ -9,15 +9,12 @@ import {
   setUserText,
   deleteUserText
 } from "../db.js";
+import { getMentionedUsers } from "../shared/mentions.js";
 
 /* --------------------------------- helpers -------------------------------- */
 
 function mention(id) {
   return `<@${id}>`;
-}
-
-function parseMentions(message) {
-  return message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
 }
 
 function stripLeadingMentions(text) {
@@ -119,7 +116,7 @@ function makeTextListHandler(kind, label, opts = {}) {
     }
 
     // Mentions → read
-    const mentionedUsers = parseMentions(message);
+    const mentionedUsers = getMentionedUsers(message);
     if (mentionedUsers.length >= 1) {
       const lines = [];
 

@@ -6,6 +6,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "disc
 import { getDb } from "../db.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { logger } from "../shared/logger.js";
+import { parseMentionIdFromText } from "../shared/mentions.js";
 
 const MAX_LEADERBOARDS_PER_GUILD = 5;
 const MAX_CONFIRM_AGE_MS = 5 * 60_000;
@@ -74,11 +75,6 @@ function consumeToken(raw) {
   const match = text.match(/^(\S+)([\s\S]*)$/);
   if (!match) return { token: "", rest: "", quoted: false };
   return { token: match[1], rest: (match[2] || "").trim(), quoted: false };
-}
-
-function parseMentionId(value) {
-  const match = /<@!?(\d+)>/.exec(String(value || "").trim());
-  return match ? match[1] : null;
 }
 
 function extractTokens(raw) {
@@ -417,7 +413,7 @@ async function parseParticipantList(raw, { client }) {
   const mentions = [];
   const outputs = [];
   for (const token of tokens) {
-    const mentionId = parseMentionId(token);
+    const mentionId = parseMentionIdFromText(token);
     if (mentionId) {
       mentions.push(mentionId);
       outputs.push({
@@ -458,7 +454,7 @@ async function parseParticipantList(raw, { client }) {
 }
 
 async function resolveEntryByInput({ leaderboardId, input }) {
-  const mentionId = parseMentionId(input);
+  const mentionId = parseMentionIdFromText(input);
   if (mentionId) {
     const entry = await fetchEntryByDiscordId({ leaderboardId, userId: mentionId });
     if (entry) return entry;

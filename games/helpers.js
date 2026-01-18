@@ -3,6 +3,10 @@
 // Shared helpers for game modules (parsers/formatters).
 
 import { clampInt, reply } from "./framework.js";
+import {
+  parseMentionToken as parseMentionTokenShared,
+  getMentionedUsers as getMentionedUsersShared,
+} from "../shared/mentions.js";
 
 /**
  * Parses "min-max" numeric ranges (accepts hyphen/en-dash/em-dash).
@@ -25,15 +29,14 @@ export function parseMinMaxRangeToken(token) {
  * Returns the user id string or null.
  */
 export function parseMentionToken(token) {
-  const m = /^<@!?(\d+)>$/.exec(String(token ?? "").trim());
-  return m ? m[1] : null;
+  return parseMentionTokenShared(token);
 }
 
 /**
  * Returns an array of mentioned users from a message object.
  */
 export function getMentionedUsers(message) {
-  return message?.mentions?.users ? Array.from(message.mentions.users.values()) : [];
+  return getMentionedUsersShared(message);
 }
 
 /**

@@ -11,6 +11,7 @@
 import { MessageFlags, PermissionsBitField } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { CONTEST_ROLES_BY_GUILD } from "../configs/contest_roles.js";
+import { parseMentionIdsInOrder as parseMentionIdsInOrderShared } from "../shared/mentions.js";
 import { parseDurationSeconds, formatDurationSeconds } from "../shared/time_utils.js";
 import { startTimeout, startInterval, clearTimer } from "../shared/timer_utils.js";
 
@@ -133,12 +134,7 @@ export function nowMs() {
  * Supports: <@123> or <@!123>
  */
 export function parseMentionIdsInOrder(text) {
-  const s = String(text ?? "");
-  const ids = [];
-  const re = /<@!?(\d+)>/g;
-  let m;
-  while ((m = re.exec(s)) !== null) ids.push(m[1]);
-  return ids;
+  return parseMentionIdsInOrderShared(text);
 }
 
 /** Safer string trim for command rest args */
