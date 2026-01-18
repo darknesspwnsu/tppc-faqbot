@@ -15,11 +15,16 @@ const PROMO_KIND = "promo";
 const PROMO_USER_ID = "__guild__";
 const PROMO_URL = "https://www.tppcrpg.net/team.php";
 const PROMO_TIMEZONE = "America/New_York";
+const PROMO_REFRESH_RETRY_DELAY_MS = 30 * 60_000;
 
 // Cache promos per guild to avoid DB hits on every call.
 const promoCache = new Map(); // guildId -> { value, updatedAtMs }
 const forceRefresh = new Set(); // guildId -> force live fetch on next read
 let schedulerBooted = false;
+
+function normalizePromoValue(value) {
+  return String(value || "").trim();
+}
 
 function getZonedDateParts(date, timeZone) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -108,6 +113,25 @@ async function fetchCurrentPromo(client) {
   return parsePromoPrize(html);
 }
 
+async function getPromoSnapshot(guildId) {
+  if (promoCache.has(guildId)) {
+    const cached = promoCache.get(guildId);
+    return { value: cached?.value || "Not set", updatedAtMs: cached?.updatedAtMs ?? null };
+  }
+
+  try {
+    const row = await getUserTextRow({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND });
+    const promo = row?.text && String(row.text).trim() ? String(row.text).trim() : "Not set";
+    const updatedAtMs = row?.updatedAt ?? null;
+    promoCache.set(guildId, { value: promo, updatedAtMs });
+    return { value: promo, updatedAtMs };
+  } catch {
+    const promo = "Not set";
+    promoCache.set(guildId, { value: promo, updatedAtMs: null });
+    return { value: promo, updatedAtMs: null };
+  }
+}
+
 async function listPromoGuilds() {
   try {
     const db = getDb();
@@ -127,9 +151,9 @@ async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
     logger.warn("promo.refresh.skipped", { reason: "missing-credentials" });
     console.warn("[promo] RPG credentials not configured; skipping promo refresh.");
     void metrics.increment("promo.refresh", { reason, status: "skipped" });
-    return;
+    return { ok: false, reason: "missing-credentials" };
   }
-  if (!guildIds.length) return;
+  if (!guildIds.length) return { ok: false, reason: "no-guilds" };
   let promo = "";
   try {
     const client = new RpgClient();
@@ -138,13 +162,39 @@ async function refreshPromoForGuilds(guildIds, reason = "scheduled") {
     logger.warn("promo.fetch.error", { reason, error: logger.serializeError(err) });
     console.warn(`[promo] failed to fetch current promo (${reason}):`, err);
     void metrics.increment("promo.refresh", { reason, status: "error" });
-    return;
+    return { ok: false, reason: "fetch-error" };
   }
-  if (!promo) return;
+  if (!promo) return { ok: false, reason: "empty" };
+
+  const unchangedStaleGuilds = [];
+  const updatedGuilds = [];
+  const now = Date.now();
+  const normalizedPromo = normalizePromoValue(promo);
+
   for (const guildId of guildIds) {
+    const snapshot = await getPromoSnapshot(guildId);
+    const same = normalizePromoValue(snapshot.value) === normalizedPromo;
+    const stale = isPromoStale(snapshot.updatedAtMs, now);
+    if (same && stale) {
+      unchangedStaleGuilds.push(String(guildId));
+      continue;
+    }
     await setPromoForGuild(guildId, promo);
+    updatedGuilds.push(String(guildId));
   }
-  void metrics.increment("promo.refresh", { reason, status: "ok" });
+
+  if (updatedGuilds.length) {
+    void metrics.increment("promo.refresh", { reason, status: "ok" });
+  } else if (unchangedStaleGuilds.length) {
+    void metrics.increment("promo.refresh", { reason, status: "stale" });
+  }
+
+  return {
+    ok: true,
+    promo,
+    updatedGuilds,
+    unchangedStaleGuilds,
+  };
 }
 
 async function ensurePromoScheduler() {
@@ -170,7 +220,11 @@ async function ensurePromoScheduler() {
   setTimeout(async function tick() {
     try {
       const ids = await listPromoGuilds();
-      await refreshPromoForGuilds(ids, "scheduled");
+      const res = await refreshPromoForGuilds(ids, "scheduled");
+      if (res?.unchangedStaleGuilds?.length) {
+        setTimeout(tick, PROMO_REFRESH_RETRY_DELAY_MS);
+        return;
+      }
     } catch (err) {
       logger.warn("promo.refresh.error", { reason: "scheduled", error: logger.serializeError(err) });
       console.warn("[promo] scheduled promo refresh failed:", err);
@@ -199,16 +253,13 @@ async function getPromoForGuild(guildId) {
   }
 
   try {
-    const row = await getUserTextRow({ guildId, userId: PROMO_USER_ID, kind: PROMO_KIND });
-    const promo = row?.text && String(row.text).trim() ? String(row.text).trim() : "Not set";
-    const updatedAtMs = row?.updatedAt ?? null;
-    promoCache.set(guildId, { value: promo, updatedAtMs });
-      if (isPromoStale(updatedAtMs)) {
-        await refreshPromoForGuilds([String(guildId)], "stale-read");
-        const refreshed = promoCache.get(guildId);
-        if (refreshed?.value) return refreshed.value;
-      }
-    return promo;
+    const snapshot = await getPromoSnapshot(guildId);
+    if (isPromoStale(snapshot.updatedAtMs)) {
+      await refreshPromoForGuilds([String(guildId)], "stale-read");
+      const refreshed = promoCache.get(guildId);
+      if (refreshed?.value) return refreshed.value;
+    }
+    return snapshot.value;
   } catch {
     const promo = "Not set";
     promoCache.set(guildId, { value: promo, updatedAtMs: null });
@@ -281,4 +332,4 @@ export const __testables = {
   zonedTimeToUtc,
 };
 
-export { getPromoForGuild };
+export { getPromoForGuild, refreshPromoForGuilds };

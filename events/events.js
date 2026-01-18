@@ -13,13 +13,16 @@ import { ADMIN_ANNOUNCEMENT_CHANNELS_BY_GUILD } from "../configs/admin_announcem
 import { RPG_EVENTS, RPG_EVENT_TIMEZONE, computeEventWindow, computeNextStart, startOfDayInZone } from "./rpg_events.js";
 import { loadSpecialDays, computeSpecialDayWindow } from "./special_days.js";
 import { detectRadioTower, buildRadioTowerMessage } from "../rpg/radio_tower.js";
-import { getPromoForGuild } from "../tools/promo.js";
+import { getPromoForGuild, refreshPromoForGuilds } from "../tools/promo.js";
 
 const EVENT_SUB_LIMIT = 1000;
 const EVENT_NOTIFY_DELAY_MS = 1000;
 const MAX_TIMEOUT_MS = 2_000_000_000; // setTimeout limit safety
 const ADMIN_ANNOUNCEMENT_EVENT_ID = "discord_announcements";
 const SUBSCRIPTION_SNAPSHOT_INTERVAL_MS = 60 * 60_000;
+const PROMO_ANNOUNCE_RETRY_MS = 15 * 60_000;
+
+const pendingWeeklyPromoAnnouncements = new Set(); // startMs
 
 function mention(id) {
   return `<@${id}>`;
@@ -264,6 +267,44 @@ function getAnnouncementChannels(client) {
   return output;
 }
 
+function getPromoAnnouncementGuildIds(client) {
+  const ids = new Set();
+  for (const entry of getAnnouncementChannels(client)) {
+    if (entry.guildId) ids.add(String(entry.guildId));
+  }
+  const defaultGuildId = getDefaultPromoGuildId(client);
+  if (defaultGuildId) ids.add(String(defaultGuildId));
+  return [...ids];
+}
+
+function scheduleWeeklyPromoRetry({ client, event, start, end, source }) {
+  const key = start.getTime();
+  if (pendingWeeklyPromoAnnouncements.has(key)) return;
+  if (Date.now() >= end.getTime()) return;
+  pendingWeeklyPromoAnnouncements.add(key);
+  scheduleTimeout(async () => {
+    pendingWeeklyPromoAnnouncements.delete(key);
+    await attemptWeeklyPromoAnnouncement({ client, event, start, end, source: source || "retry" });
+  }, PROMO_ANNOUNCE_RETRY_MS);
+}
+
+async function attemptWeeklyPromoAnnouncement({ client, event, start, end, source }) {
+  if (Date.now() >= end.getTime()) return false;
+  const exists = await hasOccurrence(event.id, start.getTime());
+  if (exists) return true;
+
+  const guildIds = getPromoAnnouncementGuildIds(client);
+  const res = await refreshPromoForGuilds(guildIds, "event");
+  if (!res?.ok) return false;
+  if (res?.unchangedStaleGuilds?.length) {
+    scheduleWeeklyPromoRetry({ client, event, start, end, source });
+    return false;
+  }
+
+  await announceEvent({ client, event, start, end, source });
+  return true;
+}
+
 function isAdminAnnouncementChannel(message) {
   if (!message?.guildId || !message?.channelId) return false;
   const channels = ADMIN_ANNOUNCEMENT_CHANNELS_BY_GUILD?.[String(message.guildId)];
@@ -422,6 +463,10 @@ async function checkScheduledEvents(client, reason = "scheduled") {
     if (!window) continue;
     const { start, end } = window;
     if (now.getTime() < start.getTime() || now.getTime() >= end.getTime()) continue;
+    if (event.id === "weekly_promo") {
+      await attemptWeeklyPromoAnnouncement({ client, event, start, end, source: reason });
+      continue;
+    }
     const exists = await hasOccurrence(event.id, start.getTime());
     if (exists) continue;
     await announceEvent({ client, event, start, end, source: reason });
