@@ -164,11 +164,13 @@ export function buildCommandRegistry({ client } = {}) {
     const allow = Array.isArray(p.allow) ? p.allow.map(String) : null;
     const deny = Array.isArray(p.deny) ? p.deny.map(String) : null;
     const silent = p.silent === undefined ? true : Boolean(p.silent);
+    const allowAdminBypass = Boolean(p.allowAdminBypass);
 
     return {
       allow: allow && allow.length ? allow : null,
       deny: deny && deny.length ? deny : null,
       silent,
+      allowAdminBypass,
     };
   }
 
@@ -179,6 +181,9 @@ export function buildCommandRegistry({ client } = {}) {
 
     const p = channelPolicyFor(gid, logicalId);
     if (!p) return { ok: true, silent: false };
+    if (p.allowAdminBypass && isAdminOrPrivileged(message)) {
+      return { ok: true, silent: p.silent };
+    }
 
     if (p.deny && p.deny.includes(String(cid))) return { ok: false, silent: p.silent };
     if (p.allow && !p.allow.includes(String(cid))) return { ok: false, silent: p.silent };

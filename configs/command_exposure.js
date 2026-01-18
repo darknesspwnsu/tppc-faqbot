@@ -57,6 +57,7 @@ export const SLASH_EXPOSURE_BY_GUILD = {
 //    allow?: string[];     // allowlist (if present, ONLY these channels)
 //    deny?: string[];      // denylist
 //    silent?: boolean;     // if blocked, silently ignore (default false)
+//    allowAdminBypass?: boolean; // allow admin/privileged bypass (default false)
 //  }
 export const COMMAND_CHANNEL_POLICY_BY_GUILD = {
   // Official server: restrict rng.awesome to specific channels
@@ -64,10 +65,12 @@ export const COMMAND_CHANNEL_POLICY_BY_GUILD = {
     "rng.awesome": {
       allow: ["331114564966154240", "551243336187510784"],
       silent: true, // awesome should just do nothing if used elsewhere
+      allowAdminBypass: true,
     },
     "toybox.m8ball": {
       allow: ["331114564966154240"],
       silent: true,
+      allowAdminBypass: true,
     },
   },
 };

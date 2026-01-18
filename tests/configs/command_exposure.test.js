@@ -43,12 +43,15 @@ describe("command_exposure config", () => {
 
         const keys = Object.keys(policy);
         for (const key of keys) {
-          expect(["allow", "deny", "silent"].includes(key)).toBe(true);
+          expect(["allow", "deny", "silent", "allowAdminBypass"].includes(key)).toBe(true);
         }
 
         if ("allow" in policy) expect(isStringArray(policy.allow)).toBe(true);
         if ("deny" in policy) expect(isStringArray(policy.deny)).toBe(true);
         if ("silent" in policy) expect(typeof policy.silent === "boolean").toBe(true);
+        if ("allowAdminBypass" in policy) {
+          expect(typeof policy.allowAdminBypass === "boolean").toBe(true);
+        }
       }
     }
   });
