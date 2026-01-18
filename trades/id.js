@@ -3,8 +3,9 @@
 // Registers ID profile commands.
 
 import { MessageFlags } from "discord.js";
-import { getSavedId, setSavedId, deleteSavedId, getUserText, setUserText, deleteUserText } from "../db.js";
+import { setSavedId, deleteSavedId, setUserText, deleteUserText } from "../db.js";
 import { getMentionedUsers, parseMentionIdsInOrder } from "../shared/mentions.js";
+import { loadUserIds as loadStoredUserIds } from "../shared/user_ids.js";
 
 const IDS_KIND = "ids";
 const MAX_IDS = 5;
@@ -54,39 +55,20 @@ function labelKey(label) {
   return normalizeLabel(label).toLowerCase();
 }
 
-function parseEntries(text) {
-  if (!text) return [];
-  try {
-    const parsed = JSON.parse(text);
-    const entries = Array.isArray(parsed) ? parsed : parsed?.ids;
-    if (!Array.isArray(entries)) return [];
-    return entries
-      .map((entry) => ({
-        id: Number(entry?.id),
-        label: entry?.label ? String(entry.label) : null,
-        addedAt: Number(entry?.addedAt) || Date.now(),
-      }))
-      .filter((entry) => Number.isSafeInteger(entry.id));
-  } catch {
-    return [];
-  }
-}
-
 function formatEntry(entry) {
   return entry.label ? `${entry.id} (${entry.label})` : String(entry.id);
 }
 
 async function loadEntries({ guildId, userId }) {
-  const text = await getUserText({ guildId, userId, kind: IDS_KIND });
-  let entries = parseEntries(text);
-  if (entries.length) return entries;
-
-  const legacy = await getSavedId({ guildId, userId });
-  if (legacy == null) return [];
-
-  entries = [{ id: legacy, label: null, addedAt: Date.now() }];
-  await setUserText({ guildId, userId, kind: IDS_KIND, text: JSON.stringify({ ids: entries }) });
-  return entries;
+  return loadStoredUserIds({
+    guildId,
+    userId,
+    kind: IDS_KIND,
+    defaultAddedAt: () => Date.now(),
+    onLegacy: async (entries) => {
+      await setUserText({ guildId, userId, kind: IDS_KIND, text: JSON.stringify({ ids: entries }) });
+    },
+  });
 }
 
 async function persistEntries({ guildId, userId, entries }) {

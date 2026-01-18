@@ -10,7 +10,7 @@ import { sendDmBatch } from "../shared/dm.js";
 import { fetchFindMyIdMatches } from "../rpg/findmyid.js";
 import { createRpgClientFactory } from "../rpg/client_factory.js";
 import { requireRpgCredentials } from "../rpg/credentials.js";
-import { getSavedId, getUserText } from "../db.js";
+import { loadUserIds as loadStoredUserIds } from "../shared/user_ids.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { __testables as viewboxTestables } from "../rpg/viewbox.js";
 
@@ -172,35 +172,6 @@ function compareEntries(a, b, dupeDesc, useCombinedSD = false) {
   if (an < bn) return -1;
   if (an > bn) return 1;
   return 0;
-}
-
-function parseSavedIds(text) {
-  if (!text) return [];
-  try {
-    const parsed = JSON.parse(text);
-    const entries = Array.isArray(parsed) ? parsed : parsed?.ids;
-    if (!Array.isArray(entries)) return [];
-    return entries
-      .map((entry) => ({
-        id: Number(entry?.id),
-        label: entry?.label ? String(entry.label) : null,
-        addedAt: Number(entry?.addedAt) || 0,
-      }))
-      .filter((entry) => Number.isSafeInteger(entry.id));
-  } catch {
-    return [];
-  }
-}
-
-async function loadUserIds({ guildId, userId }) {
-  const text = await getUserText({ guildId, userId, kind: IDS_KIND });
-  const entries = parseSavedIds(text);
-  if (entries.length) return entries;
-
-  const legacy = await getSavedId({ guildId, userId });
-  if (legacy == null) return [];
-
-  return [{ id: Number(legacy), label: null, addedAt: 0 }];
 }
 
 function parseIdList(raw) {
@@ -734,9 +705,11 @@ export function registerSortbox(register) {
         resolvedIds = [matches[0].id];
       } else {
         const resolvedUser = targetUser || interaction.user;
-        const savedIds = await loadUserIds({
+        const savedIds = await loadStoredUserIds({
           guildId: interaction.guildId,
           userId: resolvedUser.id,
+          kind: IDS_KIND,
+          defaultAddedAt: 0,
         });
 
         if (!savedIds.length) {
