@@ -47,6 +47,10 @@ function scrubRepoUrl(repo) {
   return repo.replace(/x-access-token:[^@]+@/i, "x-access-token:***@");
 }
 
+function scrubGitArgs(args) {
+  return (args || []).map((arg) => scrubRepoUrl(String(arg)));
+}
+
 function isMissingRemoteRef(err) {
   const msg = String(err?.message || "").toLowerCase();
   return msg.includes("couldn't find remote ref");
@@ -59,7 +63,7 @@ async function runGit(args, { cwd, repoLabel } = {}) {
   } catch (err) {
     logger.warn("metrics.export.git.failed", {
       repo: repoLabel,
-      args: args.join(" "),
+      args: scrubGitArgs(args).join(" "),
       error: logger.serializeError(err),
     });
     return { ok: false, error: err };
