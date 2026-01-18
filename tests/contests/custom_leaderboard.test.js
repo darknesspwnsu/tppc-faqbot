@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { __testables } from "../../contests/custom_leaderboard.js";
 
-const { parseScoreUpdates, aggregateScoreUpdates, extractTokens, buildHelpText } = __testables;
+const { parseScoreUpdates, aggregateScoreUpdates, extractTokens, buildHelpText, parseParticipantList } =
+  __testables;
 
 describe("custom leaderboard parsing", () => {
   it("builds help text for customlb help", () => {
@@ -19,6 +20,13 @@ describe("custom leaderboard parsing", () => {
   it("extracts tokens with commas", () => {
     const tokens = extractTokens('Haunter, "The Triassic", trainer2');
     expect(tokens).toEqual(["Haunter", "The Triassic", "trainer2"]);
+  });
+
+  it("rejects participant names that exceed the limit", async () => {
+    const longName = "a".repeat(129);
+    const parsed = await parseParticipantList(longName, { client: {} });
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error).toContain("Participant name");
   });
 
   it("accepts update entries without explicit sign", () => {

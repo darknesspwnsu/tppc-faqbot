@@ -9,6 +9,9 @@ import { logger } from "../shared/logger.js";
 
 const MAX_LEADERBOARDS_PER_GUILD = 5;
 const MAX_CONFIRM_AGE_MS = 5 * 60_000;
+const MAX_LEADERBOARD_NAME_LEN = 64;
+const MAX_METRIC_NAME_LEN = 64;
+const MAX_PARTICIPANT_NAME_LEN = 128;
 
 const RESERVED_LEADERBOARD_NAMES = new Set([
   "ssanne",
@@ -418,6 +421,12 @@ async function parseParticipantList(raw, { client }) {
     }
     const name = trimOuterQuotes(token);
     if (!name) continue;
+    if (name.length > MAX_PARTICIPANT_NAME_LEN) {
+      return {
+        ok: false,
+        error: `Participant name must be ${MAX_PARTICIPANT_NAME_LEN} characters or fewer.`,
+      };
+    }
     outputs.push({
       participantType: "text",
       participantKey: normalizeName(name),
@@ -483,7 +492,6 @@ export function registerCustomLeaderboards(register) {
       const isAdmin = isAdminOrPrivileged(message);
       const userId = message.author?.id || null;
       if (!userId) return;
-
       if (!raw || raw.toLowerCase() === "help") {
         if (!isAdmin) return;
         await message.reply(buildHelpText());
@@ -544,6 +552,14 @@ export function registerCustomLeaderboards(register) {
 
         const name = nameToken.token;
         const metric = trimOuterQuotes(nameToken.rest) || "Points";
+        if (name.length > MAX_LEADERBOARD_NAME_LEN) {
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          return;
+        }
+        if (metric.length > MAX_METRIC_NAME_LEN) {
+          await message.reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
+          return;
+        }
 
         if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(name))) {
           await message.reply("❌ That leaderboard name conflicts with an existing command.");
@@ -591,6 +607,11 @@ export function registerCustomLeaderboards(register) {
         if (!nameToken.token) {
           if (!isAdmin) return;
           await message.reply("❌ Provide a leaderboard name.");
+          return;
+        }
+        if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
+          if (!isAdmin) return;
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
         if (nameToken.rest) {
@@ -643,6 +664,11 @@ export function registerCustomLeaderboards(register) {
           await message.reply("❌ Provide the old leaderboard name.");
           return;
         }
+        if (oldToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
+          if (!isAdmin) return;
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          return;
+        }
 
         const newToken = consumeToken(oldToken.rest);
         if (newToken.error) {
@@ -655,6 +681,11 @@ export function registerCustomLeaderboards(register) {
         if (!newToken.token) {
           if (!isAdmin) return;
           await message.reply("❌ Provide the new leaderboard name.");
+          return;
+        }
+        if (newToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
+          if (!isAdmin) return;
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
@@ -688,6 +719,10 @@ export function registerCustomLeaderboards(register) {
         }
 
         const metric = trimOuterQuotes(newToken.rest) || existing.metric;
+        if (metric.length > MAX_METRIC_NAME_LEN) {
+          await message.reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
+          return;
+        }
         try {
           const db = getDb();
           await db.execute(
@@ -736,6 +771,11 @@ export function registerCustomLeaderboards(register) {
         if (!nameToken.token) {
           if (!isAdmin) return;
           await message.reply("❌ Provide a leaderboard name and a participant list.");
+          return;
+        }
+        if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
+          if (!isAdmin) return;
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
@@ -867,6 +907,11 @@ export function registerCustomLeaderboards(register) {
         if (!nameToken.token) {
           if (!isAdmin) return;
           await message.reply("❌ Provide a leaderboard name and score entries.");
+          return;
+        }
+        if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
+          if (!isAdmin) return;
+          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
