@@ -13,6 +13,8 @@ const MAX_LEADERBOARD_NAME_LEN = 64;
 const MAX_METRIC_NAME_LEN = 64;
 const MAX_PARTICIPANT_NAME_LEN = 128;
 
+const USER_MENTION_ONLY = { allowedMentions: { parse: ["users"] } };
+
 const RESERVED_LEADERBOARD_NAMES = new Set([
   "ssanne",
   "ss",
@@ -42,6 +44,13 @@ const pendingConfirms = new Map(); // token -> { action, userId, guildId, leader
 
 function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function replyWithUserMentions(message, payload) {
+  if (typeof payload === "string") {
+    return message.reply({ content: payload, ...USER_MENTION_ONLY });
+  }
+  return message.reply({ ...payload, ...USER_MENTION_ONLY });
 }
 
 function trimOuterQuotes(value) {
@@ -492,16 +501,17 @@ export function registerCustomLeaderboards(register) {
       const isAdmin = isAdminOrPrivileged(message);
       const userId = message.author?.id || null;
       if (!userId) return;
+      const reply = (payload) => replyWithUserMentions(message, payload);
       if (!raw || raw.toLowerCase() === "help") {
         if (!isAdmin) return;
-        await message.reply(buildHelpText());
+        await reply(buildHelpText());
         return;
       }
 
       const parsedAction = consumeToken(raw);
       if (parsedAction.error) {
         if (!isAdmin) return;
-        await message.reply(
+        await reply(
           "❌ Missing closing quote. Wrap names with spaces in quotes or use underscores."
         );
         return;
@@ -511,25 +521,25 @@ export function registerCustomLeaderboards(register) {
       const restAfterAction = parsedAction.rest;
       if (!action) {
         if (!isAdmin) return;
-        await message.reply("❌ Provide a subcommand. Use `!customlb help`.");
+        await reply("❌ Provide a subcommand. Use `!customlb help`.");
         return;
       }
 
       if (action === "list") {
         if (!isAdmin) return;
         if (restAfterAction) {
-          await message.reply("❌ `!customlb list` does not take any arguments.");
+          await reply("❌ `!customlb list` does not take any arguments.");
           return;
         }
 
         const leaderboards = await fetchLeaderboardsForGuild({ guildId: message.guildId });
         if (!leaderboards.length) {
-          await message.reply("No custom leaderboards found.");
+          await reply("No custom leaderboards found.");
           return;
         }
 
         const lines = leaderboards.map((lb) => `• **${lb.name}** — ${lb.metric}`);
-        await message.reply(
+        await reply(
           `**Active custom leaderboards (${leaderboards.length})**\n${lines.join("\n")}`
         );
         return;
@@ -540,41 +550,41 @@ export function registerCustomLeaderboards(register) {
 
         const nameToken = consumeToken(restAfterAction);
         if (nameToken.error) {
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!nameToken.token) {
-          await message.reply("❌ Provide a leaderboard name.");
+          await reply("❌ Provide a leaderboard name.");
           return;
         }
 
         const name = nameToken.token;
         const metric = trimOuterQuotes(nameToken.rest) || "Points";
         if (name.length > MAX_LEADERBOARD_NAME_LEN) {
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
         if (metric.length > MAX_METRIC_NAME_LEN) {
-          await message.reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
+          await reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
           return;
         }
 
         if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(name))) {
-          await message.reply("❌ That leaderboard name conflicts with an existing command.");
+          await reply("❌ That leaderboard name conflicts with an existing command.");
           return;
         }
 
         const existing = await fetchLeaderboardByName({ guildId: message.guildId, name });
         if (existing) {
-          await message.reply("❌ A leaderboard with that name already exists.");
+          await reply("❌ A leaderboard with that name already exists.");
           return;
         }
 
         const count = await countLeaderboardsForGuild({ guildId: message.guildId });
         if (count >= MAX_LEADERBOARDS_PER_GUILD) {
-          await message.reply(
+          await reply(
             `❌ This server already has ${MAX_LEADERBOARDS_PER_GUILD} custom leaderboards.`
           );
           return;
@@ -587,11 +597,11 @@ export function registerCustomLeaderboards(register) {
           hostId: userId,
         });
         if (!id) {
-          await message.reply("❌ Failed to create leaderboard.");
+          await reply("❌ Failed to create leaderboard.");
           return;
         }
 
-        await message.reply(`✅ Created **${name}** (${metric}).`);
+        await reply(`✅ Created **${name}** (${metric}).`);
         return;
       }
 
@@ -599,24 +609,24 @@ export function registerCustomLeaderboards(register) {
         const nameToken = consumeToken(restAfterAction);
         if (nameToken.error) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!nameToken.token) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide a leaderboard name.");
+          await reply("❌ Provide a leaderboard name.");
           return;
         }
         if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
           if (!isAdmin) return;
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
         if (nameToken.rest) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Too many arguments. If the leaderboard name contains spaces, wrap it in quotes or use underscores."
           );
           return;
@@ -628,7 +638,7 @@ export function registerCustomLeaderboards(register) {
         });
         if (!leaderboard) {
           if (!isAdmin) return;
-          await message.reply("❌ Leaderboard not found.");
+          await reply("❌ Leaderboard not found.");
           return;
         }
 
@@ -643,7 +653,7 @@ export function registerCustomLeaderboards(register) {
           createdAtMs: Date.now(),
         });
 
-        await message.reply({
+        await reply({
           content: `Delete **${leaderboard.name}**?`,
           components: [buildDeleteRow(token)],
         });
@@ -654,38 +664,38 @@ export function registerCustomLeaderboards(register) {
         const oldToken = consumeToken(restAfterAction);
         if (oldToken.error) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the old leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!oldToken.token) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide the old leaderboard name.");
+          await reply("❌ Provide the old leaderboard name.");
           return;
         }
         if (oldToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
           if (!isAdmin) return;
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
         const newToken = consumeToken(oldToken.rest);
         if (newToken.error) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the new leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!newToken.token) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide the new leaderboard name.");
+          await reply("❌ Provide the new leaderboard name.");
           return;
         }
         if (newToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
           if (!isAdmin) return;
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
@@ -695,7 +705,7 @@ export function registerCustomLeaderboards(register) {
         });
         if (!existing) {
           if (!isAdmin) return;
-          await message.reply("❌ Leaderboard not found.");
+          await reply("❌ Leaderboard not found.");
           return;
         }
 
@@ -703,7 +713,7 @@ export function registerCustomLeaderboards(register) {
 
         const newName = newToken.token;
         if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(newName))) {
-          await message.reply("❌ That leaderboard name conflicts with an existing command.");
+          await reply("❌ That leaderboard name conflicts with an existing command.");
           return;
         }
 
@@ -713,14 +723,14 @@ export function registerCustomLeaderboards(register) {
             name: newName,
           });
           if (collision) {
-            await message.reply("❌ A leaderboard with the new name already exists.");
+            await reply("❌ A leaderboard with the new name already exists.");
             return;
           }
         }
 
         const metric = trimOuterQuotes(newToken.rest) || existing.metric;
         if (metric.length > MAX_METRIC_NAME_LEN) {
-          await message.reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
+          await reply(`❌ Metric name must be 1-${MAX_METRIC_NAME_LEN} characters.`);
           return;
         }
         try {
@@ -731,11 +741,11 @@ export function registerCustomLeaderboards(register) {
           );
         } catch (err) {
           logger.warn("customlb.rename.failed", { error: logger.serializeError(err) });
-          await message.reply("❌ Failed to update leaderboard.");
+          await reply("❌ Failed to update leaderboard.");
           return;
         }
 
-        await message.reply(`✅ Updated leaderboard to **${newName}** (${metric}).`);
+        await reply(`✅ Updated leaderboard to **${newName}** (${metric}).`);
         return;
       }
 
@@ -743,7 +753,7 @@ export function registerCustomLeaderboards(register) {
         const subToken = consumeToken(restAfterAction);
         if (subToken.error) {
           if (!isAdmin) return;
-          await message.reply("❌ Missing closing quote. Use quotes for names with spaces.");
+          await reply("❌ Missing closing quote. Use quotes for names with spaces.");
           return;
         }
 
@@ -756,33 +766,33 @@ export function registerCustomLeaderboards(register) {
         }
         if (!mode) {
           if (!isAdmin) return;
-          await message.reply("❌ Use `!customlb entrant add|delete <lb_name> <list>`.");
+          await reply("❌ Use `!customlb entrant add|delete <lb_name> <list>`.");
           return;
         }
 
         const nameToken = consumeToken(subToken.rest);
         if (nameToken.error) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!nameToken.token) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide a leaderboard name and a participant list.");
+          await reply("❌ Provide a leaderboard name and a participant list.");
           return;
         }
         if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
           if (!isAdmin) return;
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
         const listRaw = String(nameToken.rest || "").trim();
         if (!listRaw) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide one or more participants.");
+          await reply("❌ Provide one or more participants.");
           return;
         }
 
@@ -792,7 +802,7 @@ export function registerCustomLeaderboards(register) {
         });
         if (!leaderboard) {
           if (!isAdmin) return;
-          await message.reply("❌ Leaderboard not found.");
+          await reply("❌ Leaderboard not found.");
           return;
         }
 
@@ -800,13 +810,13 @@ export function registerCustomLeaderboards(register) {
 
         const parsed = await parseParticipantList(listRaw, { client: message.client });
         if (!parsed.ok) {
-          await message.reply(`❌ ${parsed.error}`);
+          await reply(`❌ ${parsed.error}`);
           return;
         }
 
         const entries = parsed.entries;
         if (!entries.length) {
-          await message.reply("❌ Provide one or more participants.");
+          await reply("❌ Provide one or more participants.");
           return;
         }
 
@@ -840,14 +850,14 @@ export function registerCustomLeaderboards(register) {
           }
 
           if (!toAdd.length) {
-            await message.reply("❌ All provided participants already exist.");
+            await reply("❌ All provided participants already exist.");
             return;
           }
 
           await addParticipants({ leaderboardId: leaderboard.id, entries: toAdd });
           const addedLabel = toAdd.map(formatEntryLabel).join(", ");
           const skippedLabel = skipped.length ? `\nSkipped: ${skipped.map(formatEntryLabel).join(", ")}` : "";
-          await message.reply(`✅ Added: ${addedLabel}${skippedLabel}`);
+          await reply(`✅ Added: ${addedLabel}${skippedLabel}`);
           return;
         }
 
@@ -870,14 +880,14 @@ export function registerCustomLeaderboards(register) {
         }
 
         if (!toRemove.length) {
-          await message.reply("❌ None of those participants were found.");
+          await reply("❌ None of those participants were found.");
           return;
         }
 
         await removeParticipants({ leaderboardId: leaderboard.id, entries: toRemove });
         const removedLabel = toRemove.map(formatEntryLabel).join(", ");
         const missingLabel = missing.length ? `\nMissing: ${missing.map(formatEntryLabel).join(", ")}` : "";
-        await message.reply(`✅ Removed: ${removedLabel}${missingLabel}`);
+        await reply(`✅ Removed: ${removedLabel}${missingLabel}`);
         return;
       }
 
@@ -885,40 +895,40 @@ export function registerCustomLeaderboards(register) {
         const subToken = consumeToken(restAfterAction);
         if (subToken.error) {
           if (!isAdmin) return;
-          await message.reply("❌ Missing closing quote. Use quotes for names with spaces.");
+          await reply("❌ Missing closing quote. Use quotes for names with spaces.");
           return;
         }
 
         const sub = String(subToken.token || "").toLowerCase();
         if (sub !== "set" && sub !== "update") {
           if (!isAdmin) return;
-          await message.reply("❌ Use `!customlb score set|update <lb_name> <entries>`.");
+          await reply("❌ Use `!customlb score set|update <lb_name> <entries>`.");
           return;
         }
 
         const nameToken = consumeToken(subToken.rest);
         if (nameToken.error) {
           if (!isAdmin) return;
-          await message.reply(
+          await reply(
             "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
           );
           return;
         }
         if (!nameToken.token) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide a leaderboard name and score entries.");
+          await reply("❌ Provide a leaderboard name and score entries.");
           return;
         }
         if (nameToken.token.length > MAX_LEADERBOARD_NAME_LEN) {
           if (!isAdmin) return;
-          await message.reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
+          await reply(`❌ Leaderboard name must be 1-${MAX_LEADERBOARD_NAME_LEN} characters.`);
           return;
         }
 
         const entriesRaw = String(nameToken.rest || "").trim();
         if (!entriesRaw) {
           if (!isAdmin) return;
-          await message.reply("❌ Provide one or more score entries.");
+          await reply("❌ Provide one or more score entries.");
           return;
         }
 
@@ -928,7 +938,7 @@ export function registerCustomLeaderboards(register) {
         });
         if (!leaderboard) {
           if (!isAdmin) return;
-          await message.reply("❌ Leaderboard not found.");
+          await reply("❌ Leaderboard not found.");
           return;
         }
 
@@ -936,12 +946,12 @@ export function registerCustomLeaderboards(register) {
 
         const parsed = parseScoreUpdates(entriesRaw);
         if (!parsed.ok) {
-          await message.reply(`❌ ${parsed.error}`);
+          await reply(`❌ ${parsed.error}`);
           return;
         }
 
         if (sub === "set" && parsed.items.length !== 1) {
-          await message.reply("❌ Score set expects a single name and score.");
+          await reply("❌ Score set expects a single name and score.");
           return;
         }
 
@@ -973,12 +983,12 @@ export function registerCustomLeaderboards(register) {
         }
 
         if (missing.length) {
-          await message.reply(`❌ Missing participants: ${missing.join(", ")}`);
+          await reply(`❌ Missing participants: ${missing.join(", ")}`);
           return;
         }
 
         if (!changes.length) {
-          await message.reply("❌ No valid score updates found.");
+          await reply("❌ No valid score updates found.");
           return;
         }
 
@@ -1011,7 +1021,7 @@ export function registerCustomLeaderboards(register) {
           createdAtMs: Date.now(),
         });
 
-        await message.reply({
+        await reply({
           content: `**Confirm updates**\n${lines.join("\n")}\n\nOk?`,
           components: [buildConfirmRow(token)],
         });
@@ -1019,7 +1029,7 @@ export function registerCustomLeaderboards(register) {
       }
 
       if (!isAdmin) return;
-      await message.reply("❌ Unknown subcommand. Use `!customlb help`.");
+      await reply("❌ Unknown subcommand. Use `!customlb help`.");
     },
     "!customlb help — manage custom leaderboards",
     { admin: true, adminCategory: "Admin" }

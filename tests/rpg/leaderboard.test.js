@@ -127,8 +127,10 @@ describe("rpg leaderboard register", () => {
     const message = makeMessage();
     await handler({ message, rest: "shop" });
 
-    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("shop"));
-    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter"));
+    const replyArg = message.reply.mock.calls[0][0];
+    const content = typeof replyArg === "string" ? replyArg : replyArg.content;
+    expect(content).toContain("shop");
+    expect(content).toContain("Haunter");
   });
 
   it("renders custom leaderboards with quoted names", async () => {
@@ -156,8 +158,10 @@ describe("rpg leaderboard register", () => {
     const message = makeMessage();
     await handler({ message, rest: '"Haunter Shop"' });
 
-    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter Shop"));
-    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter"));
+    const replyArg = message.reply.mock.calls[0][0];
+    const content = typeof replyArg === "string" ? replyArg : replyArg.content;
+    expect(content).toContain("Haunter Shop");
+    expect(content).toContain("Haunter");
   });
 
   it("rejects invalid trainer counts", async () => {

@@ -21,6 +21,15 @@ import {
 } from "../contests/custom_leaderboard.js";
 import { isAdminOrPrivileged } from "../auth.js";
 
+const USER_MENTION_ONLY = { allowedMentions: { parse: ["users"] } };
+
+function replyWithUserMentions(message, payload) {
+  if (typeof payload === "string") {
+    return message.reply({ content: payload, ...USER_MENTION_ONLY });
+  }
+  return message.reply({ ...payload, ...USER_MENTION_ONLY });
+}
+
 const CHALLENGES = {
   ssanne: {
     key: "ssanne",
@@ -843,6 +852,7 @@ export function registerLeaderboard(register) {
         name: subRaw,
       });
       if (custom) {
+        const replyCustom = (payload) => replyWithUserMentions(message, payload);
         const restAfterName = firstToken.rest;
         const isAdmin = isAdminOrPrivileged(message);
         let limit = 5;
@@ -861,14 +871,14 @@ export function registerLeaderboard(register) {
             if (restAfterName.startsWith('"')) {
               const endIdx = restAfterName.indexOf('"', 1);
               if (endIdx === -1) {
-                await message.reply(
+                await replyCustom(
                   "❌ Missing closing quote. If the participant name has spaces, wrap it in quotes."
                 );
                 return;
               }
               const remainder = restAfterName.slice(endIdx + 1).trim();
               if (remainder) {
-                await message.reply(
+                await replyCustom(
                   "❌ Too many arguments. If the participant name has spaces, wrap it in quotes."
                 );
                 return;
@@ -886,12 +896,12 @@ export function registerLeaderboard(register) {
             participantInput: participantLookup,
           });
           if (!entry) {
-            await message.reply(`❌ No entry found for "${participantLookup}".`);
+            await replyCustom(`❌ No entry found for "${participantLookup}".`);
             return;
           }
           const label =
             entry.participantType === "discord" ? `<@${entry.participantKey}>` : entry.name;
-          await message.reply(
+          await replyCustom(
             `**${custom.name}** (${custom.metric})\n${label}: ${entry.score}`
           );
           return;
@@ -899,7 +909,7 @@ export function registerLeaderboard(register) {
 
         const entries = await fetchCustomLeaderboardEntries({ leaderboardId: custom.id });
         if (!entries.length) {
-          await message.reply(`No leaderboard entries found for ${custom.name}.`);
+          await replyCustom(`No leaderboard entries found for ${custom.name}.`);
           return;
         }
 
@@ -912,12 +922,12 @@ export function registerLeaderboard(register) {
           `🏆 **${custom.name}** (${custom.metric}) ` +
           `(top ${Math.min(shown.length, limit || shown.length)})\n` +
           lines.join("\n");
-        await message.reply(body);
+        await replyCustom(body);
         return;
       }
 
       if (firstToken.quoted) {
-        await message.reply(`❌ No custom leaderboard found for "${subRaw}".`);
+        await replyWithUserMentions(message, `❌ No custom leaderboard found for "${subRaw}".`);
         return;
       }
 
