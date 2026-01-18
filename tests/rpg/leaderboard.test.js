@@ -131,6 +131,35 @@ describe("rpg leaderboard register", () => {
     expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter"));
   });
 
+  it("renders custom leaderboards with quoted names", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    customLbMocks.fetchCustomLeaderboardForGuild.mockResolvedValue({
+      id: 2,
+      name: "Haunter Shop",
+      metric: "Coins",
+    });
+    customLbMocks.fetchCustomLeaderboardEntries.mockResolvedValue([
+      {
+        participantType: "text",
+        participantKey: "haunter",
+        name: "Haunter",
+        score: 7,
+      },
+    ]);
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    const message = makeMessage();
+    await handler({ message, rest: '"Haunter Shop"' });
+
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter Shop"));
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Haunter"));
+  });
+
   it("rejects invalid trainer counts", async () => {
     delete process.env.RPG_USERNAME;
     delete process.env.RPG_PASSWORD;

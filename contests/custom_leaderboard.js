@@ -1,6 +1,6 @@
 // contests/custom_leaderboard.js
 //
-// Custom leaderboard helper (slash only).
+// Custom leaderboard helper (bang + button confirmations).
 
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import { getDb } from "../db.js";
@@ -41,16 +41,27 @@ function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function isValidKey(value) {
-  return Boolean(value) && !/\s/.test(value);
-}
-
 function trimOuterQuotes(value) {
   const v = String(value || "").trim();
   if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
     return v.slice(1, -1);
   }
   return v;
+}
+
+function consumeToken(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return { token: "", rest: "", quoted: false };
+  if (text.startsWith('"')) {
+    const end = text.indexOf('"', 1);
+    if (end === -1) return { error: "missing_quote" };
+    const token = text.slice(1, end);
+    const rest = text.slice(end + 1).trim();
+    return { token, rest, quoted: true };
+  }
+  const match = text.match(/^(\S+)([\s\S]*)$/);
+  if (!match) return { token: "", rest: "", quoted: false };
+  return { token: match[1], rest: (match[2] || "").trim(), quoted: false };
 }
 
 function parseMentionId(value) {
@@ -78,61 +89,50 @@ function extractTokens(raw) {
   return tokens;
 }
 
-function parseScorePairs(raw, { allowDelta }) {
-  const text = String(raw || "").trim();
-  if (!text) return { ok: false, error: "Provide one or more name:score entries." };
+function tokenizeScoreList(raw) {
+  const cleaned = String(raw || "").replace(/,/g, " ");
+  const tokens = [];
+  const re = /"([^"]+)"|<@!?\d+>|\S+/g;
+  let match;
+  while ((match = re.exec(cleaned))) {
+    tokens.push(trimOuterQuotes(match[0]));
+  }
+  return tokens.filter(Boolean);
+}
 
-  const pairs = [];
+function parseScoreValue(raw, { allowImplicitPlus }) {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  const normalized = !/^[+-]/.test(value) && allowImplicitPlus ? `+${value}` : value;
+  if (!/^[+-]?\d+$/.test(normalized)) return null;
+  return Number(normalized);
+}
 
-  if (text.includes(",")) {
-    const chunks = text.split(",").map((c) => c.trim()).filter(Boolean);
-    for (const chunk of chunks) {
-      const trimmed = trimOuterQuotes(chunk);
-      const match = /^(.+?)\s*:\s*([+-]?\d+)$/.exec(trimmed);
-      if (!match) {
-        return { ok: false, error: `Invalid entry: "${chunk}"` };
-      }
-      const name = trimOuterQuotes(match[1]);
-      const rawValue = match[2];
-      pairs.push({ name, rawValue });
-    }
-  } else {
-    const re = /(?:"([^"]+)"|<@!?\d+>|\S+)\s*:\s*[+-]?\d+/g;
-    let match;
-    let lastEnd = 0;
-    while ((match = re.exec(text))) {
-      const gap = text.slice(lastEnd, match.index);
-      if (gap.trim()) {
-        return { ok: false, error: "Invalid formatting between entries." };
-      }
-      const chunk = match[0];
-      const parsed = /^(.+?)\s*:\s*([+-]?\d+)$/.exec(chunk);
-      if (!parsed) {
-        return { ok: false, error: `Invalid entry: "${chunk}"` };
-      }
-      const name = trimOuterQuotes(parsed[1]);
-      const rawValue = parsed[2];
-      pairs.push({ name, rawValue });
-      lastEnd = re.lastIndex;
-    }
-    if (!pairs.length) {
-      return { ok: false, error: "Provide one or more name:score entries." };
-    }
-    if (text.slice(lastEnd).trim()) {
-      return { ok: false, error: "Invalid formatting after entries." };
-    }
+function parseScoreUpdates(raw) {
+  const tokens = tokenizeScoreList(raw);
+  if (!tokens.length) {
+    return {
+      ok: false,
+      error: "Provide one or more name/score pairs.",
+    };
+  }
+  if (tokens.length % 2 !== 0) {
+    return {
+      ok: false,
+      error:
+        "Each score update must include a name and a score. Use quotes for names with spaces or replace spaces with underscores.",
+    };
   }
 
   const items = [];
-  for (const pair of pairs) {
-    const value = Number(pair.rawValue);
-    if (!Number.isFinite(value) || !Number.isInteger(value)) {
-      return { ok: false, error: `Invalid score: "${pair.rawValue}"` };
+  for (let i = 0; i < tokens.length; i += 2) {
+    const name = tokens[i];
+    const scoreRaw = tokens[i + 1];
+    const value = parseScoreValue(scoreRaw, { allowImplicitPlus: true });
+    if (value === null) {
+      return { ok: false, error: `Invalid score: "${scoreRaw}"` };
     }
-    if (!allowDelta && pair.rawValue.startsWith("+")) {
-      return { ok: false, error: `Use a plain number for set: "${pair.rawValue}"` };
-    }
-    items.push({ name: pair.name, value });
+    items.push({ name, value });
   }
 
   return { ok: true, items };
@@ -173,6 +173,25 @@ async function fetchLeaderboardByName({ guildId, name }) {
     metric: String(row.metric),
     hostId: String(row.host_id),
   };
+}
+
+async function fetchLeaderboardsForGuild({ guildId }) {
+  const db = getDb();
+  const [rows] = await db.execute(
+    `SELECT id, guild_id, name, name_norm, metric, host_id
+     FROM custom_leaderboards
+     WHERE guild_id = ?
+     ORDER BY name ASC`,
+    [String(guildId)]
+  );
+  return (rows || []).map((row) => ({
+    id: Number(row.id),
+    guildId: String(row.guild_id),
+    name: String(row.name),
+    nameNorm: String(row.name_norm),
+    metric: String(row.metric),
+    hostId: String(row.host_id),
+  }));
 }
 
 async function fetchLeaderboardEntries({ leaderboardId }) {
@@ -441,15 +460,17 @@ async function resolveEntryByInput({ leaderboardId, input }) {
 function buildHelpText() {
   return (
     "**Custom Leaderboards**\n" +
-    "• `/customlb createlb <name> [metric]` — metric defaults to Points\n" +
-    "• `/customlb deletelb <name>` — delete after confirmation\n" +
-    "• `/customlb renamelb <old> <new> [metric]` — rename or update leaderboard name and/or metric name\n" +
-    "• `/customlb participant add <name> <list>` — add participants\n" +
-    "• `/customlb participant remove <name> <list>` — remove participants\n" +
-    "• `/customlb score set <name> <name:score ...>`\n" +
-    "• `/customlb score update <name> <name:+delta ...>`\n\n" +
-    "Lists support spaces or commas. Names with spaces should be quoted.\n" +
-    "Example: `\"The Triassic\":+2, Haunter:+1`"
+    "• `!customlb create <lb_name> [metric]` — metric defaults to Points\n" +
+    "• `!customlb list` — list active custom leaderboards\n" +
+    "• `!customlb delete|del <lb_name>` — delete after confirmation\n" +
+    "• `!customlb rename <old> <new> [metric]` — rename and optionally update the metric\n" +
+    "• `!customlb entrant add <lb_name> <list>` — add entrants (score starts at 0)\n" +
+    "• `!customlb entrant delete <lb_name> <list>` — remove entrants\n" +
+    "• `!customlb score set <lb_name> <name> <score>` — set a single score\n" +
+    "• `!customlb score update <lb_name> <name> <delta> [name delta ...]`\n\n" +
+    "Lists support spaces or commas. Names with spaces should be quoted or use underscores.\n" +
+    "Score updates accept +/- values; missing signs default to +.\n" +
+    "Example: `!customlb score update \"Haunter Shop\" \"The Triassic\" +2 Haunter +1`"
   );
 }
 
@@ -457,16 +478,506 @@ export function registerCustomLeaderboards(register) {
   register(
     "!customlb",
     async ({ message, rest }) => {
-      if (!isAdminOrPrivileged(message)) return;
-      const arg = String(rest || "").trim().toLowerCase();
-      if (!arg || arg === "help") {
+      if (!message.guildId) return;
+      const raw = String(rest || "").trim();
+      const isAdmin = isAdminOrPrivileged(message);
+      const userId = message.author?.id || null;
+      if (!userId) return;
+
+      if (!raw || raw.toLowerCase() === "help") {
+        if (!isAdmin) return;
         await message.reply(buildHelpText());
         return;
       }
-      await message.reply("❌ Use `/customlb help` for usage details.");
+
+      const parsedAction = consumeToken(raw);
+      if (parsedAction.error) {
+        if (!isAdmin) return;
+        await message.reply(
+          "❌ Missing closing quote. Wrap names with spaces in quotes or use underscores."
+        );
+        return;
+      }
+
+      const action = String(parsedAction.token || "").toLowerCase();
+      const restAfterAction = parsedAction.rest;
+      if (!action) {
+        if (!isAdmin) return;
+        await message.reply("❌ Provide a subcommand. Use `!customlb help`.");
+        return;
+      }
+
+      if (action === "list") {
+        if (!isAdmin) return;
+        if (restAfterAction) {
+          await message.reply("❌ `!customlb list` does not take any arguments.");
+          return;
+        }
+
+        const leaderboards = await fetchLeaderboardsForGuild({ guildId: message.guildId });
+        if (!leaderboards.length) {
+          await message.reply("No custom leaderboards found.");
+          return;
+        }
+
+        const lines = leaderboards.map((lb) => `• **${lb.name}** — ${lb.metric}`);
+        await message.reply(
+          `**Active custom leaderboards (${leaderboards.length})**\n${lines.join("\n")}`
+        );
+        return;
+      }
+
+      if (action === "create") {
+        if (!isAdmin) return;
+
+        const nameToken = consumeToken(restAfterAction);
+        if (nameToken.error) {
+          await message.reply(
+            "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!nameToken.token) {
+          await message.reply("❌ Provide a leaderboard name.");
+          return;
+        }
+
+        const name = nameToken.token;
+        const metric = trimOuterQuotes(nameToken.rest) || "Points";
+
+        if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(name))) {
+          await message.reply("❌ That leaderboard name conflicts with an existing command.");
+          return;
+        }
+
+        const existing = await fetchLeaderboardByName({ guildId: message.guildId, name });
+        if (existing) {
+          await message.reply("❌ A leaderboard with that name already exists.");
+          return;
+        }
+
+        const count = await countLeaderboardsForGuild({ guildId: message.guildId });
+        if (count >= MAX_LEADERBOARDS_PER_GUILD) {
+          await message.reply(
+            `❌ This server already has ${MAX_LEADERBOARDS_PER_GUILD} custom leaderboards.`
+          );
+          return;
+        }
+
+        const id = await createLeaderboard({
+          guildId: message.guildId,
+          name,
+          metric,
+          hostId: userId,
+        });
+        if (!id) {
+          await message.reply("❌ Failed to create leaderboard.");
+          return;
+        }
+
+        await message.reply(`✅ Created **${name}** (${metric}).`);
+        return;
+      }
+
+      if (action === "delete" || action === "del") {
+        const nameToken = consumeToken(restAfterAction);
+        if (nameToken.error) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!nameToken.token) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide a leaderboard name.");
+          return;
+        }
+        if (nameToken.rest) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Too many arguments. If the leaderboard name contains spaces, wrap it in quotes or use underscores."
+          );
+          return;
+        }
+
+        const leaderboard = await fetchLeaderboardByName({
+          guildId: message.guildId,
+          name: nameToken.token,
+        });
+        if (!leaderboard) {
+          if (!isAdmin) return;
+          await message.reply("❌ Leaderboard not found.");
+          return;
+        }
+
+        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction: message })) return;
+
+        const token = createToken();
+        pendingConfirms.set(token, {
+          action: "delete",
+          userId,
+          guildId: message.guildId,
+          leaderboardId: leaderboard.id,
+          createdAtMs: Date.now(),
+        });
+
+        await message.reply({
+          content: `Delete **${leaderboard.name}**?`,
+          components: [buildDeleteRow(token)],
+        });
+        return;
+      }
+
+      if (action === "rename") {
+        const oldToken = consumeToken(restAfterAction);
+        if (oldToken.error) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Missing closing quote for the old leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!oldToken.token) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide the old leaderboard name.");
+          return;
+        }
+
+        const newToken = consumeToken(oldToken.rest);
+        if (newToken.error) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Missing closing quote for the new leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!newToken.token) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide the new leaderboard name.");
+          return;
+        }
+
+        const existing = await fetchLeaderboardByName({
+          guildId: message.guildId,
+          name: oldToken.token,
+        });
+        if (!existing) {
+          if (!isAdmin) return;
+          await message.reply("❌ Leaderboard not found.");
+          return;
+        }
+
+        if (!isHostOrAdmin({ leaderboard: existing, actorId: userId, interaction: message })) return;
+
+        const newName = newToken.token;
+        if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(newName))) {
+          await message.reply("❌ That leaderboard name conflicts with an existing command.");
+          return;
+        }
+
+        if (normalizeName(existing.name) !== normalizeName(newName)) {
+          const collision = await fetchLeaderboardByName({
+            guildId: message.guildId,
+            name: newName,
+          });
+          if (collision) {
+            await message.reply("❌ A leaderboard with the new name already exists.");
+            return;
+          }
+        }
+
+        const metric = trimOuterQuotes(newToken.rest) || existing.metric;
+        try {
+          const db = getDb();
+          await db.execute(
+            `UPDATE custom_leaderboards SET name = ?, name_norm = ?, metric = ? WHERE id = ?`,
+            [newName, normalizeName(newName), metric, Number(existing.id)]
+          );
+        } catch (err) {
+          logger.warn("customlb.rename.failed", { error: logger.serializeError(err) });
+          await message.reply("❌ Failed to update leaderboard.");
+          return;
+        }
+
+        await message.reply(`✅ Updated leaderboard to **${newName}** (${metric}).`);
+        return;
+      }
+
+      if (action === "entrant") {
+        const subToken = consumeToken(restAfterAction);
+        if (subToken.error) {
+          if (!isAdmin) return;
+          await message.reply("❌ Missing closing quote. Use quotes for names with spaces.");
+          return;
+        }
+
+        const sub = String(subToken.token || "").toLowerCase();
+        let mode = null;
+        if (sub === "add") {
+          mode = "add";
+        } else if (sub === "delete" || sub === "del" || sub === "remove") {
+          mode = "delete";
+        }
+        if (!mode) {
+          if (!isAdmin) return;
+          await message.reply("❌ Use `!customlb entrant add|delete <lb_name> <list>`.");
+          return;
+        }
+
+        const nameToken = consumeToken(subToken.rest);
+        if (nameToken.error) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!nameToken.token) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide a leaderboard name and a participant list.");
+          return;
+        }
+
+        const listRaw = String(nameToken.rest || "").trim();
+        if (!listRaw) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide one or more participants.");
+          return;
+        }
+
+        const leaderboard = await fetchLeaderboardByName({
+          guildId: message.guildId,
+          name: nameToken.token,
+        });
+        if (!leaderboard) {
+          if (!isAdmin) return;
+          await message.reply("❌ Leaderboard not found.");
+          return;
+        }
+
+        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction: message })) return;
+
+        const parsed = await parseParticipantList(listRaw, { client: message.client });
+        if (!parsed.ok) {
+          await message.reply(`❌ ${parsed.error}`);
+          return;
+        }
+
+        const entries = parsed.entries;
+        if (!entries.length) {
+          await message.reply("❌ Provide one or more participants.");
+          return;
+        }
+
+        const existing = await fetchLeaderboardEntries({ leaderboardId: leaderboard.id });
+        const existingDiscord = new Set(
+          existing.filter((e) => e.participantType === "discord").map((e) => e.participantKey)
+        );
+        const existingText = new Set(
+          existing.filter((e) => e.participantType === "text").map((e) => e.nameNorm)
+        );
+
+        if (mode === "add") {
+          const toAdd = [];
+          const skipped = [];
+          for (const entry of entries) {
+            if (entry.participantType === "discord") {
+              if (existingDiscord.has(entry.participantKey)) {
+                skipped.push(entry);
+                continue;
+              }
+              existingDiscord.add(entry.participantKey);
+              toAdd.push(entry);
+              continue;
+            }
+            if (existingText.has(entry.nameNorm)) {
+              skipped.push(entry);
+              continue;
+            }
+            existingText.add(entry.nameNorm);
+            toAdd.push(entry);
+          }
+
+          if (!toAdd.length) {
+            await message.reply("❌ All provided participants already exist.");
+            return;
+          }
+
+          await addParticipants({ leaderboardId: leaderboard.id, entries: toAdd });
+          const addedLabel = toAdd.map(formatEntryLabel).join(", ");
+          const skippedLabel = skipped.length ? `\nSkipped: ${skipped.map(formatEntryLabel).join(", ")}` : "";
+          await message.reply(`✅ Added: ${addedLabel}${skippedLabel}`);
+          return;
+        }
+
+        const toRemove = [];
+        const missing = [];
+        for (const entry of entries) {
+          if (entry.participantType === "discord") {
+            const found = existing.find(
+              (e) => e.participantType === "discord" && e.participantKey === entry.participantKey
+            );
+            if (found) toRemove.push(found);
+            else missing.push(entry);
+          } else {
+            const found = existing.find(
+              (e) => e.participantType === "text" && e.nameNorm === entry.nameNorm
+            );
+            if (found) toRemove.push(found);
+            else missing.push(entry);
+          }
+        }
+
+        if (!toRemove.length) {
+          await message.reply("❌ None of those participants were found.");
+          return;
+        }
+
+        await removeParticipants({ leaderboardId: leaderboard.id, entries: toRemove });
+        const removedLabel = toRemove.map(formatEntryLabel).join(", ");
+        const missingLabel = missing.length ? `\nMissing: ${missing.map(formatEntryLabel).join(", ")}` : "";
+        await message.reply(`✅ Removed: ${removedLabel}${missingLabel}`);
+        return;
+      }
+
+      if (action === "score") {
+        const subToken = consumeToken(restAfterAction);
+        if (subToken.error) {
+          if (!isAdmin) return;
+          await message.reply("❌ Missing closing quote. Use quotes for names with spaces.");
+          return;
+        }
+
+        const sub = String(subToken.token || "").toLowerCase();
+        if (sub !== "set" && sub !== "update") {
+          if (!isAdmin) return;
+          await message.reply("❌ Use `!customlb score set|update <lb_name> <entries>`.");
+          return;
+        }
+
+        const nameToken = consumeToken(subToken.rest);
+        if (nameToken.error) {
+          if (!isAdmin) return;
+          await message.reply(
+            "❌ Missing closing quote for the leaderboard name. Use quotes or underscores."
+          );
+          return;
+        }
+        if (!nameToken.token) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide a leaderboard name and score entries.");
+          return;
+        }
+
+        const entriesRaw = String(nameToken.rest || "").trim();
+        if (!entriesRaw) {
+          if (!isAdmin) return;
+          await message.reply("❌ Provide one or more score entries.");
+          return;
+        }
+
+        const leaderboard = await fetchLeaderboardByName({
+          guildId: message.guildId,
+          name: nameToken.token,
+        });
+        if (!leaderboard) {
+          if (!isAdmin) return;
+          await message.reply("❌ Leaderboard not found.");
+          return;
+        }
+
+        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction: message })) return;
+
+        const parsed = parseScoreUpdates(entriesRaw);
+        if (!parsed.ok) {
+          await message.reply(`❌ ${parsed.error}`);
+          return;
+        }
+
+        if (sub === "set" && parsed.items.length !== 1) {
+          await message.reply("❌ Score set expects a single name and score.");
+          return;
+        }
+
+        const missing = [];
+        const changes = [];
+        for (const item of parsed.items) {
+          const entry = await resolveEntryByInput({
+            leaderboardId: leaderboard.id,
+            input: item.name,
+          });
+          if (!entry) {
+            missing.push(item.name);
+            continue;
+          }
+
+          if (sub === "update") {
+            changes.push({ entry, delta: item.value });
+            continue;
+          }
+
+          changes.push({
+            entryId: entry.id,
+            name: entry.name,
+            participantType: entry.participantType,
+            participantKey: entry.participantKey,
+            oldScore: entry.score,
+            newScore: item.value,
+          });
+        }
+
+        if (missing.length) {
+          await message.reply(`❌ Missing participants: ${missing.join(", ")}`);
+          return;
+        }
+
+        if (!changes.length) {
+          await message.reply("❌ No valid score updates found.");
+          return;
+        }
+
+        const resolvedChanges =
+          sub === "update"
+            ? aggregateScoreUpdates(changes).map((item) => ({
+                entryId: item.entry.id,
+                name: item.entry.name,
+                participantType: item.entry.participantType,
+                participantKey: item.entry.participantKey,
+                oldScore: item.entry.score,
+                newScore: item.entry.score + item.delta,
+              }))
+            : changes;
+
+        const lines = resolvedChanges.map((change) => {
+          const label =
+            change.participantType === "discord"
+              ? `<@${change.participantKey}>`
+              : change.name;
+          return `${label}: ${change.oldScore} → ${change.newScore}`;
+        });
+        const token = createToken();
+        pendingConfirms.set(token, {
+          action: "score_update",
+          userId,
+          guildId: message.guildId,
+          leaderboardId: leaderboard.id,
+          changes: resolvedChanges,
+          createdAtMs: Date.now(),
+        });
+
+        await message.reply({
+          content: `**Confirm updates**\n${lines.join("\n")}\n\nOk?`,
+          components: [buildConfirmRow(token)],
+        });
+        return;
+      }
+
+      if (!isAdmin) return;
+      await message.reply("❌ Unknown subcommand. Use `!customlb help`.");
     },
-    "!customlb help — show custom leaderboard usage",
-    { admin: true, hideFromHelp: true, category: "Contests" }
+    "!customlb help — manage custom leaderboards",
+    { admin: true, adminCategory: "Admin" }
   );
 
   register.component("customlb:confirm:", async ({ interaction }) => {
@@ -529,605 +1040,6 @@ export function registerCustomLeaderboards(register) {
     await interaction.update({ content: "❌ Unknown confirmation action.", components: [] });
   });
 
-  register.slash(
-    {
-      name: "customlb",
-      description: "Manage custom leaderboards (admin/host)",
-      options: [
-        {
-          type: 1,
-          name: "createlb",
-          description: "Create a new custom leaderboard",
-          options: [
-            {
-              type: 3,
-              name: "name",
-              description: "Leaderboard name (no spaces)",
-              required: true,
-            },
-            {
-              type: 3,
-              name: "metric",
-              description: "Metric label (default Points)",
-              required: false,
-            },
-          ],
-        },
-        {
-          type: 1,
-          name: "deletelb",
-          description: "Delete a custom leaderboard",
-          options: [
-            {
-              type: 3,
-              name: "name",
-              description: "Leaderboard name",
-              required: true,
-            },
-          ],
-        },
-        {
-          type: 2,
-          name: "participant",
-          description: "Add or remove participants",
-          options: [
-            {
-              type: 1,
-              name: "add",
-              description: "Add participants",
-              options: [
-                {
-                  type: 3,
-                  name: "name",
-                  description: "Leaderboard name",
-                  required: true,
-                },
-                {
-                  type: 3,
-                  name: "participants",
-                  description: "Comma/space list of participants",
-                  required: true,
-                },
-              ],
-            },
-            {
-              type: 1,
-              name: "remove",
-              description: "Remove participants",
-              options: [
-                {
-                  type: 3,
-                  name: "name",
-                  description: "Leaderboard name",
-                  required: true,
-                },
-                {
-                  type: 3,
-                  name: "participants",
-                  description: "Comma/space list of participants",
-                  required: true,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          type: 2,
-          name: "score",
-          description: "Set or update scores",
-          options: [
-            {
-              type: 1,
-              name: "set",
-              description: "Set scores",
-              options: [
-                {
-                  type: 3,
-                  name: "name",
-                  description: "Leaderboard name",
-                  required: true,
-                },
-                {
-                  type: 3,
-                  name: "entries",
-                  description: "List of name:score entries",
-                  required: true,
-                },
-              ],
-            },
-            {
-              type: 1,
-              name: "update",
-              description: "Increment or decrement scores",
-              options: [
-                {
-                  type: 3,
-                  name: "name",
-                  description: "Leaderboard name",
-                  required: true,
-                },
-                {
-                  type: 3,
-                  name: "entries",
-                  description: "List of name:+delta or name:-delta entries",
-                  required: true,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          type: 1,
-          name: "help",
-          description: "Show custom leaderboard help",
-        },
-        {
-          type: 1,
-          name: "renamelb",
-          description: "Rename a custom leaderboard or update its metric",
-          options: [
-            {
-              type: 3,
-              name: "old_name",
-              description: "Current leaderboard name",
-              required: true,
-            },
-            {
-              type: 3,
-              name: "new_name",
-              description: "New leaderboard name",
-              required: true,
-            },
-            {
-              type: 3,
-              name: "metric",
-              description: "New metric label",
-              required: false,
-            },
-          ],
-        },
-      ],
-    },
-    async ({ interaction }) => {
-      if (!interaction.guildId) return;
-      if (!isAdminOrPrivileged(interaction)) {
-        await interaction.reply({
-          content: "❌ Only admins can use /customlb.",
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const sub = interaction.options?.getSubcommand?.();
-      const group = interaction.options?.getSubcommandGroup?.();
-      const userId = interaction.user?.id;
-
-      if (sub === "help") {
-        await interaction.reply({
-          content: buildHelpText(),
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (sub === "createlb") {
-        if (!isAdminOrPrivileged(interaction)) {
-          await interaction.reply({
-            content: "❌ Only admins can create custom leaderboards.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const name = String(interaction.options?.getString?.("name") || "").trim();
-        const metricRaw = String(interaction.options?.getString?.("metric") || "").trim();
-        const metric = metricRaw || "Points";
-
-        if (!name) {
-          await interaction.reply({ content: "❌ Provide a leaderboard name.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-        if (!isValidKey(name)) {
-          await interaction.reply({
-            content: "❌ Leaderboard names cannot contain spaces. Use underscores instead.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-        if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(name))) {
-          await interaction.reply({
-            content: "❌ That leaderboard name conflicts with an existing command.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const existing = await fetchLeaderboardByName({ guildId: interaction.guildId, name });
-        if (existing) {
-          await interaction.reply({
-            content: "❌ A leaderboard with that name already exists.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const count = await countLeaderboardsForGuild({ guildId: interaction.guildId });
-        if (count >= MAX_LEADERBOARDS_PER_GUILD) {
-          await interaction.reply({
-            content: `❌ This server already has ${MAX_LEADERBOARDS_PER_GUILD} custom leaderboards.`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const id = await createLeaderboard({
-          guildId: interaction.guildId,
-          name,
-          metric,
-          hostId: userId,
-        });
-        if (!id) {
-          await interaction.reply({
-            content: "❌ Failed to create leaderboard.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        await interaction.reply({
-          content: `✅ Created **${name}** (${metric}).`,
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (sub === "deletelb") {
-        const name = String(interaction.options?.getString?.("name") || "").trim();
-        if (!name) {
-          await interaction.reply({ content: "❌ Provide a leaderboard name.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        const leaderboard = await fetchLeaderboardByName({ guildId: interaction.guildId, name });
-        if (!leaderboard) {
-          await interaction.reply({ content: "❌ Leaderboard not found.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction })) {
-          await interaction.reply({ content: "❌ Only the host or admins can delete this leaderboard.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        const token = createToken();
-        pendingConfirms.set(token, {
-          action: "delete",
-          userId,
-          guildId: interaction.guildId,
-          leaderboardId: leaderboard.id,
-          createdAtMs: Date.now(),
-        });
-
-        await interaction.reply({
-          content: `Delete **${leaderboard.name}**?`,
-          components: [buildDeleteRow(token)],
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (sub === "renamelb") {
-        if (!isAdminOrPrivileged(interaction)) {
-          await interaction.reply({
-            content: "❌ Only admins can rename custom leaderboards.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const oldName = String(interaction.options?.getString?.("old_name") || "").trim();
-        const newName = String(interaction.options?.getString?.("new_name") || "").trim();
-        const metricRaw = String(interaction.options?.getString?.("metric") || "").trim();
-
-        if (!oldName || !newName) {
-          await interaction.reply({
-            content: "❌ Provide both the old and new leaderboard names.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-        if (!isValidKey(newName)) {
-          await interaction.reply({
-            content: "❌ Leaderboard names cannot contain spaces. Use underscores instead.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-        if (RESERVED_LEADERBOARD_NAMES.has(normalizeName(newName))) {
-          await interaction.reply({
-            content: "❌ That leaderboard name conflicts with an existing command.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const existing = await fetchLeaderboardByName({ guildId: interaction.guildId, name: oldName });
-        if (!existing) {
-          await interaction.reply({ content: "❌ Leaderboard not found.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        if (normalizeName(oldName) !== normalizeName(newName)) {
-          const collision = await fetchLeaderboardByName({
-            guildId: interaction.guildId,
-            name: newName,
-          });
-          if (collision) {
-            await interaction.reply({
-              content: "❌ A leaderboard with the new name already exists.",
-              flags: MessageFlags.Ephemeral,
-            });
-            return;
-          }
-        }
-
-        const metric = metricRaw || existing.metric;
-        try {
-          const db = getDb();
-          await db.execute(
-            `UPDATE custom_leaderboards SET name = ?, name_norm = ?, metric = ? WHERE id = ?`,
-            [newName, normalizeName(newName), metric, Number(existing.id)]
-          );
-        } catch (err) {
-          logger.warn("customlb.rename.failed", { error: logger.serializeError(err) });
-          await interaction.reply({
-            content: "❌ Failed to update leaderboard.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        await interaction.reply({
-          content: `✅ Updated leaderboard to **${newName}** (${metric}).`,
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (group === "participant" && (sub === "add" || sub === "remove")) {
-        const name = String(interaction.options?.getString?.("name") || "").trim();
-        const listRaw = String(interaction.options?.getString?.("participants") || "").trim();
-
-        if (!name || !listRaw) {
-          await interaction.reply({
-            content: "❌ Provide a leaderboard name and a participant list.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const leaderboard = await fetchLeaderboardByName({ guildId: interaction.guildId, name });
-        if (!leaderboard) {
-          await interaction.reply({ content: "❌ Leaderboard not found.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction })) {
-          await interaction.reply({
-            content: "❌ Only the host or admins can modify participants.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const parsed = await parseParticipantList(listRaw, { client: interaction.client });
-        if (!parsed.ok) {
-          await interaction.reply({ content: `❌ ${parsed.error}`, flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        const entries = parsed.entries;
-        if (!entries.length) {
-          await interaction.reply({ content: "❌ Provide one or more participants.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        const existing = await fetchLeaderboardEntries({ leaderboardId: leaderboard.id });
-        const existingDiscord = new Set(
-          existing.filter((e) => e.participantType === "discord").map((e) => e.participantKey)
-        );
-        const existingText = new Set(
-          existing.filter((e) => e.participantType === "text").map((e) => e.nameNorm)
-        );
-
-        if (sub === "add") {
-          const toAdd = [];
-          const skipped = [];
-          for (const entry of entries) {
-            if (entry.participantType === "discord") {
-              if (existingDiscord.has(entry.participantKey)) {
-                skipped.push(entry);
-                continue;
-              }
-              existingDiscord.add(entry.participantKey);
-              toAdd.push(entry);
-              continue;
-            }
-            if (existingText.has(entry.nameNorm)) {
-              skipped.push(entry);
-              continue;
-            }
-            existingText.add(entry.nameNorm);
-            toAdd.push(entry);
-          }
-
-          if (!toAdd.length) {
-            await interaction.reply({
-              content: "❌ All provided participants already exist.",
-              flags: MessageFlags.Ephemeral,
-            });
-            return;
-          }
-
-          await addParticipants({ leaderboardId: leaderboard.id, entries: toAdd });
-          const addedLabel = toAdd.map(formatEntryLabel).join(", ");
-          const skippedLabel = skipped.length ? `\nSkipped: ${skipped.map(formatEntryLabel).join(", ")}` : "";
-          await interaction.reply({
-            content: `✅ Added: ${addedLabel}${skippedLabel}`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const toRemove = [];
-        const missing = [];
-        for (const entry of entries) {
-          if (entry.participantType === "discord") {
-            const found = existing.find(
-              (e) => e.participantType === "discord" && e.participantKey === entry.participantKey
-            );
-            if (found) toRemove.push(found);
-            else missing.push(entry);
-          } else {
-            const found = existing.find(
-              (e) => e.participantType === "text" && e.nameNorm === entry.nameNorm
-            );
-            if (found) toRemove.push(found);
-            else missing.push(entry);
-          }
-        }
-
-        if (!toRemove.length) {
-          await interaction.reply({
-            content: "❌ None of those participants were found.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        await removeParticipants({ leaderboardId: leaderboard.id, entries: toRemove });
-        const removedLabel = toRemove.map(formatEntryLabel).join(", ");
-        const missingLabel = missing.length ? `\nMissing: ${missing.map(formatEntryLabel).join(", ")}` : "";
-        await interaction.reply({
-          content: `✅ Removed: ${removedLabel}${missingLabel}`,
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      if (group === "score" && (sub === "set" || sub === "update")) {
-        const name = String(interaction.options?.getString?.("name") || "").trim();
-        const entriesRaw = String(interaction.options?.getString?.("entries") || "").trim();
-        if (!name || !entriesRaw) {
-          await interaction.reply({
-            content: "❌ Provide a leaderboard name and score entries.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const leaderboard = await fetchLeaderboardByName({ guildId: interaction.guildId, name });
-        if (!leaderboard) {
-          await interaction.reply({ content: "❌ Leaderboard not found.", flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        if (!isHostOrAdmin({ leaderboard, actorId: userId, interaction })) {
-          await interaction.reply({
-            content: "❌ Only the host or admins can update scores.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const parsed = parseScorePairs(entriesRaw, { allowDelta: sub === "update" });
-        if (!parsed.ok) {
-          await interaction.reply({ content: `❌ ${parsed.error}`, flags: MessageFlags.Ephemeral });
-          return;
-        }
-
-        const changes = [];
-        const missing = [];
-        for (const item of parsed.items) {
-          const entry = await resolveEntryByInput({ leaderboardId: leaderboard.id, input: item.name });
-          if (!entry) {
-            missing.push(item.name);
-            continue;
-          }
-          if (sub === "update") {
-            changes.push({ entry, delta: item.value });
-          } else {
-            changes.push({
-              entryId: entry.id,
-              name: entry.name,
-              participantType: entry.participantType,
-              participantKey: entry.participantKey,
-              oldScore: entry.score,
-              newScore: item.value,
-            });
-          }
-        }
-
-        if (missing.length) {
-          await interaction.reply({
-            content: `❌ Missing participants: ${missing.join(", ")}`,
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        if (!changes.length) {
-          await interaction.reply({
-            content: "❌ No valid score updates found.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-
-        const resolvedChanges =
-          sub === "update"
-            ? aggregateScoreUpdates(changes).map((item) => ({
-                entryId: item.entry.id,
-                name: item.entry.name,
-                participantType: item.entry.participantType,
-                participantKey: item.entry.participantKey,
-                oldScore: item.entry.score,
-                newScore: item.entry.score + item.delta,
-              }))
-            : changes;
-
-        const lines = resolvedChanges.map((change) => {
-          const label =
-            change.participantType === "discord"
-              ? `<@${change.participantKey}>`
-              : change.name;
-          return `${label}: ${change.oldScore} → ${change.newScore}`;
-        });
-        const token = createToken();
-        pendingConfirms.set(token, {
-          action: "score_update",
-          userId,
-          guildId: interaction.guildId,
-          leaderboardId: leaderboard.id,
-          changes: resolvedChanges,
-          createdAtMs: Date.now(),
-        });
-
-        await interaction.reply({
-          content: `**Confirm updates**\n${lines.join("\n")}\n\nOk?`,
-          components: [buildConfirmRow(token)],
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      await interaction.reply({
-        content: "❌ Unknown subcommand.",
-        flags: MessageFlags.Ephemeral,
-      });
-    },
-    { category: "Contests", admin: true, adminCategory: "Admin" }
-  );
 }
 
 export async function fetchCustomLeaderboardForGuild({ guildId, name }) {
@@ -1143,7 +1055,7 @@ export async function fetchCustomLeaderboardEntry({ leaderboardId, participantIn
 }
 
 export const __testables = {
-  parseScorePairs,
+  parseScoreUpdates,
   extractTokens,
   parseParticipantList,
   normalizeName,

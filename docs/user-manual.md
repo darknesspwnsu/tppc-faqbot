@@ -202,8 +202,8 @@ Fetches TPPC leaderboards.
   - `!lb speedtower`
   - `!lb trainers [1-20]`
   - `!lb pokemon <name> [1-20]` or `!lb poke <name> [1-20]`
-  - `!lb <customlb> [participant]` — custom leaderboard (top 5)
-  - Admin: `!lb <customlb> --all` or `!lb <customlb> --10`
+  - `!lb <customlb> [participant]` — custom leaderboard (top 5; quote names with spaces)
+  - Admin: `!lb <customlb> --all` or `!lb <customlb> --10` (quote names with spaces)
 - **History:**
   - `!lb ssanne history`
   - `!lb tc history`
@@ -369,24 +369,26 @@ Subcommands:
 ### Reading contests / RNG / Reaction contests
 Hosted by contest admins. See command help for prompts and formats.
 
-### Custom leaderboards (`/customlb`)
-Guild-scoped leaderboards with a custom metric label.
-- `/customlb createlb <name> [metric]` — metric defaults to `Points`
-- `/customlb deletelb <name>` — requires confirmation buttons
-- `/customlb renamelb <old> <new> [metric]` — rename or update leaderboard name and/or metric name
-- `/customlb participant add <name> <list>` — add participants
-- `/customlb participant remove <name> <list>` — remove participants
-- `/customlb score set <name> <entries>` — set scores
-- `/customlb score update <name> <entries>` — increment/decrement scores
+### Custom leaderboards (`!customlb`)
+Guild-scoped leaderboards with a custom metric label (admin/privileged).
+- `!customlb create <lb_name> [metric]` — metric defaults to `Points`
+- `!customlb list` — list active custom leaderboards
+- `!customlb delete|del <lb_name>` — requires confirmation buttons
+- `!customlb rename <old> <new> [metric]` — rename or update leaderboard name and/or metric name
+- `!customlb entrant add <lb_name> <list>` — add entrants (starts at 0)
+- `!customlb entrant delete <lb_name> <list>` — remove entrants
+- `!customlb score set <lb_name> <name> <score>` — set a single score
+- `!customlb score update <lb_name> <name> <delta> [name delta ...]` — increment/decrement
 
 **Rules & syntax:**
-- Leaderboard name cannot contain spaces (use underscores). Metric names may include spaces.
-- Participant list supports spaces or commas. Names with spaces should be quoted.
-- Score entries follow `name:score` or `name:+delta` / `name:-delta`.
+- Leaderboard names can include spaces; wrap them in quotes or use underscores.
+- Metric names may include spaces.
+- Participant lists support spaces or commas. Names with spaces should be quoted.
+- Score updates accept +/- values; missing signs default to +.
 
 **Batch examples:**
-- `Haunter:+1, "The Triassic":+2, trainer3:-1`
-- `@User1:+1 @User2:+2 trainer3:-1`
+- `!customlb score update "Haunter Shop" Haunter +1 "The Triassic" +2`
+- `!customlb entrant add "Haunter Shop" Haunter, "The Triassic"`
 
 **Common invalid responses:**
 - Missing duration → usage hint

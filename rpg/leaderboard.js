@@ -476,6 +476,21 @@ function normalizeCommandToken(token) {
     .toLowerCase();
 }
 
+function consumeQuotedToken(raw) {
+  const text = String(raw ?? "").trim();
+  if (!text) return { token: "", rest: "", quoted: false };
+  if (text.startsWith('"')) {
+    const end = text.indexOf('"', 1);
+    if (end === -1) return { error: "missing_quote" };
+    const token = text.slice(1, end);
+    const rest = text.slice(end + 1).trim();
+    return { token, rest, quoted: true };
+  }
+  const match = text.match(/^(\S+)([\s\S]*)$/);
+  if (!match) return { token: "", rest: "", quoted: false };
+  return { token: match[1], rest: (match[2] || "").trim(), quoted: false };
+}
+
 function appendCacheFootnote(text, updatedAtMs) {
   const note = formatCacheAge(updatedAtMs);
   return note ? `${text}\n_${note}_` : text;
@@ -796,13 +811,16 @@ export function registerLeaderboard(register) {
       if (!message.guildId) return;
 
       const raw = String(rest || "").trim();
-      const parts = raw.split(/\s+/).filter(Boolean);
-      const wantsHistory = parts[parts.length - 1]?.toLowerCase() === "history";
-      const historyParts = wantsHistory ? parts.slice(0, -1) : parts;
-      let sub = normalizeCommandToken((historyParts[0] || "").toLowerCase());
-      if (sub === "poke") sub = "pokemon";
+      const firstToken = consumeQuotedToken(raw);
+      if (firstToken.error) {
+        await message.reply(
+          "❌ Missing closing quote. If the leaderboard name has spaces, wrap it in quotes."
+        );
+        return;
+      }
 
-      if (!sub || sub === "help") {
+      const subRaw = String(firstToken.token || "");
+      if (!subRaw || subRaw.toLowerCase() === "help") {
         await message.reply(
           [
             "**Leaderboard options:**",
@@ -814,7 +832,7 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
             `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
-            `• \`${primaryCmd} <customlb> [participant]\` — Custom leaderboard (top 5)`,
+            `• \`${primaryCmd} <customlb> [participant]\` — Custom leaderboard (top 5; quote names with spaces)`,
           ].join("\n")
         );
         return;
@@ -822,10 +840,10 @@ export function registerLeaderboard(register) {
 
       const custom = await fetchCustomLeaderboardForGuild({
         guildId: message.guildId,
-        name: sub,
+        name: subRaw,
       });
       if (custom) {
-        const restAfterName = raw.slice(parts[0].length).trim();
+        const restAfterName = firstToken.rest;
         const isAdmin = isAdminOrPrivileged(message);
         let limit = 5;
         let participantLookup = null;
@@ -842,8 +860,20 @@ export function registerLeaderboard(register) {
           } else {
             if (restAfterName.startsWith('"')) {
               const endIdx = restAfterName.indexOf('"', 1);
-              participantLookup =
-                endIdx > 1 ? restAfterName.slice(1, endIdx) : restAfterName.slice(1);
+              if (endIdx === -1) {
+                await message.reply(
+                  "❌ Missing closing quote. If the participant name has spaces, wrap it in quotes."
+                );
+                return;
+              }
+              const remainder = restAfterName.slice(endIdx + 1).trim();
+              if (remainder) {
+                await message.reply(
+                  "❌ Too many arguments. If the participant name has spaces, wrap it in quotes."
+                );
+                return;
+              }
+              participantLookup = restAfterName.slice(1, endIdx);
             } else {
               participantLookup = restAfterName;
             }
@@ -885,6 +915,17 @@ export function registerLeaderboard(register) {
         await message.reply(body);
         return;
       }
+
+      if (firstToken.quoted) {
+        await message.reply(`❌ No custom leaderboard found for "${subRaw}".`);
+        return;
+      }
+
+      const parts = raw.split(/\s+/).filter(Boolean);
+      const wantsHistory = parts[parts.length - 1]?.toLowerCase() === "history";
+      const historyParts = wantsHistory ? parts.slice(0, -1) : parts;
+      let sub = normalizeCommandToken((historyParts[0] || "").toLowerCase());
+      if (sub === "poke") sub = "pokemon";
 
       if (!requireRpgCredentials(primaryCmd)) {
         await message.reply("❌ RPG leaderboard credentials are not configured.");

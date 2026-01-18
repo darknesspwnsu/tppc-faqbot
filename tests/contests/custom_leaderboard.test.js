@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { __testables } from "../../contests/custom_leaderboard.js";
 
-const { parseScorePairs, aggregateScoreUpdates, extractTokens, buildHelpText } = __testables;
+const { parseScoreUpdates, aggregateScoreUpdates, extractTokens, buildHelpText } = __testables;
 
 describe("custom leaderboard parsing", () => {
   it("builds help text for customlb help", () => {
     const help = buildHelpText();
-    expect(help).toContain("/customlb createlb");
-    expect(help).toContain("/customlb score update");
+    expect(help).toContain("!customlb create");
+    expect(help).toContain("!customlb list");
+    expect(help).toContain("!customlb score update");
   });
 
   it("extracts tokens with quotes and mentions", () => {
@@ -21,7 +22,7 @@ describe("custom leaderboard parsing", () => {
   });
 
   it("accepts update entries without explicit sign", () => {
-    const parsed = parseScorePairs("user1:1 user2:+2 user3:-1", { allowDelta: true });
+    const parsed = parseScoreUpdates("user1 1 user2 +2 user3 -1");
     expect(parsed.ok).toBe(true);
     expect(parsed.items).toEqual([
       { name: "user1", value: 1 },
@@ -30,20 +31,20 @@ describe("custom leaderboard parsing", () => {
     ]);
   });
 
-  it("rejects set entries with plus sign", () => {
-    const parsed = parseScorePairs("user1:+3", { allowDelta: false });
+  it("rejects odd token counts", () => {
+    const parsed = parseScoreUpdates("user1 3 user2");
     expect(parsed.ok).toBe(false);
-    expect(parsed.error).toContain("Use a plain number for set");
+    expect(parsed.error).toContain("name and a score");
   });
 
   it("rejects invalid score entries", () => {
-    const parsed = parseScorePairs("user1:abc", { allowDelta: true });
+    const parsed = parseScoreUpdates("user1 abc");
     expect(parsed.ok).toBe(false);
-    expect(parsed.error).toContain("Provide one or more");
+    expect(parsed.error).toContain("Invalid score");
   });
 
   it("parses comma-separated score entries", () => {
-    const parsed = parseScorePairs('Haunter:+1, "The Triassic":-2', { allowDelta: true });
+    const parsed = parseScoreUpdates('Haunter +1, "The Triassic" -2');
     expect(parsed.ok).toBe(true);
     expect(parsed.items).toEqual([
       { name: "Haunter", value: 1 },
