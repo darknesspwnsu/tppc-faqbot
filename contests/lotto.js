@@ -9,7 +9,14 @@
 import { isAdminOrPrivileged } from "../auth.js";
 import { getDb } from "../db.js";
 import { logger } from "../shared/logger.js";
-import { metrics } from "../shared/metrics.js";
+import {
+  fetchWithTimeout as fetchForumPage,
+  computePageCountFromHtml,
+  buildPageUrl,
+  extractPostTables,
+  extractUsernameFromPostTable,
+  extractPostMessageText,
+} from "../shared/forum_scrape.js";
 import { sendChunked } from "./helpers.js";
 
 const LOTTO_THREAD_URL = "https://forums.tppc.info/showthread.php?t=641631";
@@ -18,112 +25,12 @@ const PAGE_DELAY_MS = 500;
 const CACHE_TTL_MS = 2 * 60_000;
 const RESERVATION_MS = 10 * 60_000;
 const GENERATE_COOLDOWN_MS = 10 * 60_000;
-const MAX_PAGES_HARD_CAP = 200;
 const POSTS_PER_PAGE = 25;
 
 const lottoStateByGuild = new Map(); // guildId -> state
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function ensureFetch() {
-  if (typeof fetch !== "function") {
-    throw new Error("Global fetch() is not available. Use Node 18+ or add a fetch polyfill.");
-  }
-}
-
-async function fetchWithTimeout(url) {
-  ensureFetch();
-
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    void metrics.incrementExternalFetch("lotto", "ok");
-    return await res.text();
-  } catch (err) {
-    void metrics.incrementExternalFetch("lotto", "error");
-    throw err;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-function computePageCountFromHtml(html) {
-  const m = /Show results\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)/i.exec(html);
-  if (!m) return 1;
-
-  const x = Number(m[1]);
-  const y = Number(m[2]);
-  const z = Number(m[3]);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return 1;
-
-  const perPage = Math.max(1, y - x + 1);
-  const pages = Math.ceil(z / perPage);
-  return Math.min(Math.max(1, pages), MAX_PAGES_HARD_CAP);
-}
-
-function buildPageUrl(baseUrl, pageNum) {
-  const u = new URL(baseUrl);
-  u.searchParams.set("page", String(pageNum));
-  return u.toString();
-}
-
-function extractPostTables(html) {
-  const re = /<table[^>]*\bid\s*=\s*["']post\d+["'][\s\S]*?<\/table>/gi;
-  return html.match(re) || [];
-}
-
-function decodeEntitiesBasic(str) {
-  return String(str || "")
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&apos;", "'");
-}
-
-function htmlToText(html) {
-  let s = String(html || "");
-  s = s.replace(/<\s*br\s*\/?\s*>/gi, "\n");
-  s = s.replace(/<\/p\s*>/gi, "\n");
-  s = s.replace(/<\/div\s*>/gi, "\n");
-  s = s.replace(/<[^>]+>/g, "");
-  s = decodeEntitiesBasic(s);
-  s = s.replace(/\r/g, "");
-  s = s.replace(/[ \t]+\n/g, "\n");
-  s = s.replace(/\n{3,}/g, "\n\n");
-  s = s.trim();
-  return s;
-}
-
-function extractUsernameFromPostTable(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
-  if (!m) return null;
-
-  const txt = htmlToText(m[1]);
-  const firstLine = txt
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean)[0];
-  return firstLine || null;
-}
-
-function extractPostMessageText(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
-  if (!m) return "";
-  return htmlToText(m[1]);
 }
 
 function extractPostId(postHtml) {
@@ -331,7 +238,10 @@ async function refreshThreadCombos(state, { force = false } = {}) {
 
   state.inFlight = (async () => {
     try {
-      const page1Html = await fetchWithTimeout(state.threadUrl);
+      const page1Html = await fetchForumPage(state.threadUrl, {
+        timeoutMs: FETCH_TIMEOUT_MS,
+        metricsKey: "lotto",
+      });
       const pageCount = computePageCountFromHtml(page1Html);
       const used = new Map();
       const startPage = Math.min(
@@ -346,7 +256,10 @@ async function refreshThreadCombos(state, { force = false } = {}) {
 
       for (let page = Math.max(2, startPage); page <= pageCount; page += 1) {
         await sleep(PAGE_DELAY_MS);
-        const html = await fetchWithTimeout(buildPageUrl(state.threadUrl, page));
+        const html = await fetchForumPage(buildPageUrl(state.threadUrl, page), {
+          timeoutMs: FETCH_TIMEOUT_MS,
+          metricsKey: "lotto",
+        });
         pages.push({ html, pageNum: page });
       }
 
@@ -398,7 +311,10 @@ async function scrapeInvalidEntries(state) {
   if (!state.active) return { ok: false, reason: "inactive" };
 
   try {
-    const page1Html = await fetchWithTimeout(state.threadUrl);
+    const page1Html = await fetchForumPage(state.threadUrl, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      metricsKey: "lotto",
+    });
     const pageCount = computePageCountFromHtml(page1Html);
     const startPage = Math.min(Math.max(1, computeStartPage(state.startPostId)), pageCount);
 
@@ -409,7 +325,10 @@ async function scrapeInvalidEntries(state) {
 
     for (let page = Math.max(2, startPage); page <= pageCount; page += 1) {
       await sleep(PAGE_DELAY_MS);
-      const html = await fetchWithTimeout(buildPageUrl(state.threadUrl, page));
+      const html = await fetchForumPage(buildPageUrl(state.threadUrl, page), {
+        timeoutMs: FETCH_TIMEOUT_MS,
+        metricsKey: "lotto",
+      });
       pages.push({ html, pageNum: page });
     }
 

@@ -20,12 +20,19 @@
 
 import { MessageFlags } from "discord.js";
 import { isAdminOrPrivileged } from "../auth.js";
-import { metrics } from "../shared/metrics.js";
+import {
+  fetchWithTimeout as fetchForumPage,
+  computePageCountFromHtml,
+  buildPageUrl,
+  extractPostTables,
+  extractUsernameFromPostTable,
+  extractPostMessageText,
+  htmlToText,
+} from "../shared/forum_scrape.js";
 import { dmChunked } from "./helpers.js";
 
 const FETCH_TIMEOUT_MS = 30_000;
 const PAGE_DELAY_MS = 500;
-const MAX_PAGES_HARD_CAP = 200; // safety
 const DM_CHUNK_LIMIT = 1900;
 
 // Guild-scoped "in progress" guard so admins can't start multiple scrapes at once.
@@ -33,12 +40,6 @@ const scrapeLocksByGuild = new Map(); // guildId -> true
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function ensureFetch() {
-  if (typeof fetch !== "function") {
-    throw new Error("Global fetch() is not available. Use Node 18+ or add a fetch polyfill.");
-  }
 }
 
 export function normalizeThreadUrl(raw) {
@@ -53,93 +54,6 @@ export function normalizeThreadUrl(raw) {
   } catch {
     return null;
   }
-}
-
-function decodeEntitiesBasic(str) {
-  return String(str || "")
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&apos;", "'");
-}
-
-function htmlToText(html) {
-  let s = String(html || "");
-  s = s.replace(/<\s*br\s*\/?\s*>/gi, "\n");
-  s = s.replace(/<\/p\s*>/gi, "\n");
-  s = s.replace(/<\/div\s*>/gi, "\n");
-  s = s.replace(/<[^>]+>/g, "");
-  s = decodeEntitiesBasic(s);
-  s = s.replace(/\r/g, "");
-  s = s.replace(/[ \t]+\n/g, "\n");
-  s = s.replace(/\n{3,}/g, "\n\n");
-  s = s.trim();
-  return s;
-}
-
-async function fetchWithTimeout(url) {
-  ensureFetch();
-
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; SpectreonBot/1.0; +https://forums.tppc.info/)",
-      },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    void metrics.incrementExternalFetch("forumlist", "ok");
-    return await res.text();
-  } catch (err) {
-    void metrics.incrementExternalFetch("forumlist", "error");
-    throw err;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-export function computePageCountFromHtml(html) {
-  const m = /Show results\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)/i.exec(html);
-  if (!m) return 1;
-
-  const x = Number(m[1]);
-  const y = Number(m[2]);
-  const z = Number(m[3]);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return 1;
-
-  const perPage = Math.max(1, y - x + 1);
-  const pages = Math.ceil(z / perPage);
-  return Math.min(Math.max(1, pages), MAX_PAGES_HARD_CAP);
-}
-
-function buildPageUrl(baseUrl, pageNum) {
-  const u = new URL(baseUrl);
-  u.searchParams.set("page", String(pageNum));
-  return u.toString();
-}
-
-function extractPostTables(html) {
-  const re = /<table[^>]*\bid\s*=\s*["']post\d+["'][\s\S]*?<\/table>/gi;
-  return html.match(re) || [];
-}
-
-export function extractUsernameFromPostTable(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']postmenu_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
-  if (!m) return null;
-
-  const txt = htmlToText(m[1]);
-  const firstLine = txt
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean)[0];
-  return firstLine || null;
 }
 
 function extractAlt2CellText(postHtml) {
@@ -158,12 +72,6 @@ export function extractLinkedIdsFromSidebarText(sidebarText) {
   let mm;
   while ((mm = re.exec(segment))) ids.push(mm[1]);
   return ids;
-}
-
-export function extractPostMessageText(postHtml) {
-  const m = /<div[^>]*\bid\s*=\s*["']post_message_\d+["'][^>]*>([\s\S]*?)<\/div>/i.exec(postHtml);
-  if (!m) return "";
-  return htmlToText(m[1]);
 }
 
 function findIdInPostText(postText, linkedIds) {
@@ -191,7 +99,10 @@ function findThreadStarterUsernameFromPage1(html) {
 }
 
 async function scrapeThreadUserIdPairs(threadUrl, { phrase = null } = {}) {
-  const page1Html = await fetchWithTimeout(threadUrl);
+  const page1Html = await fetchForumPage(threadUrl, {
+    timeoutMs: FETCH_TIMEOUT_MS,
+    metricsKey: "forumlist",
+  });
   const pageCount = computePageCountFromHtml(page1Html);
 
   const starterName = findThreadStarterUsernameFromPage1(page1Html);
@@ -242,7 +153,10 @@ async function scrapeThreadUserIdPairs(threadUrl, { phrase = null } = {}) {
   for (let p = 2; p <= pageCount; p++) {
     await sleep(PAGE_DELAY_MS);
     const url = buildPageUrl(threadUrl, p);
-    const html = await fetchWithTimeout(url);
+    const html = await fetchForumPage(url, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      metricsKey: "forumlist",
+    });
     processPage(html);
   }
 
@@ -400,3 +314,5 @@ export function registerForumList(register) {
     { admin: true }
   );
 }
+
+export { computePageCountFromHtml, extractUsernameFromPostTable, extractPostMessageText };
