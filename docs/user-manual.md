@@ -26,6 +26,7 @@ This manual documents all user-facing and admin-facing features, commands, optio
 - **Bang commands** use `!command` (some also support `?command`).
 - **Slash commands** use `/command` and often respond **ephemerally** (private), especially for admin or account actions.
 - **Permissions**: some commands require admin/privileged users. These are listed in the **Admin Appendix**.
+- **Channel restrictions**: some commands are limited to specific channels per server; restricted commands may be silent or return a short warning.
 - **DM behavior**: features that DM you can fail if your DMs are closed. You’ll usually see a friendly error.
 - **Input parsing**: commands are generally case-insensitive for keywords; Pokémon names are tolerant of form prefixes (s/d/g) in many RPG tools.
 
@@ -76,9 +77,11 @@ Create and view “is trading” and “is looking for” lists.
 
 **Usage:**
 - `!ft add <list>` — save your trading list
+- `!ft append <list>` — append to your trading list
 - `!ft del` — clear your trading list
 - `!ft [@user...]` — show trading list(s)
 - `!lf add <list>` — save your looking‑for list
+- `!lf append <list>` — append to your looking‑for list
 - `!lf del` — clear your looking‑for list
 - `!lf [@user...]` — show looking‑for list(s)
 
@@ -170,20 +173,20 @@ Manage event subscriptions (DMs required).
 ### `/verifyme`
 Links your TPPC forums account for server verification.
 
-**Usage (choose exactly one):**\n
-- `/verifyme username:<forums username>` — bot sends you a forum PM with a code\n
-- `/verifyme securitytoken:<code>` — submit the code you received\n
+**Usage (choose exactly one):**
+- `/verifyme username:<forums username>` — bot sends you a forum PM with a code
+- `/verifyme securitytoken:<code>` — submit the code you received
 
-**Common responses:**\n
-- If verification isn’t configured: “Verification is not configured for this server.”\n
-- If both or neither options provided: usage guidance\n
-- If already verified: confirms you don’t need to verify again\n
-- If DM fails: you’ll receive an ephemeral warning\n
+**Common responses:**
+- If verification isn’t configured: “Verification is not configured for this server.”
+- If both or neither options provided: usage guidance
+- If already verified: confirms you don’t need to verify again
+- If DM fails: you’ll receive an ephemeral warning
 
 ### `/whois`
 Looks up what forums account a Discord user is verified as.
-- **Usage:** `/whois user:@user`\n
-- **Response:** verified forum username, or “not verified.”\n
+- **Usage:** `/whois user:@user`
+- **Response:** verified forum username, or “not verified.”
 
 ### `/unverify` (Admin/Privileged)
 See **Admin Appendix**.
@@ -227,9 +230,15 @@ Find TPPC RPG trainer IDs by name.
 Fetches TPPC pokedex info (stats, types, egg groups, sprites, breeding time).
 - Supports forms and modifiers (shiny/dark/golden), including Mega and regional forms.
 - Shows egg time based on base evolution.
+ - Some sprite libraries have limited coverage (e.g., HGSS up to #493, Black/White up to #649).
 
 **Common responses:**
 - `Unknown Pokémon name` + “Did you mean” buttons (clickable).
+
+### `!sprite` (aliases: `!pokesprite`, `!gif`)
+Returns a TPPC sprite URL.
+- `!sprite <pokemon> [xy|hgss|bw|blackwhite] [M|F]`
+- If the requested library lacks coverage, you’ll get a helpful error.
 
 ### `!stats <pokemon>`
 Returns stats only (text). Includes total base stats (unmodified).
@@ -262,6 +271,7 @@ RPG informational helpers.
 Rarity tools (including comparison, reload, and rarity4).
 Common commands:
 - `!rarity <pokemon>`
+- `!rarity4 <pokemon>` (Level 4 rarity lookup)
 - `!rc <pokemonA> <pokemonB>` (comparison)
 - `!rarityreload` (admin/privileged)
 - `!rarity4reload` (admin)
@@ -270,9 +280,9 @@ Common commands:
 - Unknown Pokémon → error
 - Same Pokémon comparison → error
 
-### `!p` (Promo)
+### `!promo` / `!p` (Promo)
 Shows the current weekly promo Pokémon/item.
-- **Usage:** `!p`
+- **Usage:** `!promo` or `!p`
 - **Admin:** `!setpromo <text>` (see Admin Appendix)
 
 ### `!links` / `!link` / `!short` (tools/links)
@@ -311,7 +321,7 @@ Sorts a TPPC trainer box and DMs you BBCode as a text file.
 - **Colors:** optional BBCode colors for gold/shiny/dark/normal names
 
 ### Message counts (`!count` / `!activity` / `!yap`)
-Tracks message counts in configured channels.
+Tracks message counts in configured channels (may include forum threads if your server configured them).
 - `!count` → your count
 - `!count @user` → user count
 - `!count leaderboard` → top 10
@@ -342,12 +352,20 @@ Tracks message counts in configured channels.
 
 ## 8) Contests
 
-### `!contest` (umbrella)
-Hosts multiple contest types with subcommands.
-- `!contest choose <duration>`
-- `!contest start <duration>`
-- `!contest list`
-- (See in-command help output for full options)
+### Reaction contests (`!conteststart` / `!contest` / `/contest`)
+Runs a reaction‑based contest in the current channel (uses 👍). Admin/privileged or contest host only.
+
+**Bang usage:**
+- `!conteststart [list|choose|elim] <time> [quota] [winners] [prize=...] [require=verified]`
+- Aliases: `!contest`, `!startcontest`
+- `!cancelcontest` — cancel an active contest in this channel (host or admin)
+
+**Slash usage:**
+- `/contest mode:<list|choose|elim> time:<30sec|5min|1hour> quota:<N> winners:<N> prize:<text> require_verified:<true|false>`
+
+**Notes:**
+- `list` prints entrants, `choose` picks winners, `elim` runs elimination rounds.
+- `require=verified` / `require_verified` enforces verified role + saved ID. Ineligible users receive a DM with steps; eligibility is re‑checked at draw time.
 
 ### Giveaways (`/giveaway`)
 Subcommands: `create`, `list`, `end`, `delete`, `reroll`
@@ -363,16 +381,48 @@ Creates or manages poll contests (admin/privileged).
 ### Whispers (`/whisper`)
 Case‑insensitive phrase triggers that notify staff or log internally.
 Subcommands:
-- `/whisper add` — add a phrase to listen for (case-insensitive)\n
-- `/whisper list` — list current phrases\n
-- `/whisper delete` — remove a phrase (case-insensitive)\n
+- `/whisper add` — add a phrase to listen for (case-insensitive)
+- `/whisper list` — list current phrases
+- `/whisper delete` — remove a phrase (case-insensitive)
+**Limits:**
+- Max 5 whispers per user (admins/privileged exempt)
+- Max 256 characters per phrase
 
-### Reading contests / RNG / Reaction contests
-Hosted by contest admins. See command help for prompts and formats.
+### Reading tracker (`!startReading` / `!endReading`)
+Tracks unique responders in the current channel (admin/privileged only).
+- `!startReading [phrase]` — optional phrase filter (case‑insensitive)
+- `!endReading` — ends and prints the participant list (no pings)
+
+### TPPC Lottery (`!lotto`)
+Companion for the weekly forum lottery (admin starts tracking; users generate combos).
+- `!lotto set <postnumber>` — start tracking from a forum post number (admin only)
+- `!lotto` — generate a unique combo (reserved ~10 min; non‑admin cooldown ~10 min)
+- `!lotto check 1 2 3` — check if a combo is already claimed
+- `!lotto check --live 1 2 3` — force a live scrape (admin only)
+- `!lotto status` — show tracking status + valid entrants
+- `!lotto invalid` — list invalid forum entries (live scrape)
+- `!lotto roll` — roll winning numbers (admin only)
+- `!lotto reset` — stop tracking and clear cache (admin only)
+- `!lotto rules` / `!lotto help`
+- Alias: `!lottery`
+
+**Notes:**
+- Generated combos are reserved for ~10 minutes to avoid duplicates.
+- `--live` is admin‑only; normal users get cached results.
+
+### RNG utilities (`!roll`, `!choose`, `!elim`, `!coinflip`, `!awesome`)
+Randomizers and eliminations (prefix may be `!` or `?` depending on server policy).
+- `!roll NdM` — roll N numbers in range 1..M (example: `!roll 1d100`)
+- `!choose a b c` — pick one option at random
+- `!elim <1–30s> <items...>` — eliminate one item per round
+- `?cancelelim` — cancel the active elimination (starter or admin)
+- `!coinflip` — Heads/Tails
+- `!awesome` — tells you how awesome someone is (0–101%)
 
 ### Custom leaderboards (`!customlb`)
 Guild-scoped leaderboards with a custom metric label (admin/privileged).
 - `!customlb create <lb_name> [metric]` — metric defaults to `Points`
+- `!customlb help` — show usage and examples
 - `!customlb list` — list active custom leaderboards
 - `!customlb delete|del <lb_name>` — requires confirmation buttons
 - `!customlb rename <old> <new> [metric]` — rename or update leaderboard name and/or metric name
@@ -382,6 +432,7 @@ Guild-scoped leaderboards with a custom metric label (admin/privileged).
 - `!customlb score update <lb_name> <name> <delta> [name delta ...]` — increment/decrement
 
 **Rules & syntax:**
+- Admin/privileged only; non‑admin usage is ignored.
 - Leaderboard names can include spaces; wrap them in quotes or use underscores.
 - Metric names may include spaces.
 - Participant lists support spaces or commas. Names with spaces should be quoted.
@@ -427,6 +478,7 @@ Lightweight utilities or fun responses.
 - `!rig` — bless someone with RNG
 - `!curse @user` — curse someone with anti‑RNG
 - `!slap @user` — playful slap command
+- `!m8ball <question>` (alias: `!8ball`) — magic 8‑ball answer (15s cooldown for normal users)
 - Passive: messages containing “intbkty” get a boot reaction
 
 ---
@@ -439,6 +491,7 @@ These commands are hidden from public help and only visible in the private admin
 - `!faqreload` — reloads `faq.json`
 - `!rarity4reload` — refresh rarity4 cache
 - `!setpromo <text>` — set promo manually
+- `!cmdpolicy` — show per‑guild command exposure overrides
 - `/unverify` — remove verification for a user
 - `/getforumlist` — scrape TPPC forum thread and DM list
 - `/pollcontest` — manage poll contests (admin/priv)
