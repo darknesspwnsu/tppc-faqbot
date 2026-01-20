@@ -27,6 +27,13 @@ function normalizeCommandArg(rest) {
   return String(rest ?? "").trim();
 }
 
+function appendListText(existing, addition) {
+  const base = String(existing ?? "").trim();
+  if (!base) return addition;
+  const separator = base.includes("\n") ? "\n" : ", ";
+  return `${base}${separator}${addition}`;
+}
+
 /* ----------------------------- handler builders ---------------------------- */
 
 function makeTextListHandler(kind, label, opts = {}) {
@@ -37,8 +44,8 @@ function makeTextListHandler(kind, label, opts = {}) {
   const pretty = kind === "ft" ? "Trading" : "Looking-for";
   const helpLine =
     kind === "ft"
-      ? "!ft add <list> | !ft del | !ft [@user...] — is trading list"
-      : "!lf add <list> | !lf del | !lf [@user...] — is looking for list";
+      ? "!ft add <list> | !ft append <list> | !ft del | !ft [@user...] — is trading list"
+      : "!lf add <list> | !lf append <list> | !lf del | !lf [@user...] — is looking for list";
   const shortcutAddLine =
     kind === "ft"
       ? "!ftadd <text> — shortcut for !ft add <text>"
@@ -91,6 +98,34 @@ function makeTextListHandler(kind, label, opts = {}) {
       });
 
       await message.reply(`✅ ${pretty} list cleared.`);
+      return;
+    }
+
+    // append
+    if (lower.startsWith("append")) {
+      const after = raw.slice("append".length);
+      const text = stripLeadingMentions(after).trim();
+
+      if (!text) {
+        await message.reply(`Usage: \`${baseCmd} append <list>\``);
+        return;
+      }
+
+      const existing = await getUserText({
+        guildId: message.guild.id,
+        userId: message.author.id,
+        kind
+      });
+
+      const nextText = appendListText(existing, text);
+      await setUserText({
+        guildId: message.guild.id,
+        userId: message.author.id,
+        kind,
+        text: nextText
+      });
+
+      await message.reply(`✅ ${pretty} list updated. Use \`${baseCmd}\` to view it.`);
       return;
     }
 

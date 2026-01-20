@@ -88,6 +88,50 @@ describe("trade_commands.js", () => {
     );
   });
 
+  it("handles append for ft with existing list", async () => {
+    const register = makeRegister();
+    registerTradeCommands(register);
+
+    const handler = getHandler(register, "ft");
+    const message = makeMessage();
+
+    dbMocks.getUserText.mockResolvedValueOnce("pikachu");
+
+    await handler({ message, rest: "append eevee", cmd: "?ft" });
+
+    expect(dbMocks.setUserText).toHaveBeenCalledWith({
+      guildId: "g1",
+      userId: "u1",
+      kind: "ft",
+      text: "pikachu, eevee",
+    });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("list updated")
+    );
+  });
+
+  it("handles append when list is empty", async () => {
+    const register = makeRegister();
+    registerTradeCommands(register);
+
+    const handler = getHandler(register, "lf");
+    const message = makeMessage();
+
+    dbMocks.getUserText.mockResolvedValueOnce(null);
+
+    await handler({ message, rest: "append charmander", cmd: "?lf" });
+
+    expect(dbMocks.setUserText).toHaveBeenCalledWith({
+      guildId: "g1",
+      userId: "u1",
+      kind: "lf",
+      text: "charmander",
+    });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("list updated")
+    );
+  });
+
   it("renders mention lookups", async () => {
     const register = makeRegister();
     registerTradeCommands(register);
