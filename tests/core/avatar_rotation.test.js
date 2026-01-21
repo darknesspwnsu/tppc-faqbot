@@ -1,7 +1,22 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+
+const fsMocks = vi.hoisted(() => ({
+  readFile: vi.fn(),
+}));
+
+vi.mock("node:fs/promises", () => ({
+  default: fsMocks,
+  readFile: fsMocks.readFile,
+}));
+
 import { ruleMatches, selectRuleForDate, resolveAvatarChoice, __testables } from "../../avatar_rotation.js";
 
 describe("avatar_rotation", () => {
+  beforeEach(() => {
+    fsMocks.readFile.mockReset();
+    __testables.resetState();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -86,5 +101,45 @@ describe("avatar_rotation", () => {
   it("normalizes 24:xx to 00:xx for the same day in ET", () => {
     const parts = __testables.getZonedParts(new Date("2026-01-14T05:01:00Z"), "America/New_York");
     expect(parts).toEqual({ month: 1, day: 14, year: 2026, hour: 0, minute: 1, second: 0 });
+  });
+
+  it("retries once on socket-closed errors when setting avatar", async () => {
+    vi.useFakeTimers();
+    fsMocks.readFile.mockResolvedValue(Buffer.from("avatar"));
+
+    const setAvatar = vi
+      .fn()
+      .mockRejectedValueOnce({ name: "SocketError", message: "other side closed" })
+      .mockResolvedValueOnce(undefined);
+    const client = { user: { setAvatar } };
+
+    const prev = process.env.AVATAR_OVERRIDE;
+    process.env.AVATAR_OVERRIDE = "assets/avatars/default_flipped.png";
+
+    const promise = __testables.applyAvatar(client, "startup");
+    await vi.advanceTimersByTimeAsync(5_000);
+    await promise;
+
+    expect(setAvatar).toHaveBeenCalledTimes(2);
+
+    process.env.AVATAR_OVERRIDE = prev;
+  });
+
+  it("does not retry on non-socket errors", async () => {
+    fsMocks.readFile.mockResolvedValue(Buffer.from("avatar"));
+
+    const setAvatar = vi
+      .fn()
+      .mockRejectedValueOnce({ name: "DiscordAPIError", message: "bad request" });
+    const client = { user: { setAvatar } };
+
+    const prev = process.env.AVATAR_OVERRIDE;
+    process.env.AVATAR_OVERRIDE = "assets/avatars/default_flipped.png";
+
+    await __testables.applyAvatar(client, "startup");
+
+    expect(setAvatar).toHaveBeenCalledTimes(1);
+
+    process.env.AVATAR_OVERRIDE = prev;
   });
 });

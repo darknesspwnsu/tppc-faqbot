@@ -201,6 +201,37 @@ async function applyAvatar(client, reason) {
       reason,
     });
   } catch (err) {
+    if (isSocketClosedError(err)) {
+      logger.warn("avatar_rotation.update_retry", {
+        month,
+        rule: choice.ruleId,
+        file: choice.file,
+        reason,
+        retryMs: 5_000,
+      });
+      await wait(5_000);
+      try {
+        const buffer = await fs.readFile(filePath);
+        await client.user.setAvatar(buffer);
+        lastAppliedKey = filePath;
+        logger.info("avatar_rotation.updated", {
+          month,
+          rule: choice.ruleId,
+          file: choice.file,
+          reason: `${reason}_retry`,
+        });
+        return;
+      } catch (retryErr) {
+        logger.warn("avatar_rotation.update_failed", {
+          month,
+          rule: choice.ruleId,
+          file: choice.file,
+          reason: `${reason}_retry`,
+          error: logger.serializeError(retryErr),
+        });
+        return;
+      }
+    }
     logger.warn("avatar_rotation.update_failed", {
       month,
       rule: choice.ruleId,
@@ -209,6 +240,18 @@ async function applyAvatar(client, reason) {
       error: logger.serializeError(err),
     });
   }
+}
+
+function isSocketClosedError(err) {
+  const name = String(err?.name || "");
+  const message = String(err?.message || "");
+  if (name === "SocketError" && message.toLowerCase().includes("other side closed")) return true;
+  if (message.toLowerCase().includes("socket") && message.toLowerCase().includes("closed")) return true;
+  return false;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function scheduleNext(client) {
@@ -252,4 +295,9 @@ export const __testables = {
   makeZonedDate,
   addZonedDays,
   getZonedParts,
+  applyAvatar,
+  isSocketClosedError,
+  resetState: () => {
+    lastAppliedKey = null;
+  },
 };
