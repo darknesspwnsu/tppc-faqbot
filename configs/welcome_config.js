@@ -18,7 +18,7 @@ export const WELCOME_MESSAGE = [
   "",
   "Instructions for selecting a role: Click on \"Channels & Roles\" just under the server's banner to set a role with your favorite color and enable notifications for contests!",
   "",
-  "We highly advise you become verified. This will make you eligible for more contests, able to post pictures, and if you are a new player or returning with nothing, you may then qualify for the new [starter quests](https://forums.tppc.info/showthread.php?t=621060).",
+  "We highly advise you become verified. This will make you eligible for more contests, able to post pictures, and if you are a new player or returning with nothing, you may then qualify for the new [starter quests](https://forums.tppc.info/showthread.php?t=621060). To get started, type `/verifyme` in the server.",
   "",
   "Lastly, for a crash course on what I can do for you, type /help in any channel. Here are our most popular commands:",
   "",
@@ -26,5 +26,5 @@ export const WELCOME_MESSAGE = [
   "> !rarity <pokemon of interest>",
   "> !ft add <your trade list>",
   "",
-  "Good luck trainer! :saluting_face:",
+  "Good luck, Trainer! :saluting_face:",
 ].join("\n");
