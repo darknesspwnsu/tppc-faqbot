@@ -338,6 +338,8 @@ Tracks message counts in configured channels (may include forum threads if your 
 
 - `/remindme set phrase:<phrase> <time>`
 - `/remindme set messageID:<id> <time>`
+- `/remindme set phrase:<phrase> at:<datetime>`
+- `/remindme set messageID:<id> at:<datetime>`
 - `/remindme list`
 - `/remindme unset <dropdown>`
 - `/remindme clear` — clear all reminders
@@ -347,6 +349,8 @@ Tracks message counts in configured channels (may include forum threads if your 
 - NotifyMe is **guild-scoped**
 - RemindMe works in servers; message IDs must be in a server the bot can access
 - DM permission is required; bot tests DMs and warns if it cannot DM you
+- `at:` accepts common formats like `2026-01-18 19:30`, `01/18/2026 7:30 PM`, `Jan 18 2026 7:30 PM`
+- Timezone defaults to America/New_York; add `UTC`, `ET`, or an offset like `-05:00` to override
 
 ---
 

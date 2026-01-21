@@ -9,7 +9,7 @@ _Core, high-frequency commands._
   Example: `!id add 123456`
 - **!rarity <pokemon>** - quick rarity lookup  
   Example: `!rarity Dratini`
-- **!calc <mode> ...** - level/exp/money calc  
+- **!calc <mode> ...** - level/exp/money calc. `!calc help` to get started.  
   Example: `!calc l2e 100`
 - **!lb <board>** - leaderboards  
   Example: `!lb roulette weekly`
@@ -18,7 +18,7 @@ _Core, high-frequency commands._
 - **/help** - private help menu  
   Example: `/help`
 
-> Note: In some servers the prefix is `?` instead of `!` - check `/help`.
+> Note: If using `!` triggers older bots, then prefix the command with `?` (`?ft` instead of `!ft`)- check `/help` for list.
 
 ---
 
@@ -45,8 +45,8 @@ _Practical helpers for otherwise tedious rpg stuff._
   Example: `!count leaderboard`
 - **/notifyme set <phrase>** - DM on phrase  
   Example: `/notifyme set phrase:golden`
-- **/remindme set <phrase> <time>** - timed reminder  
-  Example: `/remindme set phrase:trade 2h`
+- **/remindme set <phrase> <time|at>** - timed reminder  
+  Example: `/remindme set phrase:trade at:2026-01-18 7:30 PM ET`
 
 ---
 

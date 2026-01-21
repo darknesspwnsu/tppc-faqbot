@@ -3,6 +3,7 @@
 // /notifyme and /remindme (slash only).
 
 import { MessageFlags } from "discord.js";
+import { DateTime } from "luxon";
 import { getDb } from "../db.js";
 import { isAdminOrPrivileged } from "../auth.js";
 import { includesWholePhrase, normalizeForMatch } from "../contests/helpers.js";
@@ -14,6 +15,15 @@ const MAX_NOTIFY_PER_USER = 10;
 const MAX_REMIND_PER_USER = 10;
 const MAX_DURATION_SECONDS = 365 * 24 * 60 * 60;
 const MAX_TIMEOUT_MS = 2_000_000_000; // ~23 days (setTimeout limit safety)
+const DEFAULT_REMINDME_TZ = "America/New_York";
+
+const TZ_ALIASES = new Map([
+  ["UTC", "UTC"],
+  ["GMT", "UTC"],
+  ["ET", "America/New_York"],
+  ["EST", "America/New_York"],
+  ["EDT", "America/New_York"],
+]);
 
 const notifyByGuild = new Map(); // guildId -> { loaded, items: [{ id, userId, phrase, key }] }
 const remindersById = new Map(); // reminderId -> { reminder, timeout }
@@ -55,6 +65,103 @@ function parseDurationExtended(raw) {
   if (u === "mo" || u === "mon" || u.startsWith("month")) return v * 30 * 86400;
   if (u.startsWith("y")) return v * 365 * 86400;
   return null;
+}
+
+function splitWhitespace(text) {
+  const tokens = [];
+  let current = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") {
+      if (current) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += ch;
+  }
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+function isDigits(text) {
+  if (!text) return false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch < "0" || ch > "9") return false;
+  }
+  return true;
+}
+
+function isOffsetToken(token) {
+  if (!token || token.length < 3) return false;
+  const sign = token[0];
+  if (sign !== "+" && sign !== "-") return false;
+  const rest = token.slice(1);
+  const parts = rest.split(":");
+  if (parts.length !== 2) return false;
+  const [hh, mm] = parts;
+  if (!isDigits(hh) || !isDigits(mm)) return false;
+  const h = Number(hh);
+  const m = Number(mm);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
+function normalizeTimezoneToken(token) {
+  if (!token) return null;
+  const upper = token.toUpperCase();
+  if (TZ_ALIASES.has(upper)) return TZ_ALIASES.get(upper);
+  if (isOffsetToken(token)) return token;
+  return null;
+}
+
+function parseAbsoluteDateTime(raw, { defaultZone = DEFAULT_REMINDME_TZ } = {}) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return { ok: false, error: "Please provide a date and time." };
+
+  const tokens = splitWhitespace(trimmed);
+  if (!tokens.length) return { ok: false, error: "Please provide a date and time." };
+
+  let zone = defaultZone;
+  const last = tokens[tokens.length - 1];
+  const tz = normalizeTimezoneToken(last);
+  if (tz) {
+    zone = tz;
+    tokens.pop();
+  }
+
+  const dateText = tokens.join(" ").trim();
+  if (!dateText) return { ok: false, error: "Please provide a date and time." };
+
+  const normalized = dateText;
+  const formats = [
+    "yyyy-MM-dd HH:mm",
+    "yyyy-MM-dd H:mm",
+    "yyyy-MM-dd h:mm a",
+    "MM/dd/yyyy HH:mm",
+    "M/d/yyyy HH:mm",
+    "MM/dd/yyyy h:mm a",
+    "M/d/yyyy h:mm a",
+    "LLL d yyyy h:mm a",
+    "LLL d yyyy HH:mm",
+    "yyyy-MM-dd'T'HH:mm",
+    "yyyy-MM-dd'T'H:mm",
+  ];
+
+  for (const fmt of formats) {
+    const dt = DateTime.fromFormat(normalized, fmt, { zone });
+    if (dt.isValid) return { ok: true, dt, zone };
+  }
+
+  const iso = DateTime.fromISO(normalized, { zone });
+  if (iso.isValid) return { ok: true, dt: iso, zone };
+
+  return {
+    ok: false,
+    error:
+      "Please provide a valid date/time. Examples: `2026-01-18 19:30`, `01/18/2026 7:30 PM`, `Jan 18 2026 7:30 PM`, optional tz like `UTC` or `-05:00`.",
+  };
 }
 
 async function ensureDmAvailable(user, feature) {
@@ -651,7 +758,13 @@ export function registerReminders(register) {
               type: 3,
               name: "time",
               description: "Duration (e.g. 10m, 2h, 3d, 2w, 1y)",
-              required: true,
+              required: false,
+            },
+            {
+              type: 3,
+              name: "at",
+              description: "Absolute date/time (e.g. 2026-01-18 7:30 PM ET)",
+              required: false,
             },
             {
               type: 3,
@@ -703,9 +816,17 @@ export function registerReminders(register) {
         const phrase = norm(interaction.options?.getString?.("phrase"));
         const messageId = norm(interaction.options?.getString?.("message_id"));
         const timeRaw = norm(interaction.options?.getString?.("time"));
+        const atRaw = norm(interaction.options?.getString?.("at"));
         if ((phrase && messageId) || (!phrase && !messageId)) {
           await interaction.reply({
             content: "Please provide exactly one of `phrase` or `message_id`.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if ((timeRaw && atRaw) || (!timeRaw && !atRaw)) {
+          await interaction.reply({
+            content: "Please provide exactly one of `time` or `at`.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -718,20 +839,49 @@ export function registerReminders(register) {
           return;
         }
 
-        const seconds = parseDurationExtended(timeRaw);
-        if (!Number.isFinite(seconds) || seconds <= 0) {
-          await interaction.reply({
-            content: "Please provide a valid duration (e.g. 10m, 2h, 3d, 2w, 1y).",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-        if (seconds > MAX_DURATION_SECONDS) {
-          await interaction.reply({
-            content: "Reminders cannot exceed 1 year.",
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
+        let remindAtMs = null;
+        if (timeRaw) {
+          const seconds = parseDurationExtended(timeRaw);
+          if (!Number.isFinite(seconds) || seconds <= 0) {
+            await interaction.reply({
+              content: "Please provide a valid duration (e.g. 10m, 2h, 3d, 2w, 1y).",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          if (seconds > MAX_DURATION_SECONDS) {
+            await interaction.reply({
+              content: "Reminders cannot exceed 1 year.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          remindAtMs = Date.now() + seconds * 1000;
+        } else {
+          const parsed = parseAbsoluteDateTime(atRaw, { defaultZone: DEFAULT_REMINDME_TZ });
+          if (!parsed.ok) {
+            await interaction.reply({
+              content: parsed.error,
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          remindAtMs = parsed.dt.toMillis();
+          const deltaMs = remindAtMs - Date.now();
+          if (deltaMs <= 0) {
+            await interaction.reply({
+              content: "Please provide a future date/time.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          if (deltaMs > MAX_DURATION_SECONDS * 1000) {
+            await interaction.reply({
+              content: "Reminders cannot exceed 1 year.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
         }
 
         const dmOk = await ensureDmAvailable(interaction.user, "remindme");
@@ -772,7 +922,6 @@ export function registerReminders(register) {
           }
         }
 
-        const remindAtMs = Date.now() + seconds * 1000;
         const id = await addReminder({
           userId,
           guildId: interaction.guildId || "",

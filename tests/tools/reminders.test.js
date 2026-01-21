@@ -25,6 +25,7 @@ function makeInteraction({
   phrase,
   messageId,
   time,
+  at,
   userId = "u1",
   isAdmin = false,
 } = {}) {
@@ -43,6 +44,7 @@ function makeInteraction({
         if (key === "phrase") return phrase;
         if (key === "message_id") return messageId;
         if (key === "time") return time;
+        if (key === "at") return at;
         if (key === "notify_id") return phrase;
         if (key === "reminder_id") return phrase;
         return null;
@@ -334,6 +336,27 @@ describe("tools/reminders", () => {
     );
   });
 
+  it("rejects remindme when time and at are both provided", async () => {
+    const execute = vi.fn(async () => [[]]);
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({
+      sub: "set",
+      phrase: "ping",
+      time: "10m",
+      at: "2026-01-02 03:04 UTC",
+    });
+    await remindSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("exactly one of `time` or `at`") })
+    );
+  });
+
   it("rejects remindme over 1 year", async () => {
     const execute = vi.fn(async () => [[]]);
     dbMocks.getDb.mockReturnValue({ execute });
@@ -369,6 +392,70 @@ describe("tools/reminders", () => {
       expect.objectContaining({ content: "✅ Reminder set." })
     );
     expect(execute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO reminders"), expect.anything());
+  });
+
+  it("sets a remindme using an absolute datetime (default timezone)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+
+    let insertParams = null;
+    const execute = vi.fn(async (sql, params) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      if (sql.includes("INSERT INTO reminders")) {
+        insertParams = params;
+        return [{ insertId: 8 }];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "ping", at: "2026-01-02 03:04" });
+    await remindSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "✅ Reminder set." })
+    );
+    expect(insertParams?.[5]).toBe(Date.UTC(2026, 0, 2, 8, 4));
+
+    vi.useRealTimers();
+  });
+
+  it("sets a remindme using an absolute datetime with timezone override", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+
+    let insertParams = null;
+    const execute = vi.fn(async (sql, params) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      if (sql.includes("INSERT INTO reminders")) {
+        insertParams = params;
+        return [{ insertId: 9 }];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({
+      sub: "set",
+      phrase: "ping",
+      at: "2026-01-02 03:04 UTC",
+    });
+    await remindSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "✅ Reminder set." })
+    );
+    expect(insertParams?.[5]).toBe(Date.UTC(2026, 0, 2, 3, 4));
+
+    vi.useRealTimers();
   });
 
   it("allows remindme in DMs with a phrase", async () => {
