@@ -256,7 +256,39 @@ describe("tools/reminders", () => {
     };
 
     await listener({ message });
-    expect(send).toHaveBeenCalledWith(expect.stringContaining("/notifyme unset"));
+    const payload = send.mock.calls[0][0];
+    expect(payload).toContain("> hello magic there");
+    expect(payload).toContain("/notifyme unset");
+  });
+
+  it("truncates long notifyme snippets with ellipses", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
+        return [[{ id: 5, user_id: "u1", phrase: "magic" }]];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const listener = register.calls.listener[0];
+
+    const send = vi.fn(async () => {});
+    const message = {
+      guildId: "g1",
+      channelId: "c1",
+      id: "m3",
+      content: `magic ${"a".repeat(260)}`,
+      author: { id: "u2", bot: false },
+      client: { users: { fetch: vi.fn(async () => ({ send })) } },
+    };
+
+    await listener({ message });
+
+    const payload = send.mock.calls[0][0];
+    expect(payload).toContain("...");
+    expect(payload).not.toContain("a".repeat(210));
   });
 
   it("allows notifyme for bot messages when target user matches", async () => {

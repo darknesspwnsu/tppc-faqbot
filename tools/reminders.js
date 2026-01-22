@@ -16,6 +16,8 @@ const MAX_REMIND_PER_USER = 10;
 const MAX_DURATION_SECONDS = 365 * 24 * 60 * 60;
 const MAX_TIMEOUT_MS = 2_000_000_000; // ~23 days (setTimeout limit safety)
 const DEFAULT_REMINDME_TZ = "America/New_York";
+const NOTIFY_SNIPPET_MAX_CHARS = 200;
+const NOTIFY_SNIPPET_MAX_LINES = 3;
 
 const TZ_ALIASES = new Map([
   ["UTC", "UTC"],
@@ -65,6 +67,35 @@ function parseDurationExtended(raw) {
   if (u === "mo" || u === "mon" || u.startsWith("month")) return v * 30 * 86400;
   if (u.startsWith("y")) return v * 365 * 86400;
   return null;
+}
+
+function formatQuoteBlock(text) {
+  const lines = String(text || "").split("\n");
+  return lines.map((line) => `> ${line}`).join("\n");
+}
+
+function buildNotifySnippet(content) {
+  const raw = String(content || "").trim();
+  if (!raw) return "";
+
+  const lines = raw.split("\r").join("").split("\n");
+  let truncated = false;
+  if (lines.length > NOTIFY_SNIPPET_MAX_LINES) {
+    lines.length = NOTIFY_SNIPPET_MAX_LINES;
+    truncated = true;
+  }
+
+  let snippet = lines.join("\n");
+  if (snippet.length > NOTIFY_SNIPPET_MAX_CHARS) {
+    snippet = snippet.slice(0, NOTIFY_SNIPPET_MAX_CHARS);
+    truncated = true;
+  }
+
+  if (truncated) {
+    snippet = snippet.trimEnd() + "...";
+  }
+
+  return snippet;
 }
 
 function splitWhitespace(text) {
@@ -517,8 +548,14 @@ export function registerReminders(register) {
         });
         const res = await sendDm({
           user,
-          payload:
-            `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.\n${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`,
+          payload: (() => {
+            const snippet = buildNotifySnippet(message.content);
+            const quote = snippet ? `\n${formatQuoteBlock(snippet)}\n` : "\n";
+            return (
+              `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.` +
+              `${quote}${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`
+            );
+          })(),
           feature: "notifyme",
         });
         if (res.ok) {
