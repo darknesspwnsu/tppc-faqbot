@@ -4,8 +4,13 @@ import { registerToybox } from "../toybox.js";
 function makeRegister() {
   const handlers = {};
   let listener = null;
-  const register = (cmd, handler) => {
+  const register = (cmd, handler, _help, opts = {}) => {
     handlers[cmd] = handler;
+    const aliases = Array.isArray(opts.aliases) ? opts.aliases : [];
+    for (const alias of aliases) {
+      if (!alias) continue;
+      handlers[String(alias)] = handler;
+    }
   };
   register.expose = ({ name, handler, opts = {} }) => {
     handlers[`!${name}`] = handler;
@@ -51,6 +56,16 @@ describe("toybox commands", () => {
 
     const message = makeMessage({ authorId: "a1", mentionId: "u2" });
     await handlers["!rig"]({ message });
+
+    expect(message.channel.send).toHaveBeenCalledWith("<@u2> has now been blessed by rngesus.");
+  });
+
+  it("rig supports the bless alias", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const message = makeMessage({ authorId: "a1", mentionId: "u2" });
+    await handlers["!bless"]({ message });
 
     expect(message.channel.send).toHaveBeenCalledWith("<@u2> has now been blessed by rngesus.");
   });

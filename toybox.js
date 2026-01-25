@@ -79,7 +79,8 @@ export function registerToybox(register) {
       const uid = message.mentions?.users?.first?.()?.id ?? message.author.id;
       await message.channel.send(`${mention(uid)} has now been blessed by rngesus.`);
     },
-    "!rig — bless someone with RNG"
+    "!rig — bless someone with RNG",
+    { aliases: ["!bless"] }
   );
 
   // ------------------------------ Bang: curse -------------------------------
