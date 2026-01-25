@@ -112,6 +112,10 @@ export function registerToybox(register) {
         await message.reply("Usage: `!slap @user`");
         return;
       }
+      if (target.id === message.author.id) {
+        await message.reply("You can't slap yourself. Try someone else.");
+        return;
+      }
 
       await message.channel.send(
         `_${mention(message.author.id)} slaps ${mention(target.id)} around a bit with a large trout._`

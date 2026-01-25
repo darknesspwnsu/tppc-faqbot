@@ -97,6 +97,16 @@ describe("toybox commands", () => {
     );
   });
 
+  it("slap blocks self targets", async () => {
+    const { register, handlers } = makeRegister();
+    registerToybox(register);
+
+    const message = makeMessage({ authorId: "u1", mentionId: "u1" });
+    await handlers["!slap"]({ message });
+
+    expect(message.reply).toHaveBeenCalledWith("You can't slap yourself. Try someone else.");
+  });
+
   it("m8ball requires a question", async () => {
     const { register, handlers } = makeRegister();
     registerToybox(register);
