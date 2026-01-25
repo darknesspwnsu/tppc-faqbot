@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import fs from "fs/promises";
 import { registerCalculator, __testables } from "../../tools/calculator.js";
 
 const {
@@ -45,6 +46,7 @@ describe("calculator.js", () => {
     const reg = makeRegistry();
     registerCalculator(reg.register);
     handlers = reg.handlers;
+    __testables.setTrainerTable(null);
   });
 
   it("registers !calculate and !calculator", () => {
@@ -128,6 +130,214 @@ describe("calculator.js", () => {
 
     const msg2 = await runBang(handlers, "!calculate", "eba 42.5 10 1.25");
     expect(msg2.reply).toHaveBeenCalledTimes(1);
+  });
+
+  it("perf returns a trainer plan", async () => {
+    __testables.setTrainerTable({
+      data: [
+        { name: "TrainerA", number: 1, expDay: 10, expNight: 10 },
+        { name: "TrainerB", number: 2, expDay: 1, expNight: 1 },
+      ],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 13");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("**📈 Perfect EXP plan**");
+    expect(replyArg).toContain("TrainerA");
+    expect(replyArg).toContain("TrainerB");
+    expect(replyArg).toContain("**1** × 1");
+    expect(replyArg).toContain("> **Heads-up:**");
+    expect(replyArg).toContain("Update 5/14/23");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf uses daytime exp values", async () => {
+    __testables.setTrainerTable({
+      data: [{ name: "DayGym", number: 9, expDay: 10, expNight: 99 }],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 21");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("DayGym");
+    expect(replyArg).toContain("**2** × 10");
+    expect(replyArg).not.toContain("× 99");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf uses nighttime exp values", async () => {
+    __testables.setTrainerTable({
+      data: [{ name: "NightGym", number: 10, expDay: 10, expNight: 20 }],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-02T03:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 41");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("NightGym");
+    expect(replyArg).toContain("**2** × 20");
+    expect(replyArg).not.toContain("× 10");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf handles formatted numbers with commas/underscores", async () => {
+    __testables.setTrainerTable({
+      data: [{ name: "CommaGym", number: 11, expDay: 25, expNight: 25 }],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1,000 1_050");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("CommaGym");
+    expect(replyArg).toContain("**2** × 25");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf supports a highest gym filter", async () => {
+    __testables.setTrainerTable({
+      data: [
+        { name: "TrainerA", number: 1, expDay: 10, expNight: 10 },
+        { name: "TrainerB", number: 2, expDay: 6, expNight: 6 },
+        { name: "TrainerC", number: 3, expDay: 1, expNight: 1 },
+      ],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 21 2");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("TrainerB");
+    expect(replyArg).toContain("TrainerC");
+    expect(replyArg).not.toContain("TrainerA");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf keeps top gym when highest gym is not found", async () => {
+    __testables.setTrainerTable({
+      data: [
+        { name: "TopGym", number: 1, expDay: 10, expNight: 10 },
+        { name: "MidGym", number: 2, expDay: 5, expNight: 5 },
+      ],
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 21 999");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("TopGym");
+
+    vi.useRealTimers();
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf rejects when desired exp is not greater", async () => {
+    __testables.setTrainerTable({
+      data: [{ name: "TrainerA", number: 1, expDay: 10, expNight: 10 }],
+    });
+
+    const msg = await runBang(handlers, "!calculate", "perf 100 100");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Desired exp must be greater");
+
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf rejects invalid highest gym arguments", async () => {
+    const msg = await runBang(handlers, "!calculate", "perf 1 20 0");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]`");
+  });
+
+  it("perf rejects non-numeric args with usage", async () => {
+    const msg = await runBang(handlers, "!calculate", "perf nope 20");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]`");
+  });
+
+  it("perf rejects too many args with usage", async () => {
+    const msg = await runBang(handlers, "!calculate", "perf 1 2 3 4");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]`");
+  });
+
+  it("perf responds when no trainer plan exists", async () => {
+    __testables.setTrainerTable({
+      data: [{ name: "TooBig", number: 1, expDay: 100, expNight: 100 }],
+    });
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 50");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("No valid trainer plan found");
+
+    __testables.setTrainerTable(null);
+  });
+
+  it("perf usage includes the reference link", async () => {
+    const msg = await runBang(handlers, "!calculate", "perf");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]`");
+    expect(replyArg).toContain("coldsp33d.github.io/perfect_exp");
+  });
+
+  it("perf handles trainer data read failures", async () => {
+    const spy = vi.spyOn(fs, "readFile").mockRejectedValue(new Error("boom"));
+    __testables.setTrainerTable(null);
+
+    const msg = await runBang(handlers, "!calculate", "perf 1 20");
+    const replyArg = msg.reply.mock.calls[0][0];
+    expect(replyArg).toContain("Trainer data is unavailable");
+
+    spy.mockRestore();
+    __testables.setTrainerTable(null);
+  });
+
+  it("findOptimalTrainers respects gap filtering and ordering", () => {
+    const table = {
+      data: [
+        { name: "Big", number: 1, expDay: 100, expNight: 100 },
+        { name: "Med", number: 2, expDay: 10, expNight: 10 },
+        { name: "Small", number: 3, expDay: 3, expNight: 3 },
+      ],
+    };
+
+    const { plan } = __testables.findOptimalTrainers(1, 25, table, false);
+    expect(plan[0].name).toBe("Med");
+    expect(plan[0].numBattles).toBe(2);
+    expect(plan[1].name).toBe("Small");
+  });
+
+  it("findOptimalTrainers applies the highest gym filter", () => {
+    const table = {
+      data: [
+        { name: "Top", number: 1, expDay: 10, expNight: 10 },
+        { name: "Mid", number: 2, expDay: 6, expNight: 6 },
+        { name: "Low", number: 3, expDay: 1, expNight: 1 },
+      ],
+    };
+
+    const { plan } = __testables.findOptimalTrainers(1, 21, table, false, 2);
+    expect(plan[0].name).toBe("Mid");
+    expect(plan.some((entry) => entry.name === "Top")).toBe(false);
   });
 
   it("invalid numeric input is rejected silently for numeric functions", async () => {

@@ -1,5 +1,8 @@
 // calculator.js
 
+import fs from "fs/promises";
+import path from "path";
+
 function parseNum(raw) {
   // Accept: "123", "1,234", "42.5", "42_500", "  100162  "
   const s = String(raw ?? "")
@@ -49,6 +52,112 @@ function expToLevel(exp) {
 
 function fromBillions(bil) {
   return bil * 1e9;
+}
+
+const TRAINERS_PATH = path.resolve("data", "training_gyms.json");
+let trainerTableCache = null;
+
+async function loadTrainerTable() {
+  if (trainerTableCache) return trainerTableCache;
+  const raw = await fs.readFile(TRAINERS_PATH, "utf8");
+  const parsed = JSON.parse(raw);
+  const data = Array.isArray(parsed?.data) ? parsed.data : [];
+  const tableData = data
+    .map((row) => ({
+      name: String(row?.name ?? "").trim(),
+      number: Number(row?.number),
+      expDay: Number(row?.expDay),
+      expNight: Number(row?.expNight),
+    }))
+    .filter(
+      (row) =>
+        row.name &&
+        Number.isFinite(row.number) &&
+        Number.isFinite(row.expDay) &&
+        Number.isFinite(row.expNight)
+    );
+  if (!tableData.length) {
+    throw new Error("trainer table is empty");
+  }
+  trainerTableCache = { data: tableData };
+  return trainerTableCache;
+}
+
+function setTrainerTable(table) {
+  trainerTableCache = table;
+}
+
+function isTppcDaytime(now = new Date()) {
+  const easternTime = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const easternDate = new Date(easternTime);
+  const hour = easternDate.getHours();
+  return hour >= 6 && hour < 18;
+}
+
+function findOptimalTrainers(currentExp, desiredExp, table, useExpNight = false, highestGym = null) {
+  const expKey = useExpNight ? "expNight" : "expDay";
+  const gap = desiredExp - currentExp;
+  const candidates = table.data
+    .filter((row) => Number(row[expKey]) <= gap)
+    .sort((a, b) => Number(b[expKey]) - Number(a[expKey]));
+
+  if (highestGym) {
+    const idx = candidates.findIndex((row) => Number(row.number) === Number(highestGym));
+    if (idx > 0) {
+      candidates.splice(0, idx);
+    }
+  }
+
+  let remainingExp = gap;
+  let runningExp = currentExp;
+  const plan = [];
+
+  for (const row of candidates) {
+    const expGain = Number(row[expKey]);
+    const numBattles = Math.floor(remainingExp / expGain);
+    if (numBattles <= 0) continue;
+    remainingExp -= numBattles * expGain;
+    runningExp += numBattles * expGain;
+    plan.push({
+      name: row.name,
+      number: row.number,
+      expGain,
+      numBattles,
+      expAfter: runningExp,
+    });
+    if (remainingExp <= 0) break;
+  }
+
+  return { plan, remainingExp, finalExp: runningExp };
+}
+
+function formatPerfPlan({ currentExp, desiredExp, useExpNight, plan }) {
+  const gap = desiredExp - currentExp;
+  const timeLabel = useExpNight ? "NIGHT" : "DAY";
+  const lines = [
+    `**📈 Perfect EXP plan** (TPPC **${timeLabel}**)`,
+    `Current: ${formatInt(currentExp)}`,
+    `Target: ${formatInt(desiredExp)}`,
+    `Gap: ${formatInt(gap)}`,
+    "",
+    "Trainer (RPG ID) — Battles × Exp/Battle → Exp After",
+  ];
+
+  for (const entry of plan) {
+    lines.push(
+      `• ${entry.name} (#${entry.number}) — **${formatInt(
+        entry.numBattles
+      )}** × ${formatInt(entry.expGain)} → ${formatInt(entry.expAfter)}`
+    );
+  }
+
+  lines.push(
+    "",
+    "> **Heads-up:** Calculator data is pulled from the TPPC Wiki and can drift. Test unfamiliar trainers with a dummy battle before committing EXP.",
+    "> Update 5/14/23: Some listed trainers gave less EXP than expected; if unsure, fight a few Blisseys first and recalc."
+  );
+
+  return lines.join("\n");
 }
 
 // ---- Selling math (from sell_guide) ----
@@ -129,6 +238,10 @@ export const __testables = {
   formatInt,
   levelToExp,
   expToLevel,
+  isTppcDaytime,
+  findOptimalTrainers,
+  loadTrainerTable,
+  setTrainerTable,
   marketPriceAtLevel,
   buyerPaysAtLevel,
   sellerGetsAtLevel,
@@ -159,6 +272,7 @@ function helpText() {
     "• `ea <exp...>` — Add Exp values → level",
     "• `eba <exp_bil...>` — Add Exp values in billions → level",
     "• `ld <lvl1> <lvl2>` — Level difference (Exp diff → level)",
+    "• `perf <current_exp> <desired_exp> [highest_gym_id]` — Perfect EXP trainer plan (TPPC day/night)",
     "• `buy <money>` — Buyer pays money → **max affordable** level (shows PP no/yes)",
     "• `buym <money_millions>` — Buyer pays (in millions) → **max affordable** level (shows PP no/yes)",
     "• `sell <money>` — Seller receives money → **max affordable** level (PP no/yes will match)",
@@ -173,12 +287,12 @@ function helpText() {
     "• `!calc ea 100000 200000 300000`",
     "• `!calc eba 42.5 10 1.25`",
     "• `!calc ld 1500 1200`",
+    "• `!calc perf 100000 120000`",
     "• `!calc buy 500000000`",
     "• `!calc buym 500`",
     "• `!calc sell 250000000`",
     "• `!calc sellm 250`",
-    "",
-    AFFORDABILITY_NOTE
+    ""
   ].join("\n");
 }
 
@@ -244,6 +358,69 @@ export function registerCalculator(register) {
       const lvl = expToLevel(exp);
       await message.reply(
         `${fn === "eb2l" ? `Exp ${formatBillions(expRaw)}` : `Exp ${formatInt(exp)}`} → Level: ${lvl}`
+      );
+      return;
+    }
+
+    // perf: perfect exp trainer plan
+    if (fn === "perf") {
+      const usageMessage =
+        "Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]` or visit https://coldsp33d.github.io/perfect_exp";
+      if (args.length < 2 || args.length > 3) {
+        await message.reply(usageMessage);
+        return;
+      }
+
+      const currentRaw = parseNum(args[0]);
+      const desiredRaw = parseNum(args[1]);
+      const highestGymRaw = args.length === 3 ? parseNum(args[2]) : null;
+      if (currentRaw === null || desiredRaw === null) {
+        await message.reply(usageMessage);
+        return;
+      }
+
+      const currentExp = Math.floor(currentRaw);
+      const desiredExp = Math.floor(desiredRaw);
+      const highestGym =
+        highestGymRaw === null ? null : Math.max(0, Math.floor(highestGymRaw));
+      if (!Number.isFinite(currentExp) || !Number.isFinite(desiredExp)) return;
+      if (desiredExp <= currentExp) {
+        await message.reply("Desired exp must be greater than current exp.");
+        return;
+      }
+      if (highestGymRaw !== null && (!Number.isFinite(highestGym) || highestGym <= 0)) {
+        await message.reply(usageMessage);
+        return;
+      }
+
+      let table;
+      try {
+        table = await loadTrainerTable();
+      } catch (err) {
+        await message.reply("❌ Trainer data is unavailable right now.");
+        return;
+      }
+
+      const useExpNight = !isTppcDaytime();
+      const { plan } = findOptimalTrainers(
+        currentExp,
+        desiredExp,
+        table,
+        useExpNight,
+        highestGym
+      );
+      if (!plan.length) {
+        await message.reply("❌ No valid trainer plan found for that exp range.");
+        return;
+      }
+
+      await message.reply(
+        formatPerfPlan({
+          currentExp,
+          desiredExp,
+          useExpNight,
+          plan,
+        })
       );
       return;
     }

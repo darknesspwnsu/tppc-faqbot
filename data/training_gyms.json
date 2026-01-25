@@ -1,0 +1,491 @@
+{
+  "columns": [
+    "name",
+    "number",
+    "expDay",
+    "expNight"
+  ],
+  "data": [
+    {
+      "name": "GratzMatt",
+      "number": 3476575,
+      "expDay": 14573538,
+      "expNight": 14573538,
+      "level": "12221"
+    },
+    {
+      "name": "TR Gym L7500",
+      "number": 3395547,
+      "expDay": 9281250,
+      "expNight": 9281250,
+      "level": "7500"
+    },
+    {
+      "name": "TR Gym L7000",
+      "number": 3355075,
+      "expDay": 8347500,
+      "expNight": 8347500,
+      "level": "7000"
+    },
+    {
+      "name": "TR Gym L6500",
+      "number": 3387834,
+      "expDay": 7488000,
+      "expNight": 8043744,
+      "level": "6500"
+    },
+    {
+      "name": "TR Gym L6000",
+      "number": 3402750,
+      "expDay": 6777000,
+      "expNight": 7290000,
+      "level": "6000"
+    },
+    {
+      "name": "TR Gym L5500",
+      "number": 3395546,
+      "expDay": 6558750,
+      "expNight": 6558750,
+      "level": "5500"
+    },
+    {
+      "name": "TR Gym L5000",
+      "number": 3101818,
+      "expDay": 5760000,
+      "expNight": 6187500,
+      "level": "5000"
+    },
+    {
+      "name": "GhostlyPlane",
+      "number": 3366075,
+      "expDay": 5085760,
+      "expNight": 5470737,
+      "level": "4501-4511"
+    },
+    {
+      "name": "No more heroes",
+      "number": 350514,
+      "expDay": 4947397,
+      "expNight": 5321902,
+      "level": "4036-5445"
+    },
+    {
+      "name": "ViRuS 4499 Gym",
+      "number": 3328818,
+      "expDay": 5169351,
+      "expNight": 5297572,
+      "level": "4499"
+    },
+    {
+      "name": "DerexGym",
+      "number": 995268,
+      "expDay": 4518000,
+      "expNight": 4860000,
+      "level": "4000"
+    },
+    {
+      "name": "Outlander",
+      "number": 5316,
+      "expDay": 4004608,
+      "expNight": 4255537,
+      "level": "3476-3581"
+    },
+    {
+      "name": "Empire Vault",
+      "number": 3421893,
+      "expDay": 4159634,
+      "expNight": 4159634,
+      "level": "3499-3500"
+    },
+    {
+      "name": "TR Gym L3000",
+      "number": 3439851,
+      "expDay": 3388500,
+      "expNight": 3645000,
+      "level": "3000"
+    },
+    {
+      "name": "ScRiPtEr4",
+      "number": 2348869,
+      "expDay": 3549000,
+      "expNight": 3549000,
+      "level": "3000-3100"
+    },
+    {
+      "name": "GoodDaddy",
+      "number": 981310,
+      "expDay": 2950442,
+      "expNight": 3173782,
+      "level": "2560-2760"
+    },
+    {
+      "name": "Big Nasty Gym",
+      "number": 3331642,
+      "expDay": 2766390,
+      "expNight": 2980056,
+      "level": "2499"
+    },
+    {
+      "name": "Rune Ristars Gym",
+      "number": 482301,
+      "expDay": 2925000,
+      "expNight": 2925000,
+      "level": "2500"
+    },
+    {
+      "name": "Bt Account",
+      "number": 607667,
+      "expDay": 2287047,
+      "expNight": 2460172,
+      "level": "1958-2176"
+    },
+    {
+      "name": "2000Gym",
+      "number": 3384459,
+      "expDay": 2259000,
+      "expNight": 2430000,
+      "level": "2000"
+    },
+    {
+      "name": "Derextremes Gym",
+      "number": 961984,
+      "expDay": 2221012,
+      "expNight": 2392550,
+      "level": "2000-2016"
+    },
+    {
+      "name": "1760gym",
+      "number": 2536240,
+      "expDay": 2019600,
+      "expNight": 2019600,
+      "level": "1760"
+    },
+    {
+      "name": "FC Porto Fan For lif",
+      "number": 596577,
+      "expDay": 1839340,
+      "expNight": 1839340,
+      "level": "1478-1940"
+    },
+    {
+      "name": "Queen Lilly",
+      "number": 498042,
+      "expDay": 1775371,
+      "expNight": 1775371,
+      "level": "1506-1576"
+    },
+    {
+      "name": "Raina1350",
+      "number": 2985597,
+      "expDay": 1551149,
+      "expNight": 1589624,
+      "level": "1350"
+    },
+    {
+      "name": "Lil A-Kicker",
+      "number": 3394572,
+      "expDay": 1404000,
+      "expNight": 1404000,
+      "level": "1200"
+    },
+    {
+      "name": "Bruce",
+      "number": 479815,
+      "expDay": 1155666,
+      "expNight": 1243146,
+      "level": "1020-1025"
+    },
+    {
+      "name": "1000Gym",
+      "number": 3384457,
+      "expDay": 1129500,
+      "expNight": 1215000,
+      "level": "1000"
+    },
+    {
+      "name": "celler",
+      "number": 2645690,
+      "expDay": 1138886,
+      "expNight": 1167414,
+      "level": "1001"
+    },
+    {
+      "name": "Tiffs Blissey Traini",
+      "number": 3032564,
+      "expDay": 1081914,
+      "expNight": 1122142,
+      "level": "941"
+    },
+    {
+      "name": "masteroflols",
+      "number": 1933117,
+      "expDay": 1053000,
+      "expNight": 1053000,
+      "level": "900"
+    },
+    {
+      "name": "illusions",
+      "number": 3156466,
+      "expDay": 960075,
+      "expNight": 1032750,
+      "level": "700-1000"
+    },
+    {
+      "name": "Blissey850",
+      "number": 3190785,
+      "expDay": 986137,
+      "expNight": 1010377,
+      "level": "850-865"
+    },
+    {
+      "name": "Raina800gym",
+      "number": 2656958,
+      "expDay": 928575,
+      "expNight": 962775,
+      "level": "800-815"
+    },
+    {
+      "name": "Tsunade Genin exams",
+      "number": 995561,
+      "expDay": 846740,
+      "expNight": 846740,
+      "level": "735-737"
+    },
+    {
+      "name": "Raina650Gym",
+      "number": 2646064,
+      "expDay": 760500,
+      "expNight": 760500,
+      "level": "650"
+    },
+    {
+      "name": "Zexion-VI",
+      "number": 2493188,
+      "expDay": 677700,
+      "expNight": 729000,
+      "level": "600"
+    },
+    {
+      "name": "Shantelle8",
+      "number": 988742,
+      "expDay": 631122,
+      "expNight": 631122,
+      "level": "550"
+    },
+    {
+      "name": "EishKoms2",
+      "number": 2926825,
+      "expDay": 619498,
+      "expNight": 619498,
+      "level": "545-553"
+    },
+    {
+      "name": "500Gym",
+      "number": 3384456,
+      "expDay": 564744,
+      "expNight": 607500,
+      "level": "500"
+    },
+    {
+      "name": "Feedback Storage",
+      "number": 774595,
+      "expDay": 575627,
+      "expNight": 597059,
+      "level": "500-502"
+    },
+    {
+      "name": "GoldenDeoxys",
+      "number": 2923126,
+      "expDay": 574875,
+      "expNight": 596250,
+      "level": "500"
+    },
+    {
+      "name": "sharkey 2",
+      "number": 620891,
+      "expDay": 506516,
+      "expNight": 516733,
+      "level": "353-531"
+    },
+    {
+      "name": "Raina450Gym",
+      "number": 2844700,
+      "expDay": 514461,
+      "expNight": 514461,
+      "level": "440-460"
+    },
+    {
+      "name": "BLISSEY GYM",
+      "number": 3033909,
+      "expDay": 457200,
+      "expNight": 480000,
+      "level": "400"
+    },
+    {
+      "name": "MamaCresseIia",
+      "number": 2679442,
+      "expDay": 453017,
+      "expNight": 475875,
+      "level": "384-414"
+    },
+    {
+      "name": "My Training Gym",
+      "number": 913641,
+      "expDay": 398211,
+      "expNight": 408186,
+      "level": "350"
+    },
+    {
+      "name": "DarkGun",
+      "number": 489507,
+      "expDay": 341109,
+      "expNight": 366930,
+      "level": "300-312"
+    },
+    {
+      "name": "magby22st",
+      "number": 924714,
+      "expDay": 286872,
+      "expNight": 286872,
+      "level": "250"
+    },
+    {
+      "name": "BlisseyGymMaster",
+      "number": 1325349,
+      "expDay": 229050,
+      "expNight": 234750,
+      "level": "200"
+    },
+    {
+      "name": "Prepare 4 Trouble",
+      "number": 3167041,
+      "expDay": 187422,
+      "expNight": 187422,
+      "level": "115-200"
+    },
+    {
+      "name": "D3killa Training Acc",
+      "number": 1113640,
+      "expDay": 172348,
+      "expNight": 176624,
+      "level": "150"
+    },
+    {
+      "name": "blisseyxD01",
+      "number": 3193894,
+      "expDay": 135594,
+      "expNight": 135594,
+      "level": "95-167"
+    },
+    {
+      "name": "NeverSlumberGym",
+      "number": 3101815,
+      "expDay": 114750,
+      "expNight": 114750,
+      "level": "100"
+    },
+    {
+      "name": "DimShadow",
+      "number": 2044868,
+      "expDay": 113622,
+      "expNight": 113622,
+      "level": "101"
+    },
+    {
+      "name": "pkmnherolv75",
+      "number": 3269882,
+      "expDay": 84372,
+      "expNight": 84372,
+      "level": "75"
+    },
+    {
+      "name": "Mistaker",
+      "number": 3166941,
+      "expDay": 45562,
+      "expNight": 45562,
+      "level": "40-43"
+    },
+    {
+      "name": "Chansey Noob",
+      "number": 3379420,
+      "expDay": 28122,
+      "expNight": 28122,
+      "level": "25"
+    },
+    {
+      "name": "TomsGym20",
+      "number": 3397013,
+      "expDay": 22500,
+      "expNight": 22500,
+      "level": "20"
+    },
+    {
+      "name": "TomsGym15",
+      "number": 3397010,
+      "expDay": 16872,
+      "expNight": 16872,
+      "level": "15"
+    },
+    {
+      "name": "TomsGym10",
+      "number": 3397006,
+      "expDay": 11250,
+      "expNight": 11250,
+      "level": "10"
+    },
+    {
+      "name": "tppc loser",
+      "number": 1054571,
+      "expDay": 11248,
+      "expNight": 11248,
+      "level": "9-13"
+    },
+    {
+      "name": "pkmnherolv5",
+      "number": 3269682,
+      "expDay": 5622,
+      "expNight": 5622,
+      "level": "5"
+    },
+    {
+      "name": "TomsGym5",
+      "number": 3397003,
+      "expDay": 5622,
+      "expNight": 5622,
+      "level": "5"
+    },
+    {
+      "name": "nochickengym",
+      "number": 2502909,
+      "expDay": 4599,
+      "expNight": 4770,
+      "level": "4"
+    },
+    {
+      "name": "300 XP Gym",
+      "number": 3487664,
+      "expDay": 1800,
+      "expNight": 1800,
+      "level": "5"
+    },
+    {
+      "name": "1 XP Gym",
+      "number": 2380615,
+      "expDay": 18,
+      "expNight": 18,
+      "level": "5"
+    },
+    {
+      "name": "Single Shedinja (3 XP each)",
+      "number": 2380615,
+      "expDay": 3,
+      "expNight": 3
+    },
+    {
+      "name": "Single Shedinja w/ Exp. Share (1 XP each)",
+      "number": 2380615,
+      "expDay": 1,
+      "expNight": 1
+    }
+  ]
+}
