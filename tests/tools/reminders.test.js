@@ -60,6 +60,21 @@ function makeInteraction({
   };
 }
 
+function expectReminderSetReply(reply, unix, assumeTz = false) {
+  const payload = reply.mock.calls[0]?.[0];
+  expect(payload?.content).toContain("✅ Reminder set for <t:");
+  if (unix) {
+    const suffix = assumeTz
+      ? " (No timezone specified in input, assuming TPPC time (EST).)"
+      : "";
+    expect(payload?.content).toBe(`✅ Reminder set for <t:${unix}:f>.${suffix}`);
+    return;
+  }
+  if (assumeTz) {
+    expect(payload?.content).toContain("No timezone specified in input, assuming TPPC time (EST).");
+  }
+}
+
 describe("tools/reminders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -446,10 +461,37 @@ describe("tools/reminders", () => {
     const interaction = makeInteraction({ sub: "set", phrase: "ping", time: "10m" });
     await remindSlash.handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder set." })
-    );
+    expectReminderSetReply(interaction.reply);
     expect(execute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO reminders"), expect.anything());
+  });
+
+  it("accepts fractional durations", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+
+    let insertParams = null;
+    const execute = vi.fn(async (sql, params) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      if (sql.includes("INSERT INTO reminders")) {
+        insertParams = params;
+        return [{ insertId: 6 }];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "ping", time: "1.5h" });
+    await remindSlash.handler({ interaction });
+
+    const expectedMs = Date.UTC(2026, 0, 1, 1, 30);
+    expect(insertParams?.[5]).toBe(expectedMs);
+    expectReminderSetReply(interaction.reply, Math.floor(expectedMs / 1000));
+
+    vi.useRealTimers();
   });
 
   it("sets a remindme using an absolute datetime (default timezone)", async () => {
@@ -474,9 +516,7 @@ describe("tools/reminders", () => {
     const interaction = makeInteraction({ sub: "set", phrase: "ping", at: "2026-01-02 03:04" });
     await remindSlash.handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder set." })
-    );
+    expectReminderSetReply(interaction.reply, Math.floor(Date.UTC(2026, 0, 2, 8, 4) / 1000), true);
     expect(insertParams?.[5]).toBe(Date.UTC(2026, 0, 2, 8, 4));
 
     vi.useRealTimers();
@@ -508,10 +548,90 @@ describe("tools/reminders", () => {
     });
     await remindSlash.handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder set." })
-    );
+    expectReminderSetReply(interaction.reply, Math.floor(Date.UTC(2026, 0, 2, 3, 4) / 1000));
     expect(insertParams?.[5]).toBe(Date.UTC(2026, 0, 2, 3, 4));
+
+    vi.useRealTimers();
+  });
+
+  it("accepts time-only with tomorrow keywords", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    let insertParams = null;
+    const execute = vi.fn(async (sql, params) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      if (sql.includes("INSERT INTO reminders")) {
+        insertParams = params;
+        return [{ insertId: 10 }];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "ping", at: "7am tomorow" });
+    await remindSlash.handler({ interaction });
+
+    const expectedMs = Date.UTC(2026, 0, 2, 12, 0);
+    expect(insertParams?.[5]).toBe(expectedMs);
+    expectReminderSetReply(interaction.reply, Math.floor(expectedMs / 1000), true);
+
+    vi.useRealTimers();
+  });
+
+  it("rolls forward time-only without a date keyword", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T23:30:00Z"));
+
+    let insertParams = null;
+    const execute = vi.fn(async (sql, params) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      if (sql.includes("INSERT INTO reminders")) {
+        insertParams = params;
+        return [{ insertId: 11 }];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "ping", at: "7am" });
+    await remindSlash.handler({ interaction });
+
+    const expectedMs = Date.UTC(2026, 0, 2, 12, 0);
+    expect(insertParams?.[5]).toBe(expectedMs);
+    expectReminderSetReply(interaction.reply, Math.floor(expectedMs / 1000), true);
+
+    vi.useRealTimers();
+  });
+
+  it("rejects time-only today when it has already passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T15:00:00Z"));
+
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) return [[]];
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "ping", at: "7am today" });
+    await remindSlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("future date/time") })
+    );
 
     vi.useRealTimers();
   });
@@ -537,9 +657,7 @@ describe("tools/reminders", () => {
     });
     await remindSlash.handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder set." })
-    );
+    expectReminderSetReply(interaction.reply);
     expect(execute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO reminders"), expect.anything());
   });
 
@@ -566,9 +684,7 @@ describe("tools/reminders", () => {
     const interaction = makeInteraction({ sub: "set", phrase: "ping", time: "10m", isAdmin: true });
     await remindSlash.handler({ interaction });
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder set." })
-    );
+    expectReminderSetReply(interaction.reply);
     expect(execute).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO reminders"), expect.anything());
   });
 

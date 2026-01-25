@@ -45,8 +45,8 @@ _Practical helpers for otherwise tedious rpg stuff._
   Example: `!count leaderboard`
 - **/notifyme set <phrase>** - DM on phrase  
   Example: `/notifyme set phrase:golden`
-- **/remindme set <phrase> <time|at>** - timed reminder  
-  Example: `/remindme set phrase:trade at:2026-01-18 7:30 PM ET`
+- **/remindme set <phrase> <time|at>** - timed reminder (supports today/tomorrow)  
+  Example: `/remindme set phrase:trade at:7am tomorrow`
 
 ---
 

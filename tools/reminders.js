@@ -26,6 +26,15 @@ const TZ_ALIASES = new Map([
   ["EST", "America/New_York"],
   ["EDT", "America/New_York"],
 ]);
+const DATE_KEYWORDS = new Map([
+  ["today", "today"],
+  ["tdy", "today"],
+  ["tomorrow", "tomorrow"],
+  ["tomorow", "tomorrow"],
+  ["tmr", "tomorrow"],
+  ["tmoz", "tomorrow"],
+  ["tomo", "tomorrow"],
+]);
 
 const notifyByGuild = new Map(); // guildId -> { loaded, items: [{ id, userId, phrase, key }] }
 const remindersById = new Map(); // reminderId -> { reminder, timeout }
@@ -54,10 +63,11 @@ function parseDurationExtended(raw) {
   if (/^\d+$/.test(s)) return Number(s);
 
   const m = s.match(
-    /^(\d+)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks|mo|mon|month|months|y|yr|yrs|year|years)$/
+    /^(\d+(?:\.\d+)?)\s*(s|sec|secs|second|seconds|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks|mo|mon|month|months|y|yr|yrs|year|years)$/
   );
   if (!m) return null;
   const v = Number(m[1]);
+  if (!Number.isFinite(v) || v <= 0) return null;
   const u = m[2];
   if (u.startsWith("s")) return v;
   if (u.startsWith("m") && u !== "mo" && u !== "mon" && !u.startsWith("month")) return v * 60;
@@ -147,6 +157,31 @@ function normalizeTimezoneToken(token) {
   return null;
 }
 
+function extractDateKeyword(tokens) {
+  let keyword = null;
+  const remaining = [];
+  for (const token of tokens) {
+    const mapped = DATE_KEYWORDS.get(String(token).toLowerCase());
+    if (mapped && !keyword) {
+      keyword = mapped;
+      continue;
+    }
+    remaining.push(token);
+  }
+  return { keyword, tokens: remaining };
+}
+
+function parseTimeOnly(text, zone) {
+  const formats = ["h:mm a", "h a", "h:mma", "ha", "H:mm", "HH:mm"];
+  for (const fmt of formats) {
+    const dt = DateTime.fromFormat(text, fmt, { zone });
+    if (dt.isValid) {
+      return { hour: dt.hour, minute: dt.minute };
+    }
+  }
+  return null;
+}
+
 function parseAbsoluteDateTime(raw, { defaultZone = DEFAULT_REMINDME_TZ } = {}) {
   const trimmed = String(raw || "").trim();
   if (!trimmed) return { ok: false, error: "Please provide a date and time." };
@@ -157,13 +192,17 @@ function parseAbsoluteDateTime(raw, { defaultZone = DEFAULT_REMINDME_TZ } = {}) 
   let zone = defaultZone;
   const last = tokens[tokens.length - 1];
   const tz = normalizeTimezoneToken(last);
+  const explicitZone = Boolean(tz);
   if (tz) {
     zone = tz;
     tokens.pop();
   }
 
-  const dateText = tokens.join(" ").trim();
-  if (!dateText) return { ok: false, error: "Please provide a date and time." };
+  const { keyword, tokens: remaining } = extractDateKeyword(tokens);
+  const dateText = remaining.join(" ").trim();
+  if (!dateText) {
+    return { ok: false, error: "Please provide a time (e.g. `7:30 PM today`)." };
+  }
 
   const normalized = dateText;
   const formats = [
@@ -182,16 +221,37 @@ function parseAbsoluteDateTime(raw, { defaultZone = DEFAULT_REMINDME_TZ } = {}) 
 
   for (const fmt of formats) {
     const dt = DateTime.fromFormat(normalized, fmt, { zone });
-    if (dt.isValid) return { ok: true, dt, zone };
+    if (dt.isValid) return { ok: true, dt, zone, explicitZone };
   }
 
   const iso = DateTime.fromISO(normalized, { zone });
-  if (iso.isValid) return { ok: true, dt: iso, zone };
+  if (iso.isValid) return { ok: true, dt: iso, zone, explicitZone };
+
+  const parsedTime = parseTimeOnly(normalized, zone);
+  if (parsedTime) {
+    const now = DateTime.now().setZone(zone);
+    let base = now;
+    if (keyword === "tomorrow") {
+      base = now.plus({ days: 1 });
+    }
+    const dt = base
+      .set({
+        hour: parsedTime.hour,
+        minute: parsedTime.minute,
+        second: 0,
+        millisecond: 0,
+      })
+      .setZone(zone);
+    if (!keyword && dt <= now) {
+      return { ok: true, dt: dt.plus({ days: 1 }), zone, explicitZone };
+    }
+    return { ok: true, dt, zone, explicitZone };
+  }
 
   return {
     ok: false,
     error:
-      "Please provide a valid date/time. Examples: `2026-01-18 19:30`, `01/18/2026 7:30 PM`, `Jan 18 2026 7:30 PM`, optional tz like `UTC` or `-05:00`.",
+      "Please provide a valid date/time. Examples: `2026-01-18 19:30`, `01/18/2026 7:30 PM`, `Jan 18 2026 7:30 PM`, or `7am tomorrow` (optional tz like `UTC` or `-05:00`).",
   };
 }
 
@@ -910,6 +970,7 @@ export function registerReminders(register) {
         }
 
         let remindAtMs = null;
+        let tzNote = "";
         if (timeRaw) {
           const seconds = parseDurationExtended(timeRaw);
           if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -937,6 +998,9 @@ export function registerReminders(register) {
             return;
           }
           remindAtMs = parsed.dt.toMillis();
+          if (!parsed.explicitZone) {
+            tzNote = " (No timezone specified in input, assuming TPPC time (EST).)";
+          }
           const deltaMs = remindAtMs - Date.now();
           if (deltaMs <= 0) {
             await interaction.reply({
@@ -1019,9 +1083,10 @@ export function registerReminders(register) {
           createdAtMs: Date.now(),
         });
 
+        const whenLabel = `<t:${Math.floor(remindAtMs / 1000)}:f>`;
         void metrics.increment("remindme.set", { status: "ok" });
         await interaction.reply({
-          content: "✅ Reminder set.",
+          content: `✅ Reminder set for ${whenLabel}.${tzNote}`,
           flags: MessageFlags.Ephemeral,
         });
         return;
