@@ -215,7 +215,7 @@ describe("tools/reminders", () => {
 
   it("responds with notifyme autocomplete options", async () => {
     const execute = vi.fn(async (sql) => {
-      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
+      if (sql.includes("SELECT id, phrase, target_user_id, created_at FROM notify_me")) {
         return [[{ id: 2, user_id: "u1", phrase: "beta" }]];
       }
       return [[]];
@@ -229,7 +229,33 @@ describe("tools/reminders", () => {
     const interaction = makeInteraction({ sub: "unset", phrase: "b" });
     await notifySlash.opts.autocomplete({ interaction });
 
-    expect(interaction.respond).toHaveBeenCalledWith([{ name: "beta", value: "2" }]);
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "1. beta", value: "1" }]);
+  });
+
+  it("removes a notifyme entry by list index", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, phrase, target_user_id, created_at FROM notify_me")) {
+        return [[{ id: 12, phrase: "alpha", created_at: "2025-01-01T00:00:00Z" }]];
+      }
+      if (sql.includes("DELETE FROM notify_me")) return [[]];
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
+
+    const interaction = makeInteraction({ sub: "unset", phrase: "1" });
+    await notifySlash.handler({ interaction });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM notify_me"),
+      [12, "u1"]
+    );
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "✅ Notification #1 removed." })
+    );
   });
 
   it("notifies on matching phrases", async () => {
@@ -578,6 +604,9 @@ describe("tools/reminders", () => {
 
   it("removes a reminder on unset", async () => {
     const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, phrase, message_id, channel_id")) {
+        return [[{ id: 7, phrase: "ping", remind_at_ms: Date.now() + 10000 }]];
+      }
       if (sql.includes("DELETE FROM reminders")) return [[]];
       return [[]];
     });
@@ -587,12 +616,12 @@ describe("tools/reminders", () => {
     registerReminders(register);
     const remindSlash = register.calls.slash.find((c) => c.config.name === "remindme");
 
-    const interaction = makeInteraction({ sub: "unset", phrase: "3" });
+    const interaction = makeInteraction({ sub: "unset", phrase: "1" });
     await remindSlash.handler({ interaction });
 
-    expect(execute).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM reminders"), [3, "u1"]);
+    expect(execute).toHaveBeenCalledWith(expect.stringContaining("DELETE FROM reminders"), [7, "u1"]);
     expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "✅ Reminder removed." })
+      expect.objectContaining({ content: "✅ Reminder #1 removed." })
     );
   });
 

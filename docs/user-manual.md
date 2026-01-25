@@ -333,7 +333,7 @@ Tracks message counts in configured channels (may include forum threads if your 
 ### Reminders & NotifyMe
 - `/notifyme set <phrase>` — DM when phrase appears in guild
 - `/notifyme list`
-- `/notifyme unset <dropdown>`
+- `/notifyme unset <number from /notifyme list>`
 - `/notifyme clear` — clear all for this server
 
 - `/remindme set phrase:<phrase> <time>`
@@ -341,7 +341,7 @@ Tracks message counts in configured channels (may include forum threads if your 
 - `/remindme set phrase:<phrase> at:<datetime>`
 - `/remindme set messageID:<id> at:<datetime>`
 - `/remindme list`
-- `/remindme unset <dropdown>`
+- `/remindme unset <number from /remindme list>`
 - `/remindme clear` — clear all reminders
 
 **Rules:**

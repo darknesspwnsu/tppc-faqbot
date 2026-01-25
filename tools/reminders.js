@@ -471,23 +471,37 @@ async function fireReminder(reminder) {
 
 function buildNotifyChoices(items, focused) {
   const q = String(focused || "").toLowerCase();
-  const filtered = (items || []).filter((x) => !q || x.phrase.toLowerCase().includes(q));
-  return filtered.slice(0, 25).map((x) => ({
-    name: x.phrase.length > 90 ? `${x.phrase.slice(0, 87)}…` : x.phrase,
-    value: String(x.id),
+  const indexed = (items || []).map((item, idx) => ({
+    item,
+    index: idx + 1,
   }));
+  const filtered = indexed.filter(({ item }) => !q || item.phrase.toLowerCase().includes(q));
+  return filtered.slice(0, 25).map(({ item, index }) => {
+    const label = item.phrase.length > 84 ? `${item.phrase.slice(0, 81)}…` : item.phrase;
+    return {
+      name: `${index}. ${label}`,
+      value: String(index),
+    };
+  });
 }
 
 function buildReminderChoices(items, focused) {
   const q = String(focused || "").toLowerCase();
-  const filtered = (items || []).filter((x) => {
-    const label = x.phrase || (x.messageId ? `Message ${x.messageId}` : "");
+  const indexed = (items || []).map((item, idx) => ({
+    item,
+    index: idx + 1,
+  }));
+  const filtered = indexed.filter(({ item }) => {
+    const label = item.phrase || (item.messageId ? `Message ${item.messageId}` : "");
     return !q || label.toLowerCase().includes(q);
   });
-  return filtered.slice(0, 25).map((x) => ({
-    name: (x.phrase || `Message ${x.messageId}`).slice(0, 90),
-    value: String(x.id),
-  }));
+  return filtered.slice(0, 25).map(({ item, index }) => {
+    const label = (item.phrase || `Message ${item.messageId}`).slice(0, 84);
+    return {
+      name: `${index}. ${label}`,
+      value: String(index),
+    };
+  });
 }
 
 function renderNotifyList(items) {
@@ -615,7 +629,7 @@ export function registerReminders(register) {
             {
               type: 3,
               name: "notify_id",
-              description: "Notification to remove",
+              description: "Number from /notifyme list (1-based)",
               required: true,
               autocomplete: true,
             },
@@ -714,22 +728,42 @@ export function registerReminders(register) {
 
       if (sub === "unset") {
         const idRaw = interaction.options?.getString?.("notify_id") || "";
-        const id = Number(idRaw);
-        if (!Number.isFinite(id)) {
+        const index = Number(idRaw);
+        if (!Number.isInteger(index) || index < 1) {
           await interaction.reply({
-            content: "Please choose a notification to remove.",
+            content: "Please provide a valid notification number from `/notifyme list`.",
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        await deleteNotifyEntry({ id, userId });
+        const items = await listNotifyEntries({
+          guildId: interaction.guildId,
+          userId,
+        });
+        if (!items.length) {
+          await interaction.reply({
+            content: "You have no active notifications.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const target = items[index - 1];
+        if (!target) {
+          await interaction.reply({
+            content: "No notification found with that number. Use `/notifyme list` to check.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        await deleteNotifyEntry({ id: target.id, userId });
         const state = await loadNotifyGuild(interaction.guildId);
-        state.items = state.items.filter((item) => !(item.id === id && item.userId === userId));
+        state.items = state.items.filter((item) => !(item.id === target.id && item.userId === userId));
 
         void metrics.increment("notifyme.unset", { status: "ok" });
         await interaction.reply({
-          content: "✅ Notification removed.",
+          content: `✅ Notification #${index} removed.`,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -766,9 +800,8 @@ export function registerReminders(register) {
           await interaction.respond([]);
           return;
         }
-        const state = await loadNotifyGuild(guildId);
         const userId = interaction.user?.id;
-        const items = state.items.filter((item) => item.userId === userId);
+        const items = await listNotifyEntries({ guildId, userId });
         await interaction.respond(buildNotifyChoices(items, focused));
       },
     }
@@ -835,7 +868,7 @@ export function registerReminders(register) {
             {
               type: 3,
               name: "reminder_id",
-              description: "Reminder to remove",
+              description: "Number from /remindme list (1-based)",
               required: true,
               autocomplete: true,
             },
@@ -1006,21 +1039,38 @@ export function registerReminders(register) {
 
       if (sub === "unset") {
         const idRaw = interaction.options?.getString?.("reminder_id") || "";
-        const id = Number(idRaw);
-        if (!Number.isFinite(id)) {
+        const index = Number(idRaw);
+        if (!Number.isInteger(index) || index < 1) {
           await interaction.reply({
-            content: "Please choose a reminder to remove.",
+            content: "Please provide a valid reminder number from `/remindme list`.",
             flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        await deleteReminder({ id, userId });
-        clearReminderTimeout(id);
+        const items = await listReminders({ userId });
+        if (!items.length) {
+          await interaction.reply({
+            content: "You have no active reminders.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const target = items[index - 1];
+        if (!target) {
+          await interaction.reply({
+            content: "No reminder found with that number. Use `/remindme list` to check.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        await deleteReminder({ id: target.id, userId });
+        clearReminderTimeout(target.id);
 
         void metrics.increment("remindme.unset", { status: "ok" });
         await interaction.reply({
-          content: "✅ Reminder removed.",
+          content: `✅ Reminder #${index} removed.`,
           flags: MessageFlags.Ephemeral,
         });
         return;
