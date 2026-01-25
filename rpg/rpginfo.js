@@ -316,7 +316,8 @@ export function registerRpgInfo(register) {
         `Usage: \`${cmd} ssanne|tc|trainingchallenge\` or \`${cmd} tc iseligible <pokemon>\``
       );
     },
-    `${cmd} <topic> — show SS Anne or Training Challenge info`
+    `${cmd} <topic> — show SS Anne or Training Challenge info`,
+    { aliases: ["!info"] }
   );
 }
 

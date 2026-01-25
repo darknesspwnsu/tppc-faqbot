@@ -93,6 +93,15 @@ describe("rpginfo command", () => {
     });
   });
 
+  it("registers !info as an alias", async () => {
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+
+    const call = register.calls.find((c) => c.name === "!rpginfo");
+    expect(call?.opts?.aliases || []).toContain("!info");
+  });
+
   it("returns the cached Training Challenge ineligible list", async () => {
     storageMocks.getLeaderboard.mockResolvedValueOnce({
       challenge: "rpginfo:tc_ineligible",
