@@ -102,6 +102,70 @@ describe("rpginfo command", () => {
     expect(call?.opts?.aliases || []).toContain("!info");
   });
 
+  it("lists top training gyms", async () => {
+    fsMocks.readFile.mockImplementation((filePath) => {
+      if (String(filePath).includes("training_gyms.json")) {
+        return Promise.resolve(
+          JSON.stringify({
+            data: [
+              { name: "GymA", number: 1, expDay: 100, expNight: 100, level: "100" },
+              { name: "GymB", number: 2, expDay: 200, expNight: 200, level: "200" },
+              { name: "GymC", number: 3, expDay: 150, expNight: 150, level: "150" },
+              { name: "GymD", number: 4, expDay: 50, expNight: 50, level: "50" },
+              { name: "GymE", number: 5, expDay: 25, expNight: 25, level: "25" },
+              { name: "GymF", number: 6, expDay: 10, expNight: 10, level: "10" },
+            ],
+          })
+        );
+      }
+      return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+    });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "traininggyms" });
+
+    const reply = message.reply.mock.calls[0][0];
+    expect(reply).toContain("Top Training Gyms");
+    expect(reply).toContain("GymB");
+    expect(reply).toContain("GymC");
+    expect(reply).toContain("GymA");
+  });
+
+  it("supports a custom count for training gyms", async () => {
+    fsMocks.readFile.mockImplementation((filePath) => {
+      if (String(filePath).includes("training_gyms.json")) {
+        return Promise.resolve(
+          JSON.stringify({
+            data: [
+              { name: "GymA", number: 1, expDay: 100, expNight: 100 },
+              { name: "GymB", number: 2, expDay: 200, expNight: 200 },
+              { name: "GymC", number: 3, expDay: 150, expNight: 150 },
+            ],
+          })
+        );
+      }
+      return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+    });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "gyms 2" });
+
+    const reply = message.reply.mock.calls[0][0];
+    expect(reply).toContain("GymB");
+    expect(reply).toContain("GymC");
+    expect(reply).not.toContain("GymA");
+  });
+
   it("returns the cached Training Challenge ineligible list", async () => {
     storageMocks.getLeaderboard.mockResolvedValueOnce({
       challenge: "rpginfo:tc_ineligible",

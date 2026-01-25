@@ -24,8 +24,10 @@ const SS_ANNE_TTL_MS = 24 * 60 * 60_000;
 const TC_INELIGIBLE_TTL_MS = 7 * 24 * 60 * 60_000;
 
 const EVOLUTION_PATH = path.resolve("data/pokemon_evolutions.json");
+const TRAINING_GYMS_PATH = path.resolve("data/training_gyms.json");
 
 let evolutionBaseByName = null; // { normalizedName: normalizedBase }
+let trainingGymsCache = null;
 
 function getText(node) {
   if (!node) return "";
@@ -36,6 +38,17 @@ function getText(node) {
 
 function normalizeName(name) {
   return normalizeKey(String(name || ""));
+}
+
+function isTppcDaytime(now = new Date()) {
+  const easternTime = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const easternDate = new Date(easternTime);
+  const hour = easternDate.getHours();
+  return hour >= 6 && hour < 18;
+}
+
+function formatInt(value) {
+  return Number(value).toLocaleString("en-US");
 }
 
 async function loadEvolutionMap() {
@@ -58,6 +71,34 @@ async function loadEvolutionMap() {
     evolutionBaseByName = {};
     return evolutionBaseByName;
   }
+}
+
+async function loadTrainingGyms() {
+  if (trainingGymsCache) return trainingGymsCache;
+  try {
+    const raw = await fs.readFile(TRAINING_GYMS_PATH, "utf8");
+    const data = JSON.parse(raw);
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    trainingGymsCache = rows
+      .map((row) => ({
+        name: String(row?.name ?? "").trim(),
+        number: Number(row?.number),
+        expDay: Number(row?.expDay),
+        expNight: Number(row?.expNight),
+        level: row?.level ? String(row.level).trim() : "",
+      }))
+      .filter(
+        (row) =>
+          row.name &&
+          Number.isFinite(row.number) &&
+          Number.isFinite(row.expDay) &&
+          Number.isFinite(row.expNight)
+      );
+  } catch (err) {
+    console.error("[rpg] failed to load training gyms:", err);
+    trainingGymsCache = [];
+  }
+  return trainingGymsCache;
 }
 
 async function resolvePokemonName(raw) {
@@ -224,8 +265,45 @@ export function registerRpgInfo(register) {
             `• \`${cmd} tc\` — Training Challenge ineligible list`,
             `• \`${cmd} tc iseligible <pokemon>\` — Check Training Challenge eligibility`,
             `• \`${cmd} tc eligible <pokemon>\` — Check Training Challenge eligibility`,
+            `• \`${cmd} traininggyms [count]\` — Top training gyms by exp`,
           ].join("\n")
         );
+        return;
+      }
+
+      if (sub === "traininggyms" || sub === "gyms") {
+        const countRaw = parts[1];
+        const requested = countRaw ? Number(countRaw) : 5;
+        if (!Number.isFinite(requested) || requested <= 0) {
+          await message.reply(`Usage: \`${cmd} traininggyms [count]\``);
+          return;
+        }
+        const maxCount = 25;
+        const count = Math.min(Math.floor(requested), maxCount);
+        const gyms = await loadTrainingGyms();
+        if (!gyms.length) {
+          await message.reply("❌ Unable to load training gyms right now.");
+          return;
+        }
+
+        const useNight = !isTppcDaytime();
+        const expKey = useNight ? "expNight" : "expDay";
+        const sorted = gyms
+          .slice()
+          .sort((a, b) => Number(b[expKey]) - Number(a[expKey]));
+        const top = sorted.slice(0, Math.min(count, sorted.length));
+        const timeLabel = useNight ? "NIGHT" : "DAY";
+        const lines = [
+          `**Top Training Gyms (TPPC ${timeLabel})** — showing ${top.length}`,
+        ];
+        for (const [idx, gym] of top.entries()) {
+          const exp = formatInt(gym[expKey]);
+          const levelSuffix = gym.level ? ` (Lvl ${gym.level})` : "";
+          lines.push(
+            `${idx + 1}. ${gym.name} (#${gym.number}) — ${exp} EXP/battle${levelSuffix}`
+          );
+        }
+        await message.reply(lines.join("\n"));
         return;
       }
 
