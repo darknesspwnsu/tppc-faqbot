@@ -444,6 +444,44 @@ describe("rpg leaderboard register", () => {
     expect(body).toContain("top 1");
   });
 
+  it("renders overall pokemon leaderboard when no name is provided", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    storageMocks.getLeaderboard.mockResolvedValueOnce({
+      challenge: "pokemon_overall",
+      payload: {
+        rows: [
+          {
+            rank: "1",
+            trainer: "Lord Smaug",
+            pokemon: "Charizard",
+            level: "20405",
+            number: "3384868",
+          },
+        ],
+      },
+      updatedAt: Date.now(),
+    });
+
+    const message = makeMessage();
+    await handler({ message, rest: "pokemon" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("🏆 **Top Pokemon**");
+    expect(body).toContain("Lord Smaug");
+    expect(body).toContain("Charizard");
+    expect(pokedexMocks.parsePokemonQuery).not.toHaveBeenCalled();
+    expect(pokedexMocks.findPokedexEntry).not.toHaveBeenCalled();
+  });
+
   it("renders roulette weekly results", async () => {
     delete process.env.RPG_USERNAME;
     delete process.env.RPG_PASSWORD;

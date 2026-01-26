@@ -73,6 +73,12 @@ const CHALLENGES = {
     url: "https://www.tppcrpg.net/ranks_team.php",
     ttlMs: 5 * 60_000,
   },
+  pokemon_overall: {
+    key: "pokemon_overall",
+    name: "Top Pokemon",
+    url: "https://www.tppcrpg.net/ranks_individual.php",
+    ttlMs: 5 * 60_000,
+  },
 };
 
 const POKEMON_TTL_MS = 24 * 60 * 60_000;
@@ -515,6 +521,7 @@ async function fetchAndStore(challenge, client) {
   else if (challenge.key === "roulette_weekly") rows = parseRoulette(html).weekly;
   else if (challenge.key === "tc") rows = parseTrainingChallenge(html);
   else if (challenge.key === "trainers") rows = parseTrainerRanks(html);
+  else if (challenge.key === "pokemon_overall") rows = parsePokemonRanks(html);
   await upsertLeaderboard({ challenge: challenge.key, payload: { rows } });
   return rows;
 }
@@ -840,7 +847,7 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} speedtower\` — Speed Tower standings`,
             `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
-            `• \`${primaryCmd} pokemon|poke <name> [1-20]\` — Top trainers for a Pokemon`,
+            `• \`${primaryCmd} pokemon|poke [name] [1-20]\` — Top trainers for a Pokemon`,
             `• \`${primaryCmd} <customlb> [participant]\` — Custom leaderboard (top 5; quote names with spaces)`,
           ].join("\n")
         );
@@ -1023,7 +1030,22 @@ export function registerLeaderboard(register) {
         const nameTokens = parts.slice(1, hasCount ? -1 : undefined);
         const nameRaw = nameTokens.join(" ").trim();
         if (!nameRaw) {
-          await message.reply(`Usage: \`${primaryCmd} pokemon|poke <name> [1-20]\``);
+          const res = await getCachedOrFetch("pokemon_overall", getClient());
+          if (!res) {
+            await message.reply("❌ Unknown challenge.");
+            return;
+          }
+
+          const lines = renderTopRows("pokemon", res.rows || [], count);
+          if (!lines.length) {
+            await message.reply(`No leaderboard entries found for ${res.challenge.name}.`);
+            return;
+          }
+
+          const body =
+            `🏆 **${res.challenge.name}** (top ${Math.min(count, lines.length)})\n` +
+            lines.join("\n");
+          await message.reply(appendCacheFootnote(body, res.updatedAt));
           return;
         }
 
@@ -1131,7 +1153,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|pokemon|poke <name> [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|pokemon|poke [name] [1-20]\``
         );
         return;
       }
@@ -1140,13 +1162,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke [name] [1-20]\``
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke <name> [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke [name] [1-20]\``
         );
         return;
       }
