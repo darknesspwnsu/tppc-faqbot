@@ -73,6 +73,12 @@ const CHALLENGES = {
     url: "https://www.tppcrpg.net/ranks_team.php",
     ttlMs: 5 * 60_000,
   },
+  faction: {
+    key: "faction",
+    name: "Top Trainers by Faction",
+    url: "https://www.tppcrpg.net/top_trainers.php",
+    ttlMs: 5 * 60_000,
+  },
   pokemon_overall: {
     key: "pokemon_overall",
     name: "Top Pokemon",
@@ -102,6 +108,7 @@ const ALIASES = new Map([
   ["battleroulette", "roulette"],
   ["br", "roulette"],
   ["swarm", "swarm"],
+  ["faction", "faction"],
 ]);
 
 function getText(node) {
@@ -460,6 +467,10 @@ function renderTopRows(challengeKey, rows, limit = 5) {
       out.push(
         `#${row.rank} — ${row.trainer} (${row.faction}) • Lv ${row.level} • ID ${row.number}`
       );
+    } else if (challengeKey === "faction") {
+      out.push(
+        `#${row.rank} — ${row.trainer} (${row.faction}) • Lv ${row.level} • ID ${row.number}`
+      );
     } else if (challengeKey === "pokemon") {
       out.push(
         `#${row.rank} — ${row.trainer} • ${row.pokemon} Lv${row.level} • ID ${row.number}`
@@ -521,6 +532,7 @@ async function fetchAndStore(challenge, client) {
   else if (challenge.key === "roulette_weekly") rows = parseRoulette(html).weekly;
   else if (challenge.key === "tc") rows = parseTrainingChallenge(html);
   else if (challenge.key === "trainers") rows = parseTrainerRanks(html);
+  else if (challenge.key === "faction") rows = parseTrainerRanks(html);
   else if (challenge.key === "pokemon_overall") rows = parsePokemonRanks(html);
   await upsertLeaderboard({ challenge: challenge.key, payload: { rows } });
   return rows;
@@ -847,6 +859,7 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} speedtower\` — Speed Tower standings`,
             `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
+            `• \`${primaryCmd} faction [1-5]\` — Top trainers by faction`,
             `• \`${primaryCmd} pokemon|poke [name] [1-20]\` — Top trainers for a Pokemon`,
             `• \`${primaryCmd} <customlb> [participant]\` — Custom leaderboard (top 5; quote names with spaces)`,
           ].join("\n")
@@ -1018,6 +1031,37 @@ export function registerLeaderboard(register) {
         return;
       }
 
+      if (sub === "faction") {
+        const countRaw = parts[1] || "";
+        if (parts.length > 2) {
+          await message.reply(`Usage: \`${primaryCmd} faction [1-5]\``);
+          return;
+        }
+        const count = countRaw ? Number(countRaw) : 5;
+        if (!Number.isInteger(count) || count < 1 || count > 5) {
+          await message.reply("❌ `num_rows` must be an integer between 1 and 5.");
+          return;
+        }
+
+        const res = await getCachedOrFetch("faction", getClient());
+        if (!res) {
+          await message.reply("❌ Unknown challenge.");
+          return;
+        }
+
+        const lines = renderTopRows("faction", res.rows || [], count);
+        if (!lines.length) {
+          await message.reply(`No leaderboard entries found for ${res.challenge.name}.`);
+          return;
+        }
+
+        const body =
+          `🏆 **${res.challenge.name}** (top ${Math.min(count, lines.length)})\n` +
+          lines.join("\n");
+        await message.reply(appendCacheFootnote(body, res.updatedAt));
+        return;
+      }
+
       if (sub === "pokemon") {
         const countRaw = parts[parts.length - 1];
         const hasCount = countRaw && /^\d+$/.test(countRaw);
@@ -1153,7 +1197,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
         );
         return;
       }
@@ -1162,13 +1206,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
         );
         return;
       }

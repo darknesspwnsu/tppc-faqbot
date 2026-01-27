@@ -183,6 +183,25 @@ describe("rpg leaderboard register", () => {
     );
   });
 
+  it("rejects invalid faction counts", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    const message = makeMessage();
+    await handler({ message, rest: "faction 6" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      "❌ `num_rows` must be an integer between 1 and 5."
+    );
+  });
+
   it("renders trainers from cached data", async () => {
     delete process.env.RPG_USERNAME;
     delete process.env.RPG_PASSWORD;
@@ -210,6 +229,42 @@ describe("rpg leaderboard register", () => {
     const body = message.reply.mock.calls[0][0];
     expect(body).toContain("🏆 **Top Trainers**");
     expect(body).toContain("Ash");
+  });
+
+  it("renders faction leaderboard from cached data", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    storageMocks.getLeaderboard.mockResolvedValueOnce({
+      challenge: "faction",
+      payload: {
+        rows: [
+          {
+            rank: "1",
+            trainer: "GratzMatt Gym",
+            faction: "Team Galactic",
+            level: "22207",
+            number: "3476575",
+          },
+        ],
+      },
+      updatedAt: Date.now(),
+    });
+
+    const message = makeMessage();
+    await handler({ message, rest: "faction" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("🏆 **Top Trainers by Faction**");
+    expect(body).toContain("GratzMatt Gym");
+    expect(body).toContain("Team Galactic");
   });
 
   it("renders history for ssanne", async () => {
