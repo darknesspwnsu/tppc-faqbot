@@ -45,33 +45,69 @@ const DAILY_REFRESH_ET = process.env.RARITY_DAILY_REFRESH_ET || "07:10";
 
 // How often the bot checks for updates (keep modest; 5–10 min is perfect)
 const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
+const FETCH_TIMEOUT_MS = 5_000;
+const MAX_FETCH_BYTES = 2 * 1024 * 1024;
 
 /* --------------------------------- fetch --------------------------------- */
 
 function fetchText(url, source = "rarity") {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith("https://") ? https : http;
+    let finished = false;
+
+    const fail = (err) => {
+      if (finished) return;
+      finished = true;
+      void metrics.incrementExternalFetch(source, "error");
+      reject(err);
+    };
+
     const req = lib.get(url, (res) => {
       if (res.statusCode && res.statusCode >= 400) {
-        void metrics.incrementExternalFetch(source, "error");
-        reject(new Error(`HTTP ${res.statusCode} for ${url}`));
         res.resume();
+        fail(new Error(`HTTP ${res.statusCode} for ${url}`));
+        return;
+      }
+
+      const contentLength = Number(res.headers?.["content-length"]);
+      if (Number.isFinite(contentLength) && contentLength > MAX_FETCH_BYTES) {
+        res.resume();
+        fail(new Error(`Response too large (${contentLength} bytes) for ${url}`));
         return;
       }
 
       let data = "";
+      let totalBytes = 0;
       res.setEncoding("utf8");
-      res.on("data", (c) => (data += c));
+      res.on("data", (c) => {
+        totalBytes += Buffer.byteLength(c);
+        if (totalBytes > MAX_FETCH_BYTES) {
+          if (typeof res.destroy === "function") res.destroy();
+          fail(new Error(`Response exceeded ${MAX_FETCH_BYTES} bytes for ${url}`));
+          return;
+        }
+        data += c;
+      });
       res.on("end", () => {
+        if (finished) return;
+        finished = true;
         void metrics.incrementExternalFetch(source, "ok");
         resolve(data);
       });
+      res.on("error", (err) => fail(err));
     });
 
-    req.on("error", (err) => {
-      void metrics.incrementExternalFetch(source, "error");
-      reject(err);
-    });
+    if (typeof req.setTimeout === "function") {
+      req.setTimeout(FETCH_TIMEOUT_MS, () => {
+        if (typeof req.destroy === "function") {
+          req.destroy(new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`));
+        } else {
+          fail(new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`));
+        }
+      });
+    }
+
+    req.on("error", (err) => fail(err));
   });
 }
 
