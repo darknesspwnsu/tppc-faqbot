@@ -204,6 +204,8 @@ Fetches TPPC leaderboards.
   - `!lb roulette` or `!lb roulette weekly`
   - `!lb speedtower`
   - `!lb trainers [1-20]`
+  - `!lb faction [1-5]`
+  - `!lb pokemon [1-20]` (top Pokemon)
   - `!lb pokemon <name> [1-20]` or `!lb poke <name> [1-20]`
   - `!lb <customlb> [participant]` — custom leaderboard (top 5; quote names with spaces)
   - Admin: `!lb <customlb> --all` or `!lb <customlb> --10` (quote names with spaces)
@@ -216,7 +218,7 @@ Fetches TPPC leaderboards.
 
 **Invalid input:**
 - Unknown subcommand → usage block
-- Invalid count (not 1–20) → error
+- Invalid count (not 1–20, or 1–5 for faction) → error
 - History for trainers/pokemon → “History is not tracked for this challenge.”
 
 ### `!powerplant`
@@ -230,6 +232,7 @@ Find TPPC RPG trainer IDs by name.
 Fetches TPPC pokedex info (stats, types, egg groups, sprites, breeding time).
 - Supports forms and modifiers (shiny/dark/golden), including Mega and regional forms.
 - Shows egg time based on base evolution.
+ - Accepts numeric dex input (example: `!pokedex 123`).
  - Some sprite libraries have limited coverage (e.g., HGSS up to #493, Black/White up to #649).
 
 **Common responses:**
@@ -246,6 +249,9 @@ Returns stats only (text). Includes total base stats (unmodified).
 ### `!eggtime <pokemon>` (aliases: `!egg`, `!eggtimes`, `!breedtime`, `!breedtimes`)
 Returns breeding time (normal + Power Plant).
 - Shows base evolution used for calculation.
+
+### `!dexname <dex #>` (alias: `!pokedexname`)
+Returns the Pokemon name for a numeric Pokedex entry.
 
 ### `/viewbox` (and `!viewbox` if available)
 DMs a trainer’s Pokémon box.

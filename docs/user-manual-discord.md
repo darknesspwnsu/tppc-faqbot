@@ -12,7 +12,7 @@ _Core, high-frequency commands._
 - **!calc <mode> ...** - level/exp/money calc. `!calc help` to get started.  
   Example: `!calc l2e 100`
 - **!lb <board>** - leaderboards  
-  Example: `!lb roulette weekly`
+  Example: `!lb roulette weekly` or `!lb faction 5`
 - **!promo** (`!p`) - current promo  
   Example: `!p`
 - **/help** - private help menu  
@@ -37,6 +37,8 @@ _Practical helpers for otherwise tedious rpg stuff._
   Example: `!wiki goldenize`
 - **!pokedex <pokemon>** - full dex info  
   Example: `!pokedex Aegislash`
+- **!dexname <dex #>** - name lookup by dex number  
+  Example: `!dexname 123`
 - **!stats <pokemon>** - stats only  
   Example: `!stats Cryogonal`
 - **!eggtime <pokemon>** - breeding time  
