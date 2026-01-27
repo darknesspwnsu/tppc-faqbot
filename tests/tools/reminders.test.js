@@ -803,6 +803,8 @@ describe("tools/reminders", () => {
     const send = vi.fn(async () => {});
     __testables.setBootClient({ users: { fetch: vi.fn(async () => ({ send })) } });
 
+    const now = Date.now();
+    const createdAtMs = now - 5 * 60 * 1000;
     __testables.scheduleReminder({
       id: 9,
       userId: "u9",
@@ -810,12 +812,13 @@ describe("tools/reminders", () => {
       channelId: "c1",
       messageId: "m1",
       phrase: "",
-      remindAtMs: Date.now() + 1000,
-      createdAtMs: Date.now() - 5 * 60 * 1000,
+      remindAtMs: now + 1000,
+      createdAtMs,
     });
 
     await vi.advanceTimersByTimeAsync(1000);
-    expect(send).toHaveBeenCalledWith(expect.stringContaining("set 5m ago"));
+    const setAtUnix = Math.floor(createdAtMs / 1000);
+    expect(send).toHaveBeenCalledWith(expect.stringContaining(`set <t:${setAtUnix}:f>`));
     expect(execute).toHaveBeenCalledWith(
       expect.stringContaining("DELETE FROM reminders"),
       [9, "u9"]

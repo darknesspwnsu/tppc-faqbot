@@ -472,16 +472,9 @@ function scheduleReminder(reminder) {
   remindersById.set(reminder.id, { reminder, timeout });
 }
 
-function formatAge(fromMs, nowMs = Date.now()) {
+function formatSetTimestamp(fromMs) {
   if (!Number.isFinite(fromMs)) return "";
-  const diff = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
-  if (diff < 60) return `${diff}s ago`;
-  const mins = Math.floor(diff / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `<t:${Math.floor(fromMs / 1000)}:f>`;
 }
 
 async function fireReminder(reminder) {
@@ -497,8 +490,8 @@ async function fireReminder(reminder) {
       channelId: reminder.channelId,
       messageId: reminder.messageId,
     });
-    const ageLabel = formatAge(reminder.createdAtMs);
-    const suffix = ageLabel ? ` (set ${ageLabel})` : "";
+    const setAt = formatSetTimestamp(reminder.createdAtMs);
+    const suffix = setAt ? ` (set ${setAt})` : "";
     let res = { ok: true };
     if (reminder.messageId && link) {
       res = await sendDm({
