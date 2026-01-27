@@ -24,6 +24,7 @@ const EVOLUTION_PATH = path.resolve("data/pokemon_evolutions.json");
 let pokedex = null; // { name: key }
 let pokedexLower = null; // { lowerName: entry }
 let pokedexNorm = null; // { normalizedKey: entry }
+let pokedexById = null; // { id: entry }
 let evolutionCache = null; // { baseByName }
 
 async function ensureRpgCredentials(message, cmd) {
@@ -220,12 +221,20 @@ async function loadPokedexMap() {
 
   pokedexLower = {};
   pokedexNorm = {};
+  pokedexById = {};
 
   for (const [name, key] of Object.entries(pokedex)) {
     const entry = { name, key };
     pokedexLower[name.toLowerCase()] = entry;
     const norm = normalizeKey(name);
     if (!pokedexNorm[norm]) pokedexNorm[norm] = entry;
+    const { id, form } = parseEntryKey(key);
+    if (Number.isFinite(id) && id > 0) {
+      const existing = pokedexById[id];
+      if (!existing || form === 0) {
+        pokedexById[id] = entry;
+      }
+    }
   }
 
   return pokedex;
@@ -250,6 +259,13 @@ export async function findPokedexEntry(queryRaw) {
 }
 
 export { parsePokemonQuery };
+
+async function findPokedexEntryById(idRaw) {
+  const id = Number(idRaw);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  await loadPokedexMap();
+  return pokedexById?.[id] || null;
+}
 
 async function getCachedPokedexEntry({ cacheKey, url, client }) {
   const cached = await getPokedexEntry({ entryKey: cacheKey });
@@ -526,6 +542,16 @@ function hasExplicitVariant(raw) {
 }
 
 async function resolvePokedexEntryQuery(nameRaw, variant, message, command, options = {}) {
+  const numericMatch = /^\s*#?(\d+)\s*$/.exec(String(nameRaw || ""));
+  if (numericMatch) {
+    const entry = await findPokedexEntryById(numericMatch[1]);
+    if (!entry) {
+      await message.reply(`❌ Unknown Pokedex number: #${numericMatch[1]}.`);
+      return null;
+    }
+    return { entry, variant: "normal" };
+  }
+
   const explicitVariant = hasExplicitVariant(nameRaw);
 
   if (variant && !explicitVariant) {
@@ -667,7 +693,7 @@ export function registerPokedex(register) {
 
       const nameRaw = String(rest || "").trim();
       if (!nameRaw || nameRaw.toLowerCase() === "help") {
-        await message.reply(`Usage: \`${primaryCmd} <pokemon name>\``);
+        await message.reply(`Usage: \`${primaryCmd} <pokemon name|dex #>\``);
         return;
       }
 
@@ -748,9 +774,11 @@ export function registerPokedex(register) {
         const fields = statsToFields(payload?.stats, variant);
         const total = sumBaseStats(payload?.stats);
         const label = formatVariantName(variant, entry.name);
+        const { id } = parseEntryKey(entry.key);
+        const idLabel = Number.isFinite(id) ? ` (#${id})` : "";
         const lines = fields.map((field) => `${field.name}: ${field.value}`);
         if (Number.isFinite(total)) lines.push(`Total: ${total}`);
-        await message.reply(`**${label}** stats:\n${lines.join("\n")}`);
+        await message.reply(`**${label}${idLabel}** stats:\n${lines.join("\n")}`);
       } catch (err) {
         console.error("[rpg] pokedex stats failed:", err);
         await message.reply("❌ Failed to fetch stats. Please try again later.");
@@ -800,9 +828,11 @@ export function registerPokedex(register) {
           await message.reply("Unknown egg time.");
           return;
         }
+        const { id } = parseEntryKey(entry.key);
+        const idLabel = Number.isFinite(id) ? ` (#${id})` : "";
         const baseLabel = baseName && baseName !== entry.name ? baseName : entry.name;
         await message.reply(
-          `Breeding times for **${entry.name}** (Base evolution: **${baseLabel}**)\n` +
+          `Breeding times for **${entry.name}${idLabel}** (Base evolution: **${baseLabel}**)\n` +
             `${eggTime.normal} (normal)\n` +
             `${eggTime.pp} (Power Plant)`
         );
