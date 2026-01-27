@@ -17,6 +17,15 @@ function mention(id) {
   return `<@${id}>`;
 }
 
+function buildAllowedMentions(userIds) {
+  const users = Array.from(new Set((userIds || []).filter(Boolean).map((id) => String(id))));
+  return { parse: [], users, roles: [] };
+}
+
+function sendMentionSafe(channel, content, userIds) {
+  return channel.send({ content, allowedMentions: buildAllowedMentions(userIds) });
+}
+
 function stripLeadingMentions(text) {
   return String(text ?? "")
     .replace(/^(\s*<@!?\d+>\s*)+/g, "")
@@ -170,7 +179,7 @@ function makeTextListHandler(kind, label, opts = {}) {
       }
 
       if (lines.length) {
-        await message.channel.send(lines.join("\n"));
+        await sendMentionSafe(message.channel, lines.join("\n"), mentionedUsers.map((u) => u.id));
       }
       return;
     }
@@ -190,7 +199,11 @@ function makeTextListHandler(kind, label, opts = {}) {
         return;
       }
 
-      await message.channel.send(`${mention(message.author.id)} ${label}: ${text}`);
+      await sendMentionSafe(
+        message.channel,
+        `${mention(message.author.id)} ${label}: ${text}`,
+        [message.author.id]
+      );
       return;
     }
   };

@@ -147,7 +147,10 @@ describe("trade_commands.js", () => {
     await handler({ message, rest: "<@u2> <@u3>", cmd: "?ft" });
 
     expect(message.channel.send).toHaveBeenCalledWith(
-      "<@u2> is trading: a list\n<@u3> has not set a list!"
+      expect.objectContaining({
+        content: "<@u2> is trading: a list\n<@u3> has not set a list!",
+        allowedMentions: { parse: [], users: ["u2", "u3"], roles: [] },
+      })
     );
   });
 });
