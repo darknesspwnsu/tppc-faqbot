@@ -332,6 +332,41 @@ describe("tools/reminders", () => {
     expect(payload).not.toContain("a".repeat(210));
   });
 
+  it("coalesces multiple notifyme phrases into one DM", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {
+        return [[
+          { id: 5, user_id: "u1", phrase: "magic" },
+          { id: 6, user_id: "u1", phrase: "hello" },
+        ]];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const listener = register.calls.listener[0];
+
+    const send = vi.fn(async () => {});
+    const message = {
+      guildId: "g1",
+      channelId: "c1",
+      id: "m9",
+      content: "hello magic there",
+      author: { id: "u2", bot: false },
+      client: { users: { fetch: vi.fn(async () => ({ send })) } },
+    };
+
+    await listener({ message });
+
+    expect(send).toHaveBeenCalledTimes(1);
+    const payload = send.mock.calls[0][0];
+    expect(payload).toContain("2 phrases mentioned");
+    expect(payload).toContain('• "magic"');
+    expect(payload).toContain('• "hello"');
+  });
+
   it("allows notifyme for bot messages when target user matches", async () => {
     const execute = vi.fn(async (sql) => {
       if (sql.includes("SELECT id, user_id, phrase, target_user_id FROM notify_me")) {

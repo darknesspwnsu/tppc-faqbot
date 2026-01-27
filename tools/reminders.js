@@ -604,37 +604,55 @@ export function registerReminders(register) {
     });
     if (!matches.length) return;
 
+    const matchesByUser = new Map();
     for (const item of matches) {
+      const list = matchesByUser.get(item.userId) || [];
+      list.push(item);
+      matchesByUser.set(item.userId, list);
+    }
+
+    for (const [userId, items] of matchesByUser.entries()) {
       try {
-        const user = await message.client.users.fetch(item.userId);
+        const user = await message.client.users.fetch(userId);
         if (!user) continue;
         const link = formatLink({
           guildId: message.guildId,
           channelId: message.channelId,
           messageId: message.id,
         });
+        const phrases = items.map((entry) => String(entry.phrase || "").trim()).filter(Boolean);
+        const listBlock =
+          phrases.length > 1
+            ? `\n${phrases.map((phrase) => `• "${phrase}"`).join("\n")}`
+            : "";
+        const snippet = buildNotifySnippet(message.content);
+        const quote = snippet ? `\n${formatQuoteBlock(snippet)}\n` : "\n";
+        const header =
+          phrases.length > 1
+            ? `🔔 **NotifyMe**: ${phrases.length} phrases mentioned by ${mention(
+                message.author?.id
+              )} in <#${message.channelId}>.${listBlock}`
+            : `🔔 **NotifyMe**: "${phrases[0]}" mentioned by ${mention(
+                message.author?.id
+              )} in <#${message.channelId}>.`;
+
         const res = await sendDm({
           user,
-          payload: (() => {
-            const snippet = buildNotifySnippet(message.content);
-            const quote = snippet ? `\n${formatQuoteBlock(snippet)}\n` : "\n";
-            return (
-              `🔔 **NotifyMe**: "${item.phrase}" mentioned by ${mention(message.author?.id)} in <#${message.channelId}>.` +
-              `${quote}${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`
-            );
-          })(),
+          payload:
+            `${header}` +
+            `${quote}${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`,
           feature: "notifyme",
         });
         if (res.ok) {
-          void metrics.increment("notifyme.trigger", { status: "ok" });
+          void metrics.increment("notifyme.trigger", { status: "ok" }, phrases.length || 1);
         } else if (res.code === 50007) {
-          void metrics.increment("notifyme.trigger", { status: "blocked" });
+          void metrics.increment("notifyme.trigger", { status: "blocked" }, phrases.length || 1);
         } else {
-          void metrics.increment("notifyme.trigger", { status: "error" });
+          void metrics.increment("notifyme.trigger", { status: "error" }, phrases.length || 1);
           console.warn("[notifyme] DM failed:", res.error);
         }
       } catch (err) {
-        void metrics.increment("notifyme.trigger", { status: "error" });
+        void metrics.increment("notifyme.trigger", { status: "error" }, items.length || 1);
         console.warn("[notifyme] DM failed:", err);
       }
     }
