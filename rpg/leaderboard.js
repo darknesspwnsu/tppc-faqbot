@@ -1197,7 +1197,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
@@ -1206,13 +1206,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\``
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
