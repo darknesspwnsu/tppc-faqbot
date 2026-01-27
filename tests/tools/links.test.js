@@ -3,8 +3,12 @@ import { registerLinks } from "../../tools/links.js";
 
 function makeRegistry() {
   const handlers = new Map();
-  const register = (cmd, fn) => handlers.set(cmd, fn);
-  return { register, handlers };
+  const helpByCmd = new Map();
+  const register = (cmd, fn, help) => {
+    handlers.set(cmd, fn);
+    if (help) helpByCmd.set(cmd, help);
+  };
+  return { register, handlers, helpByCmd };
 }
 
 function makeMessage() {
@@ -21,6 +25,14 @@ describe("tools/links.js", () => {
     expect(reg.handlers.has("!tools")).toBe(true);
   });
 
+  it("mentions /sortbox in organizer help text", () => {
+    const reg = makeRegistry();
+    registerLinks(reg.register);
+
+    const help = reg.helpByCmd.get("!organizer") || "";
+    expect(help).toContain("/sortbox");
+  });
+
   it("replies for !organizer and !tools", async () => {
     const reg = makeRegistry();
     registerLinks(reg.register);
@@ -35,5 +47,6 @@ describe("tools/links.js", () => {
 
     expect(msg1.reply).toHaveBeenCalledTimes(1);
     expect(msg2.reply).toHaveBeenCalledTimes(1);
+    expect(msg1.reply).toHaveBeenCalledWith(expect.stringContaining("/sortbox"));
   });
 });

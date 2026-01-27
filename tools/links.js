@@ -6,9 +6,11 @@ export function registerLinks(register) {
   register(
     "!organizer",
     async ({ message }) => {
-      await message.reply("https://coldsp33d.github.io/box_organizer");
+      await message.reply(
+        "https://coldsp33d.github.io/box_organizer\nTip: You can also use `/sortbox` for in-bot sorting."
+      );
     },
-    "!organizer — returns the organizer page link",
+    "!organizer — returns the organizer page link (try /sortbox for in-bot sorting)",
     { aliases: ["!boxorganizer"] }
   );
 
