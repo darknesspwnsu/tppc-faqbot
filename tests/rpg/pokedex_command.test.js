@@ -218,6 +218,17 @@ describe("rpg pokedex command", () => {
     expect(replyArg.embeds[0].title).toContain("Bulbasaur");
   });
 
+  it("returns the pokemon name for a dex number", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!dexname");
+
+    const message = makeMessage();
+    await handler({ message, rest: "1" });
+
+    expect(message.reply).toHaveBeenCalledWith("**Bulbasaur**");
+  });
+
   it("returns the sprite url for the requested variant", async () => {
     const register = makeRegister();
     registerPokedex(register);

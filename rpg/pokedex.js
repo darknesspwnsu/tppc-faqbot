@@ -680,6 +680,7 @@ async function disableInteractionButtons(interaction) {
 
 export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
+  const dexNameCmd = "!dexname";
   const statsCmd = "!stats";
   const eggCmd = "!eggtime";
   const spriteCmd = "!sprite";
@@ -744,6 +745,36 @@ export function registerPokedex(register) {
     },
     "!pokedex <pokemon> — show TPPC RPG pokedex details",
     { helpTier: "primary", category: "RPG", aliases: ["!dex", "!pd"] }
+  );
+
+  register(
+    dexNameCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!(await ensureRpgCredentials(message, dexNameCmd))) return;
+
+      const raw = String(rest || "").trim();
+      if (!raw || raw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${dexNameCmd} <pokedex number>\``);
+        return;
+      }
+
+      const match = /^\s*#?(\d+)\s*$/.exec(raw);
+      if (!match) {
+        await message.reply("❌ Please provide a valid Pokedex number.");
+        return;
+      }
+
+      const entry = await findPokedexEntryById(match[1]);
+      if (!entry) {
+        await message.reply(`❌ Unknown Pokedex number: #${match[1]}.`);
+        return;
+      }
+
+      await message.reply(`**${entry.name}**`);
+    },
+    "!dexname <pokedex number> — lookup a Pokemon name by Pokedex number",
+    { helpTier: "primary", category: "RPG", aliases: ["!pokedexname"] }
   );
 
   register(
