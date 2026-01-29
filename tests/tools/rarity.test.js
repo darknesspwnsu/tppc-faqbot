@@ -241,6 +241,21 @@ describe("rarity.js", () => {
     expect(res).toEqual({ cmd: "?rarity", rest: "Pikachu 7d" });
   });
 
+  it("handleRarityInteraction maps generic rarity retries", async () => {
+    const { handleRarityInteraction } = await loadRarityModule();
+
+    const interaction = {
+      isButton: () => true,
+      customId: "rarity_retry:!rc_replace:Pikachu:2%7Cg.meowth%7Cg.vulpix%20(alola)",
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+      message: { components: [] },
+    };
+
+    const res = await handleRarityInteraction(interaction);
+    expect(res).toEqual({ cmd: "!rc", rest: "\"g.meowth\" \"g.vulpix (alola)\" \"Pikachu\"" });
+  });
+
   it("registerRarityHistory fetches API data and formats output", async () => {
     const { registerLevel4Rarity } = await loadRarityModule();
     const register = vi.fn();
@@ -465,6 +480,30 @@ describe("rarity.js", () => {
     const payload = message.channel.send.mock.calls[0][0];
     expect(payload.embeds[0].title).toBe("Pikachu vs Shiny Pikachu vs Golden Meowth");
     expect(payload.embeds[0].fields[0].value).toBe("10 vs 1 vs 5");
+  });
+
+  it("rarity comparison suggests buttons for missing third entry", async () => {
+    const { registerLevel4Rarity } = await loadRarityModule();
+    const register = vi.fn();
+    register.expose = vi.fn();
+
+    registerLevel4Rarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rcCall = register.mock.calls.find((call) => call[0] === "!rc");
+    const handler = rcCall[1];
+
+    const message = {
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "g.meowth g.vulpix (alola) Pikac" });
+
+    const payload = message.reply.mock.calls[0][0];
+    const ids = payload.components[0].components.map((button) => button.data.customId);
+    expect(ids.some((id) => id.startsWith("rarity_retry:!rc_replace:"))).toBe(true);
+    expect(ids[0]).toContain("2%7Cg.meowth%7Cg.vulpix%20(alola)");
   });
 
   it("rarity comparison rejects duplicate entries in three-way mode", async () => {

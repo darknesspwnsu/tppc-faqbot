@@ -377,6 +377,23 @@ function parseTwoArgs(rest) {
   return parseArgs(rest, 2);
 }
 
+function buildRcRetryExtra(index, args) {
+  const cleanArgs = Array.isArray(args)
+    ? args.map((arg) => String(arg ?? "")).filter(Boolean)
+    : [];
+  return [String(index), ...cleanArgs].join("|");
+}
+
+function parseRcRetryExtra(extra) {
+  const parts = String(extra ?? "").split("|");
+  const index = Number.parseInt(parts[0], 10);
+  const args = parts.slice(1);
+  if (!Number.isFinite(index)) {
+    return { index: null, args };
+  }
+  return { index, args };
+}
+
 function cmpLine(a, b) {
   return `${fmt(a)} vs ${fmt(b)}`;
 }
@@ -864,13 +881,11 @@ export function registerLevel4Rarity(register) {
       if (!r1 || !r2 || (q3 && !r3)) {
         if (!r1) {
           const s1 = getSuggestionsFromIndex(rarityNorm, q1, 5);
-          if (s1.length && !q3) {
+          if (s1.length) {
             await message.reply({
               content: `No exact match for \`${q1}\`.\nDid you mean:`,
-              components: buildDidYouMeanButtons("!rc_left", s1, q2),
+              components: buildDidYouMeanButtons("!rc_replace", s1, buildRcRetryExtra(0, [q1, q2, q3])),
             });
-          } else if (s1.length) {
-            await message.reply(`No exact match for \`${q1}\`. ${formatSuggestionsInline(s1)}`);
           } else {
             await message.reply(`No exact match for \`${q1}\`.`);
           }
@@ -878,13 +893,11 @@ export function registerLevel4Rarity(register) {
 
         if (!r2) {
           const s2 = getSuggestionsFromIndex(rarityNorm, q2, 5);
-          if (s2.length && !q3) {
+          if (s2.length) {
             await message.reply({
               content: `No exact match for \`${q2}\`.\nDid you mean:`,
-              components: buildDidYouMeanButtons("!rc_right", s2, q1),
+              components: buildDidYouMeanButtons("!rc_replace", s2, buildRcRetryExtra(1, [q1, q2, q3])),
             });
-          } else if (s2.length) {
-            await message.reply(`No exact match for \`${q2}\`. ${formatSuggestionsInline(s2)}`);
           } else {
             await message.reply(`No exact match for \`${q2}\`.`);
           }
@@ -893,7 +906,10 @@ export function registerLevel4Rarity(register) {
         if (q3 && !r3) {
           const s3 = getSuggestionsFromIndex(rarityNorm, q3, 5);
           if (s3.length) {
-            await message.reply(`No exact match for \`${q3}\`. ${formatSuggestionsInline(s3)}`);
+            await message.reply({
+              content: `No exact match for \`${q3}\`.\nDid you mean:`,
+              components: buildDidYouMeanButtons("!rc_replace", s3, buildRcRetryExtra(2, [q1, q2, q3])),
+            });
           } else {
             await message.reply(`No exact match for \`${q3}\`.`);
           }
@@ -1014,6 +1030,28 @@ export async function handleRarityInteraction(interaction) {
 
   if (cmdKey === "!rc_left") return { cmd: "!rc", rest: `"${mon}" "${extra}"` };
   if (cmdKey === "!rc_right") return { cmd: "!rc", rest: `"${extra}" "${mon}"` };
+  if (cmdKey === "!rc_first" || cmdKey === "!rc_second" || cmdKey === "!rc_third") {
+    const parts = extra ? extra.split("|") : [];
+    const [a, b] = parts;
+    let args = [];
+    if (cmdKey === "!rc_first") args = [mon, a, b];
+    if (cmdKey === "!rc_second") args = [a, mon, b];
+    if (cmdKey === "!rc_third") args = [a, b, mon];
+    const rest = args.filter(Boolean).map((arg) => `"${arg}"`).join(" ");
+    return { cmd: "!rc", rest };
+  }
+  if (cmdKey === "!rc_replace") {
+    const { index, args } = parseRcRetryExtra(extra);
+    if (index === null) return false;
+    const updated = [...args];
+    if (index >= updated.length) {
+      updated[index] = mon;
+    } else {
+      updated[index] = mon;
+    }
+    const rest = updated.filter(Boolean).map((arg) => `"${arg}"`).join(" ");
+    return { cmd: "!rc", rest };
+  }
 
   if (cmdKey === "!rh") {
     const rest = extra ? `${mon} ${extra}` : mon;
