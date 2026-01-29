@@ -229,7 +229,7 @@ describe("rpginfo command", () => {
     await handler({ message, rest: "tc eligible Gallade" });
 
     expect(message.reply).toHaveBeenCalledWith(
-      "**Gallade**'s base evolution **Ralts** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center."
+      "**Gallade**'s base evolution **Ralts** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve."
     );
   });
 
@@ -254,7 +254,7 @@ describe("rpginfo command", () => {
     await handler({ message, rest: "tc iseligible Ralts" });
 
     expect(message.reply).toHaveBeenCalledWith(
-      "**Ralts** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center."
+      "**Ralts** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve."
     );
   });
 
@@ -284,7 +284,7 @@ describe("rpginfo command", () => {
 
     expect(pokedexMocks.parsePokemonQuery).not.toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalledWith(
-      "**Slaking**'s base evolution **Slakoth** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center."
+      "**Slaking**'s base evolution **Slakoth** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve."
     );
   });
 });
