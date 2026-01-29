@@ -359,7 +359,7 @@ export function registerRpgInfo(register) {
                 );
               } else {
                 await message.reply(
-                  `**${resolved.name}**'s base evolution **${baseName}** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center.`
+                  `**${resolved.name}**'s base evolution **${baseName}** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve.`
                 );
               }
               return;
@@ -373,7 +373,7 @@ export function registerRpgInfo(register) {
             }
 
             await message.reply(
-              `**${baseName}** might be eligible for this week's Training Challenge if it evolves through the Pokemon Center.`
+              `**${baseName}** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve.`
             );
             return;
           }
