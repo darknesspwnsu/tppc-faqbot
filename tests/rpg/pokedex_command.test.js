@@ -229,6 +229,17 @@ describe("rpg pokedex command", () => {
     expect(message.reply).toHaveBeenCalledWith("**Bulbasaur**");
   });
 
+  it("returns the dex number for a pokemon name", async () => {
+    const register = makeRegister();
+    registerPokedex(register);
+    const handler = getHandler(register, "!dexnumber");
+
+    const message = makeMessage();
+    await handler({ message, rest: "Bulbasaur" });
+
+    expect(message.reply).toHaveBeenCalledWith("**#1**");
+  });
+
   it("returns the sprite url for the requested variant", async () => {
     const register = makeRegister();
     registerPokedex(register);

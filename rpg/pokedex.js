@@ -681,6 +681,7 @@ async function disableInteractionButtons(interaction) {
 export function registerPokedex(register) {
   const primaryCmd = "!pokedex";
   const dexNameCmd = "!dexname";
+  const dexNumberCmd = "!dexnumber";
   const statsCmd = "!stats";
   const eggCmd = "!eggtime";
   const spriteCmd = "!sprite";
@@ -775,6 +776,36 @@ export function registerPokedex(register) {
     },
     "!dexname <pokedex number> — lookup a Pokemon name by Pokedex number",
     { helpTier: "primary", category: "RPG", aliases: ["!pokedexname"] }
+  );
+
+  register(
+    dexNumberCmd,
+    async ({ message, rest }) => {
+      if (!message.guildId) return;
+      if (!(await ensureRpgCredentials(message, dexNumberCmd))) return;
+
+      const raw = String(rest || "").trim();
+      if (!raw || raw.toLowerCase() === "help") {
+        await message.reply(`Usage: \`${dexNumberCmd} <pokemon>\``);
+        return;
+      }
+
+      let { variant } = parsePokemonQuery(raw);
+      if (!variant) variant = "normal";
+      const resolved = await resolvePokedexEntryQuery(raw, variant, message, dexNumberCmd);
+      if (!resolved) return;
+
+      const { entry } = resolved;
+      const { id } = parseEntryKey(entry.key);
+      if (!Number.isFinite(id)) {
+        await message.reply(`❌ Could not parse Pokedex entry for **${entry.name}**.`);
+        return;
+      }
+
+      await message.reply(`**#${id}**`);
+    },
+    "!dexnumber <pokemon> — lookup a Pokedex number by Pokemon name",
+    { helpTier: "primary", category: "RPG", aliases: ["!pokedexnumber"] }
   );
 
   register(
