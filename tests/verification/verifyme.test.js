@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import crypto from "node:crypto";
 
 vi.mock("../../db.js", () => ({
   getSavedId: vi.fn(),
@@ -8,15 +9,29 @@ vi.mock("../../db.js", () => ({
 }));
 vi.mock("../../shared/metrics.js", () => ({ metrics: { increment: vi.fn(), incrementExternalFetch: vi.fn(), incrementSchedulerRun: vi.fn() } }));
 
-import { getSavedId, getUserText } from "../../db.js";
+const forumMocks = vi.hoisted(() => ({
+  sendVerificationPm: vi.fn(),
+}));
+
+vi.mock("../../verification/forum_client.js", () => ({
+  ForumClient: class {
+    sendVerificationPm(...args) {
+      return forumMocks.sendVerificationPm(...args);
+    }
+  },
+}));
+
+import { getSavedId, getUserText, setUserText, deleteUserText } from "../../db.js";
 import { registerVerifyMe } from "../../verification/verifyme.js";
 
 function makeRegister() {
   const components = new Map();
+  const slash = new Map();
   return {
-    slash: vi.fn(),
+    slash: (def, handler) => slash.set(def.name, { def, handler }),
     component: (prefix, handler) => components.set(prefix, handler),
     __components: components,
+    __slash: slash,
   };
 }
 
@@ -26,6 +41,8 @@ describe("verifyme forum ID lookup", () => {
     process.env.FORUM_BOT_USERNAME = "bot";
     process.env.FORUM_BOT_PASSWORD = "pass";
     process.env.FORUM_BASE_URL = "https://forums.tppc.info";
+    forumMocks.sendVerificationPm.mockResolvedValue({ ok: true });
+    deleteUserText.mockResolvedValue(null);
   });
 
   it("logs fetch failures and DMs guidance without 'not found' line", async () => {
@@ -122,5 +139,81 @@ describe("verifyme forum ID lookup", () => {
 
     expect(interaction.reply).toHaveBeenCalledTimes(1);
     expect(interaction.reply.mock.calls[0][0].content).toContain("couldn't DM the user");
+  });
+
+  it("allows re-verification even if already linked but missing roles", async () => {
+    getUserText.mockResolvedValueOnce("OldUser");
+
+    const reg = makeRegister();
+    registerVerifyMe(reg);
+    const handler = reg.__slash.get("verifyme")?.handler;
+
+    const member = {
+      roles: { cache: new Map() },
+      user: { id: "u1", tag: "User#1234", username: "User" },
+    };
+    const guild = {
+      members: { fetch: vi.fn(async () => member) },
+      channels: { fetch: vi.fn(async () => null) },
+    };
+
+    const interaction = {
+      guildId: "1332822580708511815",
+      guild,
+      user: member.user,
+      options: {
+        getString: (name) => (name === "username" ? "NewUser" : null),
+      },
+      reply: vi.fn(async () => {}),
+    };
+
+    await handler({ interaction });
+
+    expect(forumMocks.sendVerificationPm).toHaveBeenCalledWith(
+      expect.objectContaining({ forumUsername: "NewUser" })
+    );
+    const replyArg = interaction.reply.mock.calls[0][0];
+    expect(replyArg.content).toContain("I sent a verification code");
+  });
+
+  it("records a verified timestamp on successful token redemption", async () => {
+    const token = "abc123";
+    const tokenHash = crypto.createHash("sha256").update(token, "utf8").digest("hex");
+    getUserText.mockResolvedValueOnce(
+      JSON.stringify({
+        forumUsername: "NewUser",
+        tokenHash,
+        expiresAtMs: Date.now() + 60_000,
+      })
+    );
+
+    const reg = makeRegister();
+    registerVerifyMe(reg);
+    const handler = reg.__slash.get("verifyme")?.handler;
+
+    const member = {
+      roles: { cache: new Map() },
+      user: { id: "u1", tag: "User#1234", username: "User" },
+    };
+    const guild = {
+      members: { fetch: vi.fn(async () => member) },
+      channels: { fetch: vi.fn(async () => null) },
+    };
+
+    const interaction = {
+      guildId: "1332822580708511815",
+      guild,
+      user: member.user,
+      options: {
+        getString: (name) => (name === "securitytoken" ? token : null),
+      },
+      reply: vi.fn(async () => {}),
+    };
+
+    await handler({ interaction });
+
+    expect(setUserText).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "fuserat" })
+    );
   });
 });

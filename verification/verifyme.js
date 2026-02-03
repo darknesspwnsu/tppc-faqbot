@@ -11,6 +11,7 @@
 //
 // Storage (reuses existing user_texts table):
 //   kind "fuser"    => verified forum username (string)
+//   kind "fuserat"  => verified timestamp (ISO string)
 //   kind "fpending" => pending JSON { forumUsername, tokenHash, expiresAtMs, createdAtMs, lastSentAtMs }
 //
 // IMPORTANT:
@@ -35,6 +36,7 @@ import { sendDm } from "../shared/dm.js";
 
 const K_VERIFIED = "fuser"; // <= 8 chars (db schema)
 const K_PENDING = "fpending";
+const K_VERIFIED_AT = "fuserat";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -477,38 +479,8 @@ export function registerVerifyMe(register) {
         return;
       }
 
-      // If they are already linked in DB, allow them to re-trigger staff approval without re-PM.
-      const existingForumUser = await getUserText({ guildId, userId, kind: K_VERIFIED });
-
       // ---- Step 1: request token (or short-circuit if already linked in DB) ----
       if (username) {
-        if (existingForumUser) {
-          // They are linked but missing approval roles: post for staff approval again.
-          const postRes = await postVerificationReview({
-            interaction,
-            guildCfg,
-            forumUsername: existingForumUser,
-          });
-
-          if (!postRes.ok) {
-            await interaction.reply({
-              flags: MessageFlags.Ephemeral,
-              content:
-                `✅ You are linked as **${escapeDiscordMarkdown(existingForumUser)}**.\n` +
-                `❌ But I couldn't post the staff approval request. Ask staff to check the verification config.`,
-            });
-            return;
-          }
-
-          await interaction.reply({
-            flags: MessageFlags.Ephemeral,
-            content:
-              `✅ You are linked as forum user **${escapeDiscordMarkdown(existingForumUser)}**.\n` +
-              `🛡️ Your approval request has been sent to staff.`,
-          });
-          return;
-        }
-
         const cleaned = String(username).trim();
         if (!cleaned || cleaned.length > 50) {
           await interaction.reply({ flags: MessageFlags.Ephemeral, content: "Please provide a valid forums username." });
@@ -637,6 +609,12 @@ export function registerVerifyMe(register) {
 
         // Mark verified + clear pending (guild-scoped)
         await setUserText({ guildId, userId, kind: K_VERIFIED, text: forumUsername });
+        await setUserText({
+          guildId,
+          userId,
+          kind: K_VERIFIED_AT,
+          text: new Date(nowMs()).toISOString(),
+        });
         await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
 
         // Post staff approval request
@@ -769,6 +747,7 @@ export function registerUnverify(register) {
       const userId = target.id;
 
       await deleteUserText({ guildId, userId, kind: K_VERIFIED }).catch(() => null);
+      await deleteUserText({ guildId, userId, kind: K_VERIFIED_AT }).catch(() => null);
       await deleteUserText({ guildId, userId, kind: K_PENDING }).catch(() => null);
 
       await interaction.reply({ flags: MessageFlags.Ephemeral, content: `✅ Removed verification linkage for ${target}.` });
