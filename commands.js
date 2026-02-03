@@ -535,13 +535,28 @@ export function buildCommandRegistry({ client } = {}) {
 
   async function dispatchMessage(message) {
     const content = (message.content ?? "").trim();
-    const isBang = content.startsWith("!");
-    const isQ = content.startsWith("?");
+    const isDevPrefix = content.startsWith("!!") || content.startsWith("??");
+    const isDevEnv = String(process.env.ENV || "").toLowerCase() === "dev";
+    let isBang = content.startsWith("!");
+    let isQ = content.startsWith("?");
     let cmd = null;
     let rest = "";
     let entry = null;
 
-    if (isBang || isQ) {
+    if (isDevPrefix) {
+      if (isDevEnv) {
+        const devContent = content.slice(1);
+        isBang = devContent.startsWith("!");
+        isQ = devContent.startsWith("?");
+        const spaceIdx = devContent.indexOf(" ");
+        cmd = (spaceIdx === -1 ? devContent : devContent.slice(0, spaceIdx)).toLowerCase();
+        rest = spaceIdx === -1 ? "" : devContent.slice(spaceIdx + 1);
+        entry = bang.get(cmd);
+      } else {
+        isBang = false;
+        isQ = false;
+      }
+    } else if (isBang || isQ) {
       const spaceIdx = content.indexOf(" ");
       cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
       rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);

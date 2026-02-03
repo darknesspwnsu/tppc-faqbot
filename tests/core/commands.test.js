@@ -63,6 +63,52 @@ describe("commands registry", () => {
     isAdminOrPrivileged.mockReturnValue(false);
   });
 
+  it("ignores dev prefixes in prod mode", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const prevEnv = process.env.ENV;
+    process.env.ENV = "prod";
+    const reg = buildCommandRegistry({});
+
+    await reg.dispatchMessage(makeMessage({ guildId: "g0", content: "!!ping" }));
+    await reg.dispatchMessage(makeMessage({ guildId: "g1", content: "??ping" }));
+    expect(handler).not.toHaveBeenCalled();
+
+    process.env.ENV = prevEnv;
+  });
+
+  it("routes dev prefixes in dev mode", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const prevEnv = process.env.ENV;
+    process.env.ENV = "dev";
+    const reg = buildCommandRegistry({});
+
+    await reg.dispatchMessage(makeMessage({ guildId: "g0", content: "!!ping" }));
+    await reg.dispatchMessage(makeMessage({ guildId: "g1", content: "??ping" }));
+    expect(handler).toHaveBeenCalledTimes(2);
+
+    process.env.ENV = prevEnv;
+  });
+
   it("register.expose routes by exposure (bang/q/off)", async () => {
     const handler = vi.fn(async () => {});
     registerTrades.mockImplementation((register) => {
