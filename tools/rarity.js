@@ -18,6 +18,7 @@ import {
   normalizeKey,
   normalizeQueryVariants,
 } from "../shared/pokename_utils.js";
+import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
 let rarity = null; // { lowerName: entry }
@@ -301,10 +302,6 @@ function mergeSuggestions(...lists) {
   return out;
 }
 
-function formatSuggestionsInline(list) {
-  return list.length ? `Did you mean: ${list.join(", ")}` : "";
-}
-
 function parseArgs(rest, max = 2) {
   const s = String(rest ?? "").trim();
   if (!s) return [];
@@ -567,19 +564,16 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   }, delay);
 }
 
-function buildDidYouMeanButtons(command, suggestions, extraArgs = "") {
+function buildRarityRetryCustomId(command, name, extraArgs = "") {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
+  return `rarity_retry:${command}:${enc(name)}:${enc(extraArgs)}`;
+}
 
-  const row = new ActionRowBuilder().addComponents(
-    suggestions.slice(0, 5).map((name) =>
-      new ButtonBuilder()
-        .setCustomId(`rarity_retry:${command}:${enc(name)}:${enc(extraArgs)}`)
-        .setLabel(name.length > 80 ? name.slice(0, 77) + "…" : name)
-        .setStyle(ButtonStyle.Secondary)
-    )
-  );
-
-  return [row];
+function buildRarityDidYouMeanButtons(command, suggestions, extraArgs = "") {
+  return buildDidYouMeanButtons(suggestions, (name) => ({
+    label: name,
+    customId: buildRarityRetryCustomId(command, name, extraArgs),
+  }));
 }
 
 async function disableInteractionButtons(interaction) {
@@ -642,7 +636,7 @@ async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
     if (suggestions.length) {
       await message.reply({
         content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-        components: buildDidYouMeanButtons(cmd, suggestions, timeframe),
+        components: buildRarityDidYouMeanButtons(cmd, suggestions, timeframe),
       });
     }
     return;
@@ -739,7 +733,7 @@ export function registerRarity(register) {
 
         await message.reply({
           content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-          components: buildDidYouMeanButtons(cmd, suggestions),
+          components: buildRarityDidYouMeanButtons(cmd, suggestions),
         });
 
         return;
@@ -818,7 +812,7 @@ export function registerLevel4Rarity(register) {
       if (merged.length) {
         await message.reply({
           content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-          components: buildDidYouMeanButtons(cmd, merged),
+          components: buildRarityDidYouMeanButtons(cmd, merged),
         });
         return;
       }
@@ -884,7 +878,7 @@ export function registerLevel4Rarity(register) {
           if (s1.length) {
             await message.reply({
               content: `No exact match for \`${q1}\`.\nDid you mean:`,
-              components: buildDidYouMeanButtons("!rc_replace", s1, buildRcRetryExtra(0, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons("!rc_replace", s1, buildRcRetryExtra(0, [q1, q2, q3])),
             });
           } else {
             await message.reply(`No exact match for \`${q1}\`.`);
@@ -896,7 +890,7 @@ export function registerLevel4Rarity(register) {
           if (s2.length) {
             await message.reply({
               content: `No exact match for \`${q2}\`.\nDid you mean:`,
-              components: buildDidYouMeanButtons("!rc_replace", s2, buildRcRetryExtra(1, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons("!rc_replace", s2, buildRcRetryExtra(1, [q1, q2, q3])),
             });
           } else {
             await message.reply(`No exact match for \`${q2}\`.`);
@@ -908,7 +902,7 @@ export function registerLevel4Rarity(register) {
           if (s3.length) {
             await message.reply({
               content: `No exact match for \`${q3}\`.\nDid you mean:`,
-              components: buildDidYouMeanButtons("!rc_replace", s3, buildRcRetryExtra(2, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons("!rc_replace", s3, buildRcRetryExtra(2, [q1, q2, q3])),
             });
           } else {
             await message.reply(`No exact match for \`${q3}\`.`);

@@ -9,6 +9,7 @@ import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { createRpgClientFactory } from "./client_factory.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
+import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
 import { getLeaderboard, upsertLeaderboard, incrementLeaderboardHistory, getLeaderboardHistoryTop } from "./storage.js";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
@@ -381,18 +382,10 @@ function buildPokemonSuggestions(suggestions, variant) {
 
 function buildLeaderboardDidYouMeanButtons(suggestions, count) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
-
-  const row = new ActionRowBuilder().addComponents(
-    suggestions.slice(0, 5).map(({ label, query }) => {
-      const rest = `pokemon ${query}${count ? ` ${count}` : ""}`;
-      return new ButtonBuilder()
-        .setCustomId(`lb_retry:${enc(rest)}`)
-        .setLabel(label.length > 80 ? label.slice(0, 77) + "…" : label)
-        .setStyle(ButtonStyle.Secondary);
-    })
-  );
-
-  return [row];
+  return buildDidYouMeanButtons(suggestions, ({ label, query }) => {
+    const rest = `pokemon ${query}${count ? ` ${count}` : ""}`;
+    return { label, customId: `lb_retry:${enc(rest)}` };
+  });
 }
 
 async function disableInteractionButtons(interaction) {

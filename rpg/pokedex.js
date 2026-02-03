@@ -12,6 +12,7 @@ import {
   normalizeQueryVariants,
   queryVariantPrefix,
 } from "../shared/pokename_utils.js";
+import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
 import { parse } from "node-html-parser";
 import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials } from "./credentials.js";
@@ -520,17 +521,10 @@ function buildPokedexSuggestions(suggestions, variant, suffix) {
 function buildPokedexDidYouMeanButtons(command, suggestions) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
   const cmd = encodeURIComponent(String(command || "!pokedex"));
-
-  const row = new ActionRowBuilder().addComponents(
-    suggestions.slice(0, 5).map(({ label, query }) =>
-      new ButtonBuilder()
-        .setCustomId(`pokedex_retry:${cmd}:${enc(query)}`)
-        .setLabel(label.length > 80 ? label.slice(0, 77) + "…" : label)
-        .setStyle(ButtonStyle.Secondary)
-    )
-  );
-
-  return [row];
+  return buildDidYouMeanButtons(suggestions, ({ label, query }) => ({
+    label,
+    customId: `pokedex_retry:${cmd}:${enc(query)}`,
+  }));
 }
 
 function hasExplicitVariant(raw) {
