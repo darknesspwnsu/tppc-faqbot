@@ -6,12 +6,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { parse } from "node-html-parser";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials, hasRpgCredentials } from "./credentials.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
+import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
 import { logger } from "../shared/logger.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 
@@ -38,6 +40,58 @@ function getText(node) {
 
 function normalizeName(name) {
   return normalizeKey(String(name || ""));
+}
+
+function buildRpgInfoRetryCustomId(baseRest, name) {
+  const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
+  const rest = `${baseRest} ${name}`.trim();
+  return `rpginfo_retry:${enc(rest)}`;
+}
+
+function buildRpgInfoDidYouMeanButtons(suggestions, baseRest) {
+  return buildDidYouMeanButtons(suggestions, (name) => ({
+    label: name,
+    customId: buildRpgInfoRetryCustomId(baseRest, name),
+  }));
+}
+
+async function disableInteractionButtons(interaction) {
+  const rows = interaction.message?.components || [];
+  if (!rows.length) {
+    await interaction.deferUpdate().catch(() => {});
+    return;
+  }
+
+  const disabledRows = rows.map((row) => {
+    const newRow = new ActionRowBuilder();
+    for (const component of row.components || []) {
+      let button = null;
+      if (typeof ButtonBuilder.from === "function") {
+        try {
+          button = ButtonBuilder.from(component);
+        } catch {}
+      }
+      if (!button || typeof button.setDisabled !== "function") {
+        const customId = component?.customId ?? component?.custom_id ?? "";
+        const label = component?.label ?? component?.data?.label ?? "";
+        const style = component?.style ?? component?.data?.style ?? ButtonStyle.Secondary;
+        button = new ButtonBuilder();
+        if (customId) button.setCustomId(customId);
+        if (label) button.setLabel(label);
+        if (style) button.setStyle(style);
+        if (component?.emoji) button.setEmoji(component.emoji);
+      }
+      if (typeof button.setDisabled === "function") {
+        button.setDisabled(true);
+      }
+      newRow.addComponents(button);
+    }
+    return newRow;
+  });
+
+  await interaction.update({ components: disabledRows }).catch(async () => {
+    await interaction.deferUpdate().catch(() => {});
+  });
 }
 
 function isTppcDaytime(now = new Date()) {
@@ -104,17 +158,30 @@ async function loadTrainingGyms() {
 async function resolvePokemonName(raw) {
   const direct = await findPokedexEntry(raw);
   if (direct?.entry?.name) {
-    return { name: direct.entry.name, variant: "" };
+    return { name: direct.entry.name, variant: "", suggestions: [] };
   }
 
   const parsed = parsePokemonQuery(raw);
   const base = parsed.base || raw;
-  const baseResult = await findPokedexEntry(base);
+  const baseResult = base === raw ? direct : await findPokedexEntry(base);
   if (baseResult?.entry?.name) {
-    return { name: baseResult.entry.name, variant: parsed.variant || "" };
+    return { name: baseResult.entry.name, variant: parsed.variant || "", suggestions: [] };
   }
 
-  return { name: null, variant: parsed.variant || "" };
+  const suggestions = [];
+  const seen = new Set();
+  for (const list of [direct?.suggestions, baseResult?.suggestions]) {
+    for (const name of list || []) {
+      const key = String(name || "").toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      suggestions.push(name);
+      if (suggestions.length >= 5) break;
+    }
+    if (suggestions.length >= 5) break;
+  }
+
+  return { name: null, variant: parsed.variant || "", suggestions };
 }
 
 function isBaseEvolution(name, baseByName) {
@@ -339,7 +406,15 @@ export function registerRpgInfo(register) {
             const nameRaw = nameTokens.join(" ").trim();
             const resolved = await resolvePokemonName(nameRaw);
             if (!resolved.name) {
-              await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+              if (resolved.suggestions?.length) {
+                const baseRest = `tc ${tail[markerIndex]}`;
+                await message.reply({
+                  content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
+                  components: buildRpgInfoDidYouMeanButtons(resolved.suggestions, baseRest),
+                });
+              } else {
+                await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
+              }
               return;
             }
 
@@ -405,6 +480,17 @@ export function registerRpgInfoScheduler() {
     const client = createRpgClientFactory()();
     scheduleTrainingChallengeIneligible(client);
   });
+}
+
+export async function handleRpgInfoInteraction(interaction) {
+  if (!interaction?.isButton?.()) return false;
+
+  const id = String(interaction.customId || "");
+  if (!id.startsWith("rpginfo_retry:")) return false;
+
+  const rest = decodeURIComponent(id.slice("rpginfo_retry:".length));
+  await disableInteractionButtons(interaction);
+  return { cmd: "!rpginfo", rest };
 }
 
 export const __testables = {

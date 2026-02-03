@@ -40,6 +40,7 @@ import { registerVerification } from "./verification/verification.js";
 import { handleRarityInteraction } from "./tools/rarity.js";
 import { handleLeaderboardInteraction } from "./rpg/leaderboard.js";
 import { handlePokedexInteraction } from "./rpg/pokedex.js";
+import { handleRpgInfoInteraction } from "./rpg/rpginfo.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import { logger } from "./shared/logger.js";
 import { metrics } from "./shared/metrics.js";
@@ -851,6 +852,36 @@ export function buildCommandRegistry({ client } = {}) {
           return;
         } catch (err) {
           console.error("[COMMANDS] pokedex retry handler error:", err);
+        }
+      }
+
+      // Special-case rpginfo "did you mean" buttons.
+      if (customId.startsWith("rpginfo_retry:")) {
+        try {
+          const rerun = await handleRpgInfoInteraction(interaction);
+          if (rerun && rerun.cmd) {
+            const entry = bang.get(String(rerun.cmd).toLowerCase());
+            if (entry?.handler) {
+              const messageLike = {
+                guild: interaction.guild,
+                guildId: interaction.guildId,
+                channel: interaction.channel,
+                channelId: interaction.channelId,
+                author: interaction.user,
+                member: interaction.member,
+                reply: (payload) => interaction.followUp(payload),
+              };
+
+              await entry.handler({
+                message: messageLike,
+                cmd: rerun.cmd,
+                rest: rerun.rest ?? "",
+              });
+            }
+          }
+          return;
+        } catch (err) {
+          console.error("[COMMANDS] rpginfo retry handler error:", err);
         }
       }
 

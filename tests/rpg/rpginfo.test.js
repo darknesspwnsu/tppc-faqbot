@@ -208,6 +208,33 @@ describe("rpginfo command", () => {
     );
   });
 
+  it("offers did you mean buttons for Training Challenge eligibility", async () => {
+    pokedexMocks.findPokedexEntry.mockResolvedValueOnce({
+      entry: null,
+      suggestions: ["Alakazam"],
+    });
+    pokedexMocks.parsePokemonQuery.mockReturnValue({ base: "alakazammm", variant: "" });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "tc eligible alakazammm" });
+
+    const replyArg = message.reply.mock.calls[0][0];
+    expect(replyArg.content).toContain("Did you mean");
+    const button = replyArg.components[0].components[0];
+    const customId =
+      button.data?.customId ||
+      button.data?.custom_id ||
+      button.customId ||
+      button.custom_id;
+    expect(customId).toContain("rpginfo_retry:");
+    expect(customId).toContain("tc%20eligible%20Alakazam");
+  });
+
   it("rejects non-base evolutions for Training Challenge eligibility", async () => {
     storageMocks.getLeaderboard.mockResolvedValueOnce({
       challenge: "rpginfo:tc_ineligible",
@@ -286,5 +313,20 @@ describe("rpginfo command", () => {
     expect(message.reply).toHaveBeenCalledWith(
       "**Slaking**'s base evolution **Slakoth** might be eligible for this week's Training Challenge if it either evolves through the Pokemon Center, or is a basic pokemon that does not evolve."
     );
+  });
+
+  it("maps rpginfo did you mean buttons back to the command", async () => {
+    const { handleRpgInfoInteraction } = await import("../../rpg/rpginfo.js");
+
+    const interaction = {
+      isButton: () => true,
+      customId: "rpginfo_retry:tc%20eligible%20Alakazam",
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+      message: { components: [] },
+    };
+
+    const res = await handleRpgInfoInteraction(interaction);
+    expect(res).toEqual({ cmd: "!rpginfo", rest: "tc eligible Alakazam" });
   });
 });
