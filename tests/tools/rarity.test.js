@@ -150,6 +150,28 @@ describe("rarity.js", () => {
     expect(payload.content).toContain("Did you mean");
   });
 
+  it("includes the requester id in rarity suggestion buttons", async () => {
+    const { registerRarity } = await loadRarityModule();
+    const register = { expose: vi.fn() };
+
+    registerRarity(register);
+    await new Promise((r) => setImmediate(r));
+
+    const rarityCall = register.expose.mock.calls.find((call) => call[0].name === "rarity");
+    const handler = rarityCall[0].handler;
+
+    const message = {
+      author: { id: "123456789012345678" },
+      channel: { send: vi.fn(async () => ({})) },
+      reply: vi.fn(async () => ({})),
+    };
+
+    await handler({ message, rest: "Pikac", cmd: "?rarity" });
+    const payload = message.reply.mock.calls[0][0];
+    const customId = payload.components[0].components[0].data.customId;
+    expect(customId).toContain("rarity_retry:123456789012345678:");
+  });
+
   it("registerRarity supports help and history timeframes", async () => {
     const { registerRarity } = await loadRarityModule();
     const register = { expose: vi.fn() };
@@ -204,6 +226,7 @@ describe("rarity.js", () => {
     const interaction = {
       isButton: () => true,
       customId: "rarity_retry:?rarity:Pikachu:",
+      user: { id: "u1" },
       update: vi.fn(async () => ({})),
       deferUpdate: vi.fn(async () => ({})),
       message: {
@@ -224,6 +247,27 @@ describe("rarity.js", () => {
 
     const res = await handleRarityInteraction(interaction);
     expect(res).toEqual({ cmd: "?rarity", rest: "Pikachu" });
+  });
+
+  it("rejects rarity retry buttons from other users", async () => {
+    const { handleRarityInteraction } = await loadRarityModule();
+
+    const interaction = {
+      isButton: () => true,
+      customId: "rarity_retry:123456789012345678:?rarity:Pikachu:",
+      user: { id: "987654321098765432" },
+      reply: vi.fn(async () => ({})),
+      followUp: vi.fn(async () => ({})),
+      update: vi.fn(async () => ({})),
+      deferUpdate: vi.fn(async () => ({})),
+      message: { components: [] },
+    };
+
+    const res = await handleRarityInteraction(interaction);
+    expect(res).toBe(false);
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ ephemeral: true })
+    );
   });
 
   it("handleRarityInteraction preserves extras for rarity retries", async () => {

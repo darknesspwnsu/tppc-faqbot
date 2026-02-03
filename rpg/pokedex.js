@@ -12,7 +12,12 @@ import {
   normalizeQueryVariants,
   queryVariantPrefix,
 } from "../shared/pokename_utils.js";
-import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
+import {
+  buildDidYouMeanButtons,
+  buildDidYouMeanCustomId,
+  splitDidYouMeanCustomId,
+  enforceDidYouMeanUser,
+} from "../shared/did_you_mean.js";
 import { parse } from "node-html-parser";
 import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials } from "./credentials.js";
@@ -518,12 +523,12 @@ function buildPokedexSuggestions(suggestions, variant, suffix) {
   });
 }
 
-function buildPokedexDidYouMeanButtons(command, suggestions) {
+function buildPokedexDidYouMeanButtons(command, suggestions, userId) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
   const cmd = encodeURIComponent(String(command || "!pokedex"));
   return buildDidYouMeanButtons(suggestions, ({ label, query }) => ({
     label,
-    customId: `pokedex_retry:${cmd}:${enc(query)}`,
+    customId: buildDidYouMeanCustomId("pokedex_retry", userId, `${cmd}:${enc(query)}`),
   }));
 }
 
@@ -587,7 +592,7 @@ async function resolvePokedexEntryQuery(nameRaw, variant, message, command, opti
       const refined = buildPokedexSuggestions(suggestions, variant, options.suggestionSuffix);
       await message.reply({
         content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
-        components: buildPokedexDidYouMeanButtons(command, refined),
+        components: buildPokedexDidYouMeanButtons(command, refined, message?.author?.id),
       });
     } else {
       await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
@@ -972,11 +977,13 @@ export async function handlePokedexInteraction(interaction) {
   if (!interaction?.isButton?.()) return false;
 
   const id = String(interaction.customId || "");
-  if (!id.startsWith("pokedex_retry:")) return false;
+  const parsed = splitDidYouMeanCustomId("pokedex_retry", id);
+  if (!parsed) return false;
+  if (!(await enforceDidYouMeanUser(interaction, parsed.userId))) return false;
 
-  const parts = id.split(":");
-  const cmd = decodeURIComponent(parts[1] || "!pokedex");
-  const rest = decodeURIComponent(parts.slice(2).join(":") || "");
+  const parts = String(parsed.payload || "").split(":");
+  const cmd = decodeURIComponent(parts[0] || "!pokedex");
+  const rest = decodeURIComponent(parts.slice(1).join(":") || "");
   await disableInteractionButtons(interaction);
 
   return { cmd, rest };

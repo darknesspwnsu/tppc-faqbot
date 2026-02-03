@@ -13,7 +13,12 @@ import { requireRpgCredentials, hasRpgCredentials } from "./credentials.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
-import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
+import {
+  buildDidYouMeanButtons,
+  buildDidYouMeanCustomId,
+  splitDidYouMeanCustomId,
+  enforceDidYouMeanUser,
+} from "../shared/did_you_mean.js";
 import { logger } from "../shared/logger.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 
@@ -42,16 +47,16 @@ function normalizeName(name) {
   return normalizeKey(String(name || ""));
 }
 
-function buildRpgInfoRetryCustomId(baseRest, name) {
+function buildRpgInfoRetryCustomId(baseRest, name, userId) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
   const rest = `${baseRest} ${name}`.trim();
-  return `rpginfo_retry:${enc(rest)}`;
+  return buildDidYouMeanCustomId("rpginfo_retry", userId, enc(rest));
 }
 
-function buildRpgInfoDidYouMeanButtons(suggestions, baseRest) {
+function buildRpgInfoDidYouMeanButtons(suggestions, baseRest, userId) {
   return buildDidYouMeanButtons(suggestions, (name) => ({
     label: name,
-    customId: buildRpgInfoRetryCustomId(baseRest, name),
+    customId: buildRpgInfoRetryCustomId(baseRest, name, userId),
   }));
 }
 
@@ -410,7 +415,11 @@ export function registerRpgInfo(register) {
                 const baseRest = `tc ${tail[markerIndex]}`;
                 await message.reply({
                   content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
-                  components: buildRpgInfoDidYouMeanButtons(resolved.suggestions, baseRest),
+                  components: buildRpgInfoDidYouMeanButtons(
+                    resolved.suggestions,
+                    baseRest,
+                    message?.author?.id
+                  ),
                 });
               } else {
                 await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
@@ -486,9 +495,11 @@ export async function handleRpgInfoInteraction(interaction) {
   if (!interaction?.isButton?.()) return false;
 
   const id = String(interaction.customId || "");
-  if (!id.startsWith("rpginfo_retry:")) return false;
+  const parsed = splitDidYouMeanCustomId("rpginfo_retry", id);
+  if (!parsed) return false;
+  if (!(await enforceDidYouMeanUser(interaction, parsed.userId))) return false;
 
-  const rest = decodeURIComponent(id.slice("rpginfo_retry:".length));
+  const rest = decodeURIComponent(parsed.payload || "");
   await disableInteractionButtons(interaction);
   return { cmd: "!rpginfo", rest };
 }

@@ -18,7 +18,12 @@ import {
   normalizeKey,
   normalizeQueryVariants,
 } from "../shared/pokename_utils.js";
-import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
+import {
+  buildDidYouMeanButtons,
+  buildDidYouMeanCustomId,
+  splitDidYouMeanCustomId,
+  enforceDidYouMeanUser,
+} from "../shared/did_you_mean.js";
 
 /* ----------------------------- caches (main) ----------------------------- */
 let rarity = null; // { lowerName: entry }
@@ -564,15 +569,16 @@ function scheduleDailyRefresh(refreshFn, label = "RARITY") {
   }, delay);
 }
 
-function buildRarityRetryCustomId(command, name, extraArgs = "") {
+function buildRarityRetryCustomId(command, name, extraArgs = "", userId) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 120));
-  return `rarity_retry:${command}:${enc(name)}:${enc(extraArgs)}`;
+  const payload = `${command}:${enc(name)}:${enc(extraArgs)}`;
+  return buildDidYouMeanCustomId("rarity_retry", userId, payload);
 }
 
-function buildRarityDidYouMeanButtons(command, suggestions, extraArgs = "") {
+function buildRarityDidYouMeanButtons(command, suggestions, extraArgs = "", userId) {
   return buildDidYouMeanButtons(suggestions, (name) => ({
     label: name,
-    customId: buildRarityRetryCustomId(command, name, extraArgs),
+    customId: buildRarityRetryCustomId(command, name, extraArgs, userId),
   }));
 }
 
@@ -636,7 +642,7 @@ async function handleRarityHistory({ message, cmd, qRaw, timeframe }) {
     if (suggestions.length) {
       await message.reply({
         content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-        components: buildRarityDidYouMeanButtons(cmd, suggestions, timeframe),
+        components: buildRarityDidYouMeanButtons(cmd, suggestions, timeframe, message?.author?.id),
       });
     }
     return;
@@ -733,7 +739,7 @@ export function registerRarity(register) {
 
         await message.reply({
           content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-          components: buildRarityDidYouMeanButtons(cmd, suggestions),
+          components: buildRarityDidYouMeanButtons(cmd, suggestions, "", message?.author?.id),
         });
 
         return;
@@ -812,7 +818,7 @@ export function registerLevel4Rarity(register) {
       if (merged.length) {
         await message.reply({
           content: `No exact match for \`${qRaw}\`.\nDid you mean:`,
-          components: buildRarityDidYouMeanButtons(cmd, merged),
+          components: buildRarityDidYouMeanButtons(cmd, merged, "", message?.author?.id),
         });
         return;
       }
@@ -878,7 +884,12 @@ export function registerLevel4Rarity(register) {
           if (s1.length) {
             await message.reply({
               content: `No exact match for \`${q1}\`.\nDid you mean:`,
-              components: buildRarityDidYouMeanButtons("!rc_replace", s1, buildRcRetryExtra(0, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons(
+                "!rc_replace",
+                s1,
+                buildRcRetryExtra(0, [q1, q2, q3]),
+                message?.author?.id
+              ),
             });
           } else {
             await message.reply(`No exact match for \`${q1}\`.`);
@@ -890,7 +901,12 @@ export function registerLevel4Rarity(register) {
           if (s2.length) {
             await message.reply({
               content: `No exact match for \`${q2}\`.\nDid you mean:`,
-              components: buildRarityDidYouMeanButtons("!rc_replace", s2, buildRcRetryExtra(1, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons(
+                "!rc_replace",
+                s2,
+                buildRcRetryExtra(1, [q1, q2, q3]),
+                message?.author?.id
+              ),
             });
           } else {
             await message.reply(`No exact match for \`${q2}\`.`);
@@ -902,7 +918,12 @@ export function registerLevel4Rarity(register) {
           if (s3.length) {
             await message.reply({
               content: `No exact match for \`${q3}\`.\nDid you mean:`,
-              components: buildRarityDidYouMeanButtons("!rc_replace", s3, buildRcRetryExtra(2, [q1, q2, q3])),
+              components: buildRarityDidYouMeanButtons(
+                "!rc_replace",
+                s3,
+                buildRcRetryExtra(2, [q1, q2, q3]),
+                message?.author?.id
+              ),
             });
           } else {
             await message.reply(`No exact match for \`${q3}\`.`);
@@ -1000,9 +1021,11 @@ export async function handleRarityInteraction(interaction) {
   if (!interaction?.isButton?.()) return false;
 
   const id = String(interaction.customId || "");
-  if (!id.startsWith("rarity_retry:")) return false;
+  const parsed = splitDidYouMeanCustomId("rarity_retry", id);
+  if (!parsed) return false;
+  if (!(await enforceDidYouMeanUser(interaction, parsed.userId))) return false;
 
-  const [, cmdKey, encMon, encExtra] = id.split(":");
+  const [cmdKey, encMon, encExtra] = String(parsed.payload || "").split(":");
   const mon = decodeURIComponent(encMon || "");
   const extra = decodeURIComponent(encExtra || "");
 

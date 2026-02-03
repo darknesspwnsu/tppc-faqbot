@@ -9,7 +9,12 @@ import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
 import { createRpgClientFactory } from "./client_factory.js";
 import { fetchFindMyIdMatches } from "./findmyid.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
-import { buildDidYouMeanButtons } from "../shared/did_you_mean.js";
+import {
+  buildDidYouMeanButtons,
+  buildDidYouMeanCustomId,
+  splitDidYouMeanCustomId,
+  enforceDidYouMeanUser,
+} from "../shared/did_you_mean.js";
 import { getLeaderboard, upsertLeaderboard, incrementLeaderboardHistory, getLeaderboardHistoryTop } from "./storage.js";
 import { logger } from "../shared/logger.js";
 import { metrics } from "../shared/metrics.js";
@@ -380,11 +385,11 @@ function buildPokemonSuggestions(suggestions, variant) {
   });
 }
 
-function buildLeaderboardDidYouMeanButtons(suggestions, count) {
+function buildLeaderboardDidYouMeanButtons(suggestions, count, userId) {
   const enc = (s) => encodeURIComponent(String(s ?? "").slice(0, 80));
   return buildDidYouMeanButtons(suggestions, ({ label, query }) => {
     const rest = `pokemon ${query}${count ? ` ${count}` : ""}`;
-    return { label, customId: `lb_retry:${enc(rest)}` };
+    return { label, customId: buildDidYouMeanCustomId("lb_retry", userId, enc(rest)) };
   });
 }
 
@@ -1104,12 +1109,16 @@ export function registerLeaderboard(register) {
         const { entry, suggestions } = result;
         if (!entry) {
           const refined = buildPokemonSuggestions(suggestions, variant);
-          if (refined.length) {
-            await message.reply({
-              content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
-              components: buildLeaderboardDidYouMeanButtons(refined, hasCount ? count : null),
-            });
-          } else {
+            if (refined.length) {
+              await message.reply({
+                content: `❌ Unknown Pokemon name: **${nameRaw}**.\nDid you mean:`,
+                components: buildLeaderboardDidYouMeanButtons(
+                  refined,
+                  hasCount ? count : null,
+                  message?.author?.id
+                ),
+              });
+            } else {
             await message.reply(`❌ Unknown Pokemon name: **${nameRaw}**.`);
           }
           return;
@@ -1246,9 +1255,11 @@ export async function handleLeaderboardInteraction(interaction) {
   if (!interaction?.isButton?.()) return false;
 
   const id = String(interaction.customId || "");
-  if (!id.startsWith("lb_retry:")) return false;
+  const parsed = splitDidYouMeanCustomId("lb_retry", id);
+  if (!parsed) return false;
+  if (!(await enforceDidYouMeanUser(interaction, parsed.userId))) return false;
 
-  const rest = decodeURIComponent(id.slice("lb_retry:".length));
+  const rest = decodeURIComponent(parsed.payload || "");
   await disableInteractionButtons(interaction);
 
   return { cmd: "!leaderboard", rest };
