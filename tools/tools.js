@@ -11,6 +11,7 @@ import { registerReminders } from "./reminders.js";
 import { registerMessageCounts } from "./message_counts.js";
 import { registerMetricsExport, registerMetricsExportScheduler } from "./metrics_export.js";
 import { registerSortbox } from "./sortbox.js";
+import { registerThreadWatch, registerThreadWatchScheduler } from "./thread_watch.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { scheduleMetricsCleanup } from "../shared/metrics.js";
@@ -24,6 +25,7 @@ const TOOL_MODULES = [
   { id: "message_counts", register: registerMessageCounts },
   { id: "metrics_export", register: registerMetricsExport, registerScheduler: registerMetricsExportScheduler },
   { id: "sortbox", register: registerSortbox },
+  { id: "thread_watch", register: registerThreadWatch, registerScheduler: registerThreadWatchScheduler },
 ];
 
 export function registerTools(register) {

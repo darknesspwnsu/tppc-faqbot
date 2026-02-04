@@ -11,6 +11,8 @@ const registerReminders = vi.fn();
 const registerMessageCounts = vi.fn();
 const registerMetricsExport = vi.fn();
 const registerMetricsExportScheduler = vi.fn();
+const registerThreadWatch = vi.fn();
+const registerThreadWatchScheduler = vi.fn();
 
 vi.mock("../../tools/links.js", () => ({ registerLinks }));
 vi.mock("../../tools/promo.js", () => ({ registerPromo, registerPromoScheduler }));
@@ -25,6 +27,10 @@ vi.mock("../../tools/message_counts.js", () => ({ registerMessageCounts }));
 vi.mock("../../tools/metrics_export.js", () => ({
   registerMetricsExport,
   registerMetricsExportScheduler,
+}));
+vi.mock("../../tools/thread_watch.js", () => ({
+  registerThreadWatch,
+  registerThreadWatchScheduler,
 }));
 
 function makeRegistry() {
@@ -51,6 +57,7 @@ describe("tools/tools.js", () => {
     expect(registerReminders).toHaveBeenCalledWith(reg.register);
     expect(registerMessageCounts).toHaveBeenCalledWith(reg.register);
     expect(registerMetricsExport).toHaveBeenCalledWith(reg.register);
+    expect(registerThreadWatch).toHaveBeenCalledWith(reg.register);
     expect(registerLevel4Rarity).toHaveBeenCalledWith(reg.register, "Tools");
   });
 });

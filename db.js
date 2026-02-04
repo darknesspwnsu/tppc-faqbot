@@ -369,6 +369,31 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS forum_thread_subscriptions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id VARCHAR(32) NOT NULL,
+      thread_id INT UNSIGNED NOT NULL,
+      thread_url VARCHAR(255) NOT NULL,
+      thread_title VARCHAR(255) NOT NULL,
+      thread_op VARCHAR(64) NULL,
+      filter_mode VARCHAR(8) NOT NULL DEFAULT 'any',
+      filter_user VARCHAR(64) NULL,
+      last_seen_post_id BIGINT UNSIGNED NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uniq_user_thread (user_id, thread_id),
+      KEY idx_user (user_id),
+      KEY idx_thread (thread_id)
+    )
+  `,
+    [],
+    "init.forum_thread_subscriptions"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS reminders (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
       user_id VARCHAR(32) NOT NULL,

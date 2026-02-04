@@ -78,6 +78,7 @@ describe("db.js", () => {
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS custom_leaderboards/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS custom_leaderboard_entries/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS notify_me/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS forum_thread_subscriptions/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS reminders/),
       ])
     );
