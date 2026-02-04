@@ -61,6 +61,12 @@ const CHALLENGES = {
     url: "https://www.tppcrpg.net/speed_tower.php",
     ttlMs: 5 * 60_000,
   },
+  speed_hof: {
+    key: "speed_hof",
+    name: "Speed Tower Hall of Fame",
+    url: "https://www.tppcrpg.net/speed_tower.php",
+    ttlMs: 5 * 60_000,
+  },
   roulette: {
     key: "roulette",
     name: "Battle Roulette",
@@ -116,6 +122,8 @@ const ALIASES = new Map([
   ["swarm", "swarm"],
   ["faction", "faction"],
 ]);
+
+const SPEED_HOF_TOKENS = new Set(["halloffame", "hof", "overall", "roundup"]);
 
 function getText(node) {
   if (!node) return "";
@@ -186,6 +194,39 @@ function parseSpeedTower(html) {
       trainerId,
       faction: getText(cells[2]),
       floor: getText(cells[3]),
+      time: getText(cells[4]),
+    });
+  }
+  return out;
+}
+
+function parseSpeedHallOfFame(html) {
+  const root = parse(normalizeHtml(html));
+  const table = root.querySelector("table.ranks");
+  if (!table) return [];
+  const rows = table.querySelectorAll("tr");
+  const out = [];
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < 5) continue;
+    const standing = getText(cells[0]);
+    if (!standing || isHeaderRank(standing)) continue;
+    const lower = standing.toLowerCase();
+    let kind = null;
+    if (lower === "fastest ever") kind = "ever";
+    else if (lower === "this week's fastest") kind = "week";
+    else if (lower === "yesterday's fastest") kind = "yesterday";
+    else if (/^[a-z]+'s fastest$/i.test(standing)) kind = "month";
+    if (!kind) continue;
+
+    const { trainerId, name } = parseTrainerCell(cells[1]);
+    out.push({
+      standing,
+      kind,
+      trainer: name,
+      trainerId,
+      faction: getText(cells[2]),
+      moves: getText(cells[3]),
       time: getText(cells[4]),
     });
   }
@@ -480,6 +521,42 @@ function renderTopRows(challengeKey, rows, limit = 5) {
   return out;
 }
 
+function getEtMonthLabel() {
+  const month = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    month: "long",
+  }).format(new Date());
+  return `${month}'s Fastest`;
+}
+
+function formatHofRow(label, row) {
+  if (!row) return `${label} — not set`;
+  const moveNum = Number(String(row.moves || "").replace(/,/g, ""));
+  const moveLabel = Number.isFinite(moveNum)
+    ? `${row.moves} move${moveNum === 1 ? "" : "s"}`
+    : row.moves
+      ? `${row.moves} moves`
+      : "moves ?";
+  const time = row.time || "time ?";
+  return `${label} — ${row.trainer} (${row.faction}) • ${moveLabel} • ${time}`;
+}
+
+function renderSpeedHallOfFame(rows) {
+  const byKind = { ever: null, month: null, week: null, yesterday: null };
+  for (const row of rows || []) {
+    if (!row?.kind || byKind[row.kind]) continue;
+    byKind[row.kind] = row;
+  }
+
+  const monthLabel = byKind.month?.standing || getEtMonthLabel();
+  return [
+    formatHofRow("Fastest Ever", byKind.ever),
+    formatHofRow(monthLabel, byKind.month),
+    formatHofRow("This Week's Fastest", byKind.week),
+    formatHofRow("Yesterday's Fastest", byKind.yesterday),
+  ];
+}
+
 function formatCacheAge(updatedAtMs) {
   if (!updatedAtMs) return "";
   const diffMs = Date.now() - updatedAtMs;
@@ -524,6 +601,7 @@ async function fetchAndStore(challenge, client) {
   const html = await client.fetchPage(challenge.url);
   let rows = [];
   if (challenge.key === "speedtower") rows = parseSpeedTower(html);
+  else if (challenge.key === "speed_hof") rows = parseSpeedHallOfFame(html);
   else if (challenge.key === "ssanne") rows = parseSsAnne(html);
   else if (challenge.key === "safarizone") rows = parseSafariZone(html);
   else if (challenge.key === "roulette") rows = parseRoulette(html).daily;
@@ -855,6 +933,7 @@ export function registerLeaderboard(register) {
             `• \`${primaryCmd} tc\` — Training Challenge standings`,
             `• \`${primaryCmd} roulette [weekly]\` — Battle Roulette standings`,
             `• \`${primaryCmd} speedtower\` — Speed Tower standings`,
+            `• \`${primaryCmd} speed halloffame|hof|overall|roundup\` — Speed Tower Hall of Fame`,
             `• \`${primaryCmd} swarm [1-10]\` — Swarm standings (Saturdays only)`,
             `• \`${primaryCmd} trainers [1-20]\` — Top trainers by level`,
             `• \`${primaryCmd} faction [1-5]\` — Top trainers by faction`,
@@ -999,6 +1078,27 @@ export function registerLeaderboard(register) {
           return `${i + 1}. ${label} — ${row.wins} win${row.wins === 1 ? "" : "s"}`;
         });
         await message.reply(`🏆 **${CHALLENGES[key].name} — History**\n` + lines.join("\n"));
+        return;
+      }
+
+      const hofToken = normalizeCommandToken((parts[1] || "").toLowerCase());
+      if ((sub === "speed" || sub === "speedtower") && hofToken && SPEED_HOF_TOKENS.has(hofToken)) {
+        if (parts.length > 2) {
+          await message.reply(
+            `Usage: \`${primaryCmd} speed halloffame|hof|overall|roundup\``
+          );
+          return;
+        }
+
+        const res = await getCachedOrFetch("speed_hof", getClient());
+        if (!res) {
+          await message.reply("❌ Unknown challenge.");
+          return;
+        }
+
+        const lines = renderSpeedHallOfFame(res.rows || []);
+        const body = `🏆 **${res.challenge.name}**\n` + lines.join("\n");
+        await message.reply(appendCacheFootnote(body, res.updatedAt));
         return;
       }
 
@@ -1199,7 +1299,7 @@ export function registerLeaderboard(register) {
       const baseKey = ALIASES.get(sub);
       if (!baseKey) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|swarm [1-10]|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|speed halloffame|swarm [1-10]|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
@@ -1208,13 +1308,13 @@ export function registerLeaderboard(register) {
       const key = baseKey === "roulette" && isWeekly ? "roulette_weekly" : baseKey;
       if (parts.length > 1 && baseKey !== "roulette") {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|speed halloffame|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
       if (baseKey === "roulette" && parts.length > 1 && !isWeekly) {
         await message.reply(
-          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
+          `Usage: \`${primaryCmd} ssanne|safarizone|tc|roulette [weekly]|speedtower|speed halloffame|trainers [1-20]|faction [1-5]|pokemon|poke [name] [1-20]\`\nType \`!lb help\` for more info.`
         );
         return;
       }
@@ -1269,6 +1369,7 @@ export const __testables = {
   parseSsAnne,
   parseSafariZone,
   parseSpeedTower,
+  parseSpeedHallOfFame,
   parseRoulette,
   parseTrainingChallenge,
   parseTrainerRanks,
@@ -1276,6 +1377,7 @@ export const __testables = {
   parsePokemonRanks,
   parsePokemonPageCount,
   renderTopRows,
+  renderSpeedHallOfFame,
   buildPokemonSuggestions,
   recordChallengeWinner,
 };

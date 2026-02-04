@@ -41,7 +41,7 @@ vi.mock("../../rpg/rpg_client.js", () => ({
 }));
 
 import { registerLeaderboard, handleLeaderboardInteraction, __testables } from "../../rpg/leaderboard.js";
-const { recordChallengeWinner } = __testables;
+const { recordChallengeWinner, parseSpeedHallOfFame, renderSpeedHallOfFame } = __testables;
 
 function makeRegister() {
   const calls = [];
@@ -535,6 +535,89 @@ describe("rpg leaderboard register", () => {
     expect(body).toContain("Charizard");
     expect(pokedexMocks.parsePokemonQuery).not.toHaveBeenCalled();
     expect(pokedexMocks.findPokedexEntry).not.toHaveBeenCalled();
+  });
+
+  it("parses speed hall of fame rows", () => {
+    const html = `
+      <table class="ranks">
+        <tbody>
+          <tr><td>Fastest Ever</td><td><a href="profile.php?id=1">Alpha</a></td><td>Team TPPC</td><td>39</td><td>00:23</td></tr>
+          <tr><td>March's Fastest</td><td><a href="profile.php?id=2">Beta</a></td><td>Team Aqua</td><td>40</td><td>00:30</td></tr>
+          <tr><td>This Week's Fastest</td><td><a href="profile.php?id=3">Gamma</a></td><td>Team Rocket</td><td>41</td><td>00:31</td></tr>
+          <tr><td>Yesterday's Fastest</td><td><a href="profile.php?id=4">Delta</a></td><td>Team Magma</td><td>42</td><td>00:32</td></tr>
+        </tbody>
+      </table>
+    `;
+
+    const rows = parseSpeedHallOfFame(html);
+    expect(rows).toHaveLength(4);
+    expect(rows[0].kind).toBe("ever");
+    expect(rows[1].kind).toBe("month");
+    expect(rows[2].kind).toBe("week");
+    expect(rows[3].kind).toBe("yesterday");
+  });
+
+  it("renders speed hall of fame results with placeholders", async () => {
+    delete process.env.RPG_USERNAME;
+    delete process.env.RPG_PASSWORD;
+
+    const register = makeRegister();
+    registerLeaderboard(register);
+    const handler = getHandler(register, "!leaderboard");
+
+    process.env.RPG_USERNAME = "user";
+    process.env.RPG_PASSWORD = "pass";
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-03T12:00:00Z"));
+
+    storageMocks.getLeaderboard.mockResolvedValueOnce({
+      challenge: "speed_hof",
+      payload: {
+        rows: [
+          {
+            standing: "Fastest Ever",
+            kind: "ever",
+            trainer: "Braixen",
+            trainerId: "2645731",
+            faction: "Team TPPC",
+            moves: "39",
+            time: "00:23",
+          },
+          {
+            standing: "This Week's Fastest",
+            kind: "week",
+            trainer: "Braixen",
+            trainerId: "2645731",
+            faction: "Team TPPC",
+            moves: "39",
+            time: "00:28",
+          },
+          {
+            standing: "Yesterday's Fastest",
+            kind: "yesterday",
+            trainer: "the infinity stones",
+            trainerId: "3181487",
+            faction: "Team TPPC",
+            moves: "45",
+            time: "00:38",
+          },
+        ],
+      },
+      updatedAt: Date.now(),
+    });
+
+    const message = makeMessage();
+    await handler({ message, rest: "speed hof" });
+
+    const body = message.reply.mock.calls[0][0];
+    expect(body).toContain("Speed Tower Hall of Fame");
+    expect(body).toContain("Fastest Ever");
+    expect(body).toContain("February's Fastest — not set");
+    expect(body).toContain("This Week's Fastest");
+    expect(body).toContain("Yesterday's Fastest");
+
+    vi.useRealTimers();
   });
 
   it("renders roulette weekly results", async () => {
