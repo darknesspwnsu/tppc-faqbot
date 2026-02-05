@@ -28,7 +28,14 @@ import {
 
 const THREADWATCH_ALIASES = ["!thread", "!tw", "!watchthread", "!wt", "!watch"];
 const THREADWATCH_LIMIT = 3;
-const POLL_INTERVAL_MS = 10 * 60_000;
+const ENV = String(process.env.ENV || "").toLowerCase();
+const DEV_MODE = ENV === "dev";
+const DEV_POLL_MS = Number(process.env.THREADWATCH_DEV_INTERVAL_MS);
+const POLL_INTERVAL_MS =
+  DEV_MODE && Number.isFinite(DEV_POLL_MS) && DEV_POLL_MS > 0
+    ? DEV_POLL_MS
+    : 10 * 60_000;
+const THREADWATCH_MAX_PAGES = 2000;
 const FETCH_TIMEOUT_MS = 30_000;
 const PAGE_DELAY_MS = 250;
 const MAX_SCAN_PAGES = 10;
@@ -47,6 +54,11 @@ let schedulerBooted = false;
 let pollTimer = null;
 let pollInFlight = false;
 let cachedClient = null;
+
+function debugLog(event, data) {
+  if (!DEV_MODE) return;
+  logger.info(event, data || {});
+}
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -254,7 +266,7 @@ async function fetchThreadMeta(threadUrl) {
   });
   const title = extractThreadTitleFromHtml(page1Html);
   const op = extractThreadOpFromHtml(page1Html);
-  const pageCount = computePageCountFromHtml(page1Html);
+  const pageCount = computePageCountFromHtml(page1Html, { maxPages: THREADWATCH_MAX_PAGES });
 
   let lastPageHtml = page1Html;
   if (pageCount > 1) {
@@ -266,8 +278,16 @@ async function fetchThreadMeta(threadUrl) {
 
   const posts = parsePostsFromHtml(lastPageHtml);
   const lastPostId = posts.reduce((acc, p) => (p.postId > acc ? p.postId : acc), 0) || null;
+  const lastPoster = posts.length ? posts[posts.length - 1].username : null;
 
   const threadId = extractThreadIdFromUrl(threadUrl) || extractThreadIdFromHtml(page1Html);
+
+  debugLog("threadwatch.debug.meta", {
+    threadId,
+    pageCount,
+    lastPostId,
+    lastPoster,
+  });
 
   return { threadId, title, op, lastPostId, pageCount, page1Html };
 }
@@ -277,7 +297,7 @@ async function fetchPostsSince(threadUrl, minPostId) {
     timeoutMs: FETCH_TIMEOUT_MS,
     metricsKey: "threadwatch",
   });
-  const pageCount = computePageCountFromHtml(page1Html);
+  const pageCount = computePageCountFromHtml(page1Html, { maxPages: THREADWATCH_MAX_PAGES });
 
   const posts = [];
   let latestPostId = null;
@@ -310,6 +330,14 @@ async function fetchPostsSince(threadUrl, minPostId) {
   }
 
   posts.sort((a, b) => a.postId - b.postId);
+
+  debugLog("threadwatch.debug.scan", {
+    minPostId,
+    pageCount,
+    newestPostId: latestPostId,
+    newPosts: posts.length,
+    lastPoster: posts.length ? posts[posts.length - 1].username : null,
+  });
 
   return { posts, latestPostId };
 }
@@ -610,7 +638,7 @@ async function handleUnsubCommand({ message, tokens }) {
   const db = getDb();
   await db.execute(`DELETE FROM forum_thread_subscriptions WHERE id = ?`, [Number(row.id)]);
 
-  await message.reply(`✅ Unsubscribed from **${row.thread_title}**.`);
+  await message.reply(`✅ Unsubscribed from **${row.thread_title}** (t=${row.thread_id}).`);
 }
 
 async function handleListCommand({ message }) {
@@ -808,6 +836,7 @@ function scheduleNextPoll(delayMs = POLL_INTERVAL_MS) {
 function startScheduler() {
   if (schedulerBooted) return;
   schedulerBooted = true;
+  debugLog("threadwatch.debug.scheduler_start", { intervalMs: POLL_INTERVAL_MS });
   scheduleNextPoll(POLL_INTERVAL_MS);
 }
 

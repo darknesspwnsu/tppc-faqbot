@@ -41,17 +41,27 @@ export async function fetchWithTimeout(url, { timeoutMs = DEFAULT_TIMEOUT_MS, me
 }
 
 export function computePageCountFromHtml(html, { maxPages = DEFAULT_MAX_PAGES } = {}) {
-  const m = /Show results\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)/i.exec(html);
-  if (!m) return 1;
+  const pageMatch = /Page\s+(\d+)\s+of\s+(\d+)/i.exec(html);
+  if (pageMatch) {
+    const total = Number(String(pageMatch[2]).replace(/,/g, ""));
+    if (Number.isFinite(total) && total > 0) {
+      return Math.min(Math.max(1, total), maxPages);
+    }
+  }
 
-  const x = Number(m[1]);
-  const y = Number(m[2]);
-  const z = Number(m[3]);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return 1;
+  const m = /Show(?:ing)? results\s+([\d,]+)\s+to\s+([\d,]+)\s+of\s+([\d,]+)/i.exec(html);
+  if (m) {
+    const x = Number(String(m[1]).replace(/,/g, ""));
+    const y = Number(String(m[2]).replace(/,/g, ""));
+    const z = Number(String(m[3]).replace(/,/g, ""));
+    if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+      const perPage = Math.max(1, y - x + 1);
+      const pages = Math.ceil(z / perPage);
+      return Math.min(Math.max(1, pages), maxPages);
+    }
+  }
 
-  const perPage = Math.max(1, y - x + 1);
-  const pages = Math.ceil(z / perPage);
-  return Math.min(Math.max(1, pages), maxPages);
+  return 1;
 }
 
 export function buildPageUrl(baseUrl, pageNum) {
