@@ -18,6 +18,7 @@ export const COMMAND_EXPOSURE_BY_GUILD = {
     "rng.awesome": "q",
     "rng.choose": "q",
     "rng.roll": "q",
+    "threadwatch": "q",
     "trading.ft": "q",
     "trading.id": "q",
     "trading.lf": "q",

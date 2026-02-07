@@ -1,6 +1,6 @@
 // tools/thread_watch.js
 //
-// Forum thread watch subscriptions (bang only):
+// Forum thread watch subscriptions (bang/q based on guild exposure):
 //   !threadwatch sub <thread_url|thread_id> [--op | --user "Forum Name"]
 //   !threadwatch unsub <thread_url|thread_id|index>
 //   !threadwatch list
@@ -26,7 +26,7 @@ import {
   htmlToText,
 } from "../shared/forum_scrape.js";
 
-const THREADWATCH_ALIASES = ["!thread", "!tw", "!watchthread", "!wt", "!watch"];
+const THREADWATCH_ALIASES = ["thread", "tw", "watchthread", "wt", "watch"];
 const THREADWATCH_LIMIT = 3;
 const ENV = String(process.env.ENV || "").toLowerCase();
 const DEV_MODE = ENV === "dev";
@@ -359,17 +359,18 @@ function formatFilterLabel(row) {
   return "any";
 }
 
-function buildHelpText() {
+function buildHelpText(prefix = "!") {
+  const cmd = `${prefix}threadwatch`;
   return (
     "Forum thread watch:\n" +
-    "• `!threadwatch sub <thread_url|thread_id> [--op | --user \"Forum Name\"]` — subscribe\n" +
-    "• `!threadwatch unsub <thread_url|thread_id|index>` — unsubscribe\n" +
-    "• `!threadwatch list` — show your tracked threads\n" +
-    "• `!threadwatch clearall` — remove all tracked threads\n" +
-    "• `!threadwatch help` — show this help\n\n" +
+    `• \`${cmd} sub <thread_url|thread_id> [--op | --user "Forum Name"]\` — subscribe\n` +
+    `• \`${cmd} unsub <thread_url|thread_id|index>\` — unsubscribe\n` +
+    `• \`${cmd} list\` — show your tracked threads\n` +
+    `• \`${cmd} clearall\` — remove all tracked threads\n` +
+    `• \`${cmd} help\` — show this help\n\n` +
     "Notes:\n" +
     "• Use quotes for forum names with spaces.\n" +
-    "• Index refers to the numbered list from `!threadwatch list`.\n" +
+    `• Index refers to the numbered list from \`${cmd} list\`.\n` +
     "• Filters are case-sensitive (must match forums display name exactly).\n" +
     `• Limit: ${THREADWATCH_LIMIT} threads per user (admin/privileged unlimited).`
   );
@@ -858,14 +859,16 @@ export function registerThreadWatchScheduler() {
 }
 
 export function registerThreadWatch(register) {
-  register(
-    "!threadwatch",
-    async ({ message, rest }) => {
+  register.expose({
+    logicalId: "threadwatch",
+    name: "threadwatch",
+    handler: async ({ message, rest, cmd }) => {
       const tokens = tokenizeArgs(rest);
       const subcmd = String(tokens.shift() || "").toLowerCase();
+      const prefix = String(cmd || "").startsWith("?") ? "?" : "!";
 
       if (!subcmd || subcmd === "help") {
-        await message.reply(buildHelpText());
+        await message.reply(buildHelpText(prefix));
         return;
       }
 
@@ -889,11 +892,11 @@ export function registerThreadWatch(register) {
         return;
       }
 
-      await message.reply(buildHelpText());
+      await message.reply(buildHelpText(prefix));
     },
-    "!threadwatch <sub|unsub|list|clearall|help> — follow TPPC forum threads",
-    { aliases: THREADWATCH_ALIASES, category: "Tools" }
-  );
+    help: "!threadwatch <sub|unsub|list|clearall|help> — follow TPPC forum threads",
+    opts: { aliases: THREADWATCH_ALIASES, category: "Tools" },
+  });
 
   register.component("threadwatch:clear:", handleClearConfirm);
 }
