@@ -767,7 +767,8 @@ export function registerRarity(register) {
         ]
       });
     },
-    help: "?rarity <pokemon> — shows rarity statistics (add <timeframe> for history)"
+    help: "?rarity <pokemon> — shows rarity statistics (add <timeframe> for history)",
+    opts: { aliases: ["r"] }
   });
 
   // Rarity reload should be OFF wherever rarity.main is OFF
