@@ -1057,10 +1057,6 @@ async function handleTiers({ message, tokens }) {
 
 async function handlePollNow({ message }) {
   const settings = await getMarketPollSettings({ guildId: message.guildId });
-  if (!settings.enabled) {
-    await message.reply("MarketPoll is currently disabled. Enable it with `!marketpoll config enabled on`. ");
-    return;
-  }
   if (!settings.channelId) {
     await message.reply("MarketPoll channel is not configured. Use `!marketpoll config channel <id>`. ");
     return;

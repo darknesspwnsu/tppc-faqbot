@@ -181,6 +181,44 @@ describe("marketpoll registration", () => {
     );
   });
 
+  it("allows manual poll now while config enabled is off", async () => {
+    const { registerMarketPoll } = await import("../../tools/marketpoll.js");
+    const store = await import("../../tools/marketpoll_store.js");
+
+    store.getMarketPollSettings.mockResolvedValue({
+      enabled: false,
+      channelId: "123",
+      cadenceMinutes: 180,
+      pollMinutes: 15,
+      pairCooldownDays: 90,
+      minVotes: 5,
+      matchupModes: ["1v1"],
+    });
+
+    const register = vi.fn();
+    register.expose = vi.fn();
+    register.listener = vi.fn();
+
+    registerMarketPoll(register);
+    const handler = register.expose.mock.calls[0][0].handler;
+
+    const message = {
+      guildId: "g1",
+      author: { id: "u1" },
+      reply: vi.fn(async () => {}),
+      channel: { send: vi.fn(async () => {}) },
+    };
+
+    await handler({ message, rest: "poll now", cmd: "!mp" });
+
+    expect(message.reply).not.toHaveBeenCalledWith(
+      expect.stringContaining("currently disabled")
+    );
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("Cannot run poll now because seed validation failed.")
+    );
+  });
+
   it("registers scheduler hook", async () => {
     const { registerMarketPollScheduler } = await import("../../tools/marketpoll.js");
     registerMarketPollScheduler();

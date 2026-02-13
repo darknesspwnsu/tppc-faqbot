@@ -305,7 +305,7 @@ Golden market preference tooling (base-stage Goldens only).
 - `!marketpoll config minvotes <n>`
 - `!marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>`
 - `!marketpoll tiers [tier] [gender] [limit]`
-- `!marketpoll poll now`
+- `!marketpoll poll now` (works even if `config enabled` is off)
 
 **Notes:**
 - Seed ranges are loaded from `data/marketpoll_seeds.csv` on startup/boot.
