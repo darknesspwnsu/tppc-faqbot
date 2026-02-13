@@ -85,6 +85,7 @@ describe("db.js", () => {
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS notify_me/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS forum_thread_subscriptions/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS reminders/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS scheduled_contest_commands/),
       ])
     );
   });

@@ -69,6 +69,7 @@ const client = new Client({
 });
 
 const commands = buildCommandRegistry({ client });
+client.spectreonCommandRegistry = commands;
 
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user?.tag}`);

@@ -122,6 +122,7 @@ export function buildCommandRegistry({ client } = {}) {
       admin: Boolean(opts.admin),
       adminCategory: opts.adminCategory || null,
       canonical: true,
+      canonicalName: key,
       category: opts.category || "Other",
       hideFromHelp: Boolean(opts.hideFromHelp),
       helpTier: opts.helpTier || "normal", // "primary" | "normal"
@@ -139,7 +140,7 @@ export function buildCommandRegistry({ client } = {}) {
           );
         }
         // Copy the entry but mark canonical=false so we don't duplicate in help
-        bang.set(akey, { ...entry, canonical: false });
+        bang.set(akey, { ...entry, canonical: false, canonicalName: key });
       }
     }
   }
@@ -533,7 +534,99 @@ export function buildCommandRegistry({ client } = {}) {
 
   /* ------------------------------- dispatchers ------------------------------ */
 
+  function bangDispatchResult({
+    ok = false,
+    reason = "unknown",
+    cmd = null,
+    entry = null,
+    dryRun = false,
+    executed = false,
+    error = null,
+    details = {},
+  } = {}) {
+    const normalizedCmd = cmd ? String(cmd).toLowerCase() : null;
+    const canonicalCmd = entry?.canonicalName || entry?.name || normalizedCmd;
+    return {
+      ok: Boolean(ok),
+      reason: String(reason || (ok ? "ok" : "error")),
+      dryRun: Boolean(dryRun),
+      executed: Boolean(executed),
+      cmd: normalizedCmd,
+      canonicalCmd,
+      exposeLogicalId: entry?.exposeMeta?.logicalId || null,
+      error: error ? logger.serializeError(error) : null,
+      ...details,
+    };
+  }
+
+  function preflightBangCommand(message, cmd, entry) {
+    if (!entry?.handler) {
+      return { ok: false, reason: "unknown_command", silent: true };
+    }
+
+    const isBangPrefix = String(cmd || "").startsWith("!");
+    const logicalId = entry?.exposeMeta?.logicalId || null;
+    const guildId = message?.guildId || null;
+
+    if (logicalId && guildId) {
+      const exp = exposureFor(guildId, logicalId);
+      if (exp === "off") {
+        return {
+          ok: false,
+          reason: "exposure_off",
+          logicalId,
+          exposure: exp,
+          silent: true,
+        };
+      }
+
+      if ((isBangPrefix && exp !== "bang") || (!isBangPrefix && exp !== "q")) {
+        return {
+          ok: false,
+          reason: "wrong_prefix",
+          logicalId,
+          exposure: exp,
+          silent: true,
+        };
+      }
+
+      const gate = allowedInChannel(message, logicalId);
+      if (!gate.ok) {
+        return {
+          ok: false,
+          reason: "channel_blocked",
+          logicalId,
+          exposure: exp,
+          silent: Boolean(gate.silent),
+          notifyText: gate.silent ? null : "This command isn’t allowed in this channel.",
+        };
+      }
+
+      return {
+        ok: true,
+        logicalId,
+        exposure: exp,
+      };
+    }
+
+    if (isBangPrefix && !logicalId) {
+      const base = String(cmd).slice(1);
+      if (guildId && exposureFor(guildId, base) === "off") {
+        return {
+          ok: false,
+          reason: "exposure_off",
+          exposure: "off",
+          silent: false,
+          notifyText: "This command isn’t allowed in this server.",
+        };
+      }
+    }
+
+    return { ok: true, logicalId, exposure: null };
+  }
+
   async function dispatchMessage(message) {
+    const dryRun = Boolean(message?.__dryRun || message?.__preflightOnly);
     const content = (message.content ?? "").trim();
     const isDevPrefix = content.startsWith("!!") || content.startsWith("??");
     const isDevEnv = String(process.env.ENV || "").toLowerCase() === "dev";
@@ -564,19 +657,64 @@ export function buildCommandRegistry({ client } = {}) {
     }
 
     // Passive listeners run for ALL messages (not just !/? commands)
-    await dispatchMessageHooks(message, { isCommand: Boolean(entry?.handler), commandName: entry?.handler ? cmd : null });
+    if (!dryRun) {
+      await dispatchMessageHooks(message, {
+        isCommand: Boolean(entry?.handler),
+        commandName: entry?.handler ? cmd : null,
+      });
+    }
 
-    if (!isBang && !isQ) return;
-    if (!entry?.handler) return;
+    if (!isBang && !isQ) {
+      return bangDispatchResult({
+        ok: false,
+        reason: "not_command",
+        cmd,
+        entry,
+        dryRun,
+        executed: false,
+      });
+    }
+    if (!entry?.handler) {
+      return bangDispatchResult({
+        ok: false,
+        reason: "unknown_command",
+        cmd,
+        entry,
+        dryRun,
+        executed: false,
+        details: { silent: true },
+      });
+    }
+
+    const preflight = preflightBangCommand(message, cmd, entry);
+    if (!preflight.ok) {
+      if (!dryRun && preflight.notifyText && typeof message.reply === "function") {
+        await message.reply(preflight.notifyText);
+      }
+      return bangDispatchResult({
+        ok: false,
+        reason: preflight.reason,
+        cmd,
+        entry,
+        dryRun,
+        executed: false,
+        details: preflight,
+      });
+    }
+
+    if (dryRun) {
+      return bangDispatchResult({
+        ok: true,
+        reason: "dry_run_ok",
+        cmd,
+        entry,
+        dryRun: true,
+        executed: false,
+        details: preflight,
+      });
+    }
 
     const startedAt = Date.now();
-    if (cmd.startsWith("!") && !entry.exposeMeta) {
-      const base = cmd.slice(1);
-      if (message.guildId && exposureFor(message.guildId, base) === "off") {
-        await message.reply("This command isn’t allowed in this server.");
-        return;
-      }
-    }
 
     try {
       await entry.handler({ message, cmd, rest });
@@ -597,6 +735,15 @@ export function buildCommandRegistry({ client } = {}) {
         userId: message.author?.id || null,
         durationMs: Date.now() - startedAt,
       });
+      return bangDispatchResult({
+        ok: true,
+        reason: "ok",
+        cmd,
+        entry,
+        dryRun: false,
+        executed: true,
+        details: preflight,
+      });
     } catch (err) {
       void metrics.increment("command.invoked", {
         type: "bang",
@@ -615,6 +762,16 @@ export function buildCommandRegistry({ client } = {}) {
         userId: message.author?.id || null,
         durationMs: Date.now() - startedAt,
         error: logger.serializeError(err),
+      });
+      return bangDispatchResult({
+        ok: false,
+        reason: "handler_error",
+        cmd,
+        entry,
+        dryRun: false,
+        executed: true,
+        error: err,
+        details: preflight,
       });
     }
   }

@@ -12,6 +12,10 @@ import { registerPollContest } from "./pollcontest.js";
 import { registerGiveaway } from "./giveaway.js";
 import { registerLotto } from "./lotto.js";
 import { registerCustomLeaderboards } from "./custom_leaderboard.js";
+import {
+  registerScheduledCommands,
+  registerScheduledCommandsScheduler,
+} from "./scheduled_commands.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const CONTEST_MODULES = [
@@ -24,6 +28,11 @@ const CONTEST_MODULES = [
   { id: "giveaway", register: registerGiveaway },
   { id: "lotto", register: registerLotto },
   { id: "custom_leaderboard", register: registerCustomLeaderboards },
+  {
+    id: "scheduled_commands",
+    register: registerScheduledCommands,
+    registerScheduler: registerScheduledCommandsScheduler,
+  },
 ];
 
 export function registerContests(register) {

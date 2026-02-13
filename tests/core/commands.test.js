@@ -140,6 +140,94 @@ describe("commands registry", () => {
     expect(handler).toHaveBeenCalledTimes(2);
   });
 
+  it("dispatchMessage supports dry-run preflight without executing handlers", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const msg = makeMessage({ guildId: "g0", content: "!ping" });
+    msg.__dryRun = true;
+
+    const result = await reg.dispatchMessage(msg);
+    expect(result).toMatchObject({
+      ok: true,
+      dryRun: true,
+      executed: false,
+      cmd: "!ping",
+      canonicalCmd: "!ping",
+      exposeLogicalId: "ping",
+      reason: "dry_run_ok",
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+  });
+
+  it("dry-run preflight reports wrong-prefix exposure mismatches", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const msg = makeMessage({ guildId: "g1", content: "!ping" });
+    msg.__dryRun = true;
+
+    const result = await reg.dispatchMessage(msg);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "wrong_prefix",
+      dryRun: true,
+      executed: false,
+      exposeLogicalId: "ping",
+      silent: true,
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+  });
+
+  it("dry-run preflight reports channel blocks without replying", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const msg = makeMessage({ guildId: "g3", channelId: "c-denied", content: "!ping" });
+    msg.__dryRun = true;
+
+    const result = await reg.dispatchMessage(msg);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: "channel_blocked",
+      dryRun: true,
+      executed: false,
+      silent: false,
+      notifyText: "This command isn’t allowed in this channel.",
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(msg.reply).not.toHaveBeenCalled();
+  });
+
   it("register.component routes to the longest matching prefix", async () => {
     const shortHandler = vi.fn(async () => {});
     const longHandler = vi.fn(async () => {});

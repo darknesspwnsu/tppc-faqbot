@@ -636,6 +636,26 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS scheduled_contest_commands (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      creator_user_id VARCHAR(32) NOT NULL,
+      command_text TEXT NOT NULL,
+      execute_at_ms BIGINT UNSIGNED NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY scheduled_contest_commands_guild_time_idx (guild_id, execute_at_ms),
+      KEY scheduled_contest_commands_time_idx (execute_at_ms)
+    )
+  `,
+    [],
+    "init.scheduled_contest_commands"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS message_counts (
       guild_id VARCHAR(32) NOT NULL,
       user_id VARCHAR(32) NOT NULL,
