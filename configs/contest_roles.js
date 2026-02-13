@@ -16,3 +16,13 @@ export const CONTEST_ROLES_BY_GUILD = {
     },
   },
 };
+
+// Guild-level role toggles for !contest / !contests.
+export const CONTEST_TOGGLE_ROLE_BY_GUILD = {
+  // TPPC Official
+  "329934860388925442": "398953158690471948",
+  // TPPC Unofficial
+  "880141088722141294": "880274092060733500",
+  // Dev server
+  "1332822580708511815": "1471783891244285952",
+};

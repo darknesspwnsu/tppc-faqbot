@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { CONTEST_ROLES_BY_GUILD } from "../../configs/contest_roles.js";
+import { CONTEST_ROLES_BY_GUILD, CONTEST_TOGGLE_ROLE_BY_GUILD } from "../../configs/contest_roles.js";
 
 function isIdString(value) {
   return typeof value === "string" && /^\d+$/.test(value);
@@ -24,6 +24,13 @@ describe("contest_roles config", () => {
         expect(Array.isArray(config.applyTo)).toBe(true);
         expect(config.applyTo.every((v) => typeof v === "string")).toBe(true);
       }
+    }
+  });
+
+  it("uses numeric string ids for guild-level contest toggle roles", () => {
+    for (const [guildId, roleId] of Object.entries(CONTEST_TOGGLE_ROLE_BY_GUILD)) {
+      expect(isIdString(guildId)).toBe(true);
+      expect(isIdString(roleId)).toBe(true);
     }
   });
 });

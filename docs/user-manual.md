@@ -393,12 +393,12 @@ Tracks message counts in configured channels (may include forum threads if your 
 
 ## 8) Contests
 
-### Reaction contests (`!conteststart` / `!contest` / `/contest`)
+### Reaction contests (`!conteststart` / `/contest`)
 Runs a reaction‑based contest in the current channel (uses 👍). Admin/privileged or contest host only.
 
 **Bang usage:**
 - `!conteststart [list|choose|elim] <time> [quota] [winners] [prize=...] [require=verified]`
-- Aliases: `!contest`, `!startcontest`
+- Alias: `!startcontest`
 - `!cancelcontest` — cancel an active contest in this channel (host or admin)
 
 **Slash usage:**
@@ -407,6 +407,11 @@ Runs a reaction‑based contest in the current channel (uses 👍). Admin/privil
 **Notes:**
 - `list` prints entrants, `choose` picks winners, `elim` runs elimination rounds.
 - `require=verified` / `require_verified` enforces verified role + saved ID. Ineligible users receive a DM with steps; eligibility is re‑checked at draw time.
+
+### Contest Role Toggle (`!contest` / `!contests`)
+Toggles the contests ping role for your account in supported servers.
+- If you do not have the role: command adds it.
+- If you already have the role: command removes it.
 
 ### Giveaways (`/giveaway`)
 Subcommands: `create`, `list`, `end`, `delete`, `reroll`

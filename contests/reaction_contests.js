@@ -7,6 +7,7 @@
 import { MessageFlags } from "discord.js";
 
 import { isAdminOrPrivileged } from "../auth.js";
+import { CONTEST_TOGGLE_ROLE_BY_GUILD } from "../configs/contest_roles.js";
 import { formatUserWithId, stripEmojisAndSymbols } from "./helpers.js";
 import { sendDm } from "../shared/dm.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
@@ -338,6 +339,17 @@ function canManageContest(message) {
   return isAdminOrPrivileged(message);
 }
 
+async function resolveGuildMember(message) {
+  if (!message?.guildId || !message?.author?.id) return null;
+  if (message.member?.roles?.cache?.has) return message.member;
+  if (!message.guild?.members?.fetch) return null;
+  try {
+    return await message.guild.members.fetch(message.author.id);
+  } catch {
+    return null;
+  }
+}
+
 async function cancelCollector({ messageId, canceledById }) {
   const state = activeCollectorsByMessage.get(messageId);
   if (!state) return false;
@@ -606,6 +618,41 @@ export function registerReactionContests(register) {
   );
 
   register(
+    "!contest",
+    async ({ message }) => {
+      if (!message?.guildId || !message?.author?.id) return;
+
+      const roleId = CONTEST_TOGGLE_ROLE_BY_GUILD[String(message.guildId)] || null;
+      if (!roleId) {
+        await message.reply("Contest role toggle is not configured for this server.");
+        return;
+      }
+
+      const member = await resolveGuildMember(message);
+      if (!member?.roles?.cache?.has || !member?.roles?.add || !member?.roles?.remove) {
+        await message.reply("I could not resolve your server role state.");
+        return;
+      }
+
+      try {
+        const hasRole = Boolean(member.roles.cache.has(roleId));
+        if (hasRole) {
+          await member.roles.remove(roleId, "User toggled contest role via !contest");
+          await message.reply(`✅ Removed contest notifications role <@&${roleId}>.`);
+          return;
+        }
+
+        await member.roles.add(roleId, "User toggled contest role via !contest");
+        await message.reply(`✅ Added contest notifications role <@&${roleId}>.`);
+      } catch {
+        await message.reply("❌ I couldn't update your contest role. Please contact staff.");
+      }
+    },
+    "!contest — toggle contest notifications role for this server",
+    { aliases: ["!contests"] }
+  );
+
+  register(
     "!conteststart",
     async ({ message, rest }) => {
       if (!message.guildId) return;
@@ -802,6 +849,6 @@ export function registerReactionContests(register) {
       }
     },
     "!conteststart [choose|elim|list] <time> [quota] [winners] — reaction contest using 👍",
-    { aliases: ["!contest", "!startcontest"] }
+    { aliases: ["!startcontest"] }
   );
 }

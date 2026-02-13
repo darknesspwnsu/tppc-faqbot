@@ -22,7 +22,14 @@ const { collectEntrantsByReactions, registerReactionContests } = reactionContest
 function createRegister() {
   const handlers = new Map();
   const slashHandlers = new Map();
-  const register = (cmd, fn) => handlers.set(cmd, fn);
+  const register = (cmd, fn, _help, opts = {}) => {
+    handlers.set(cmd, fn);
+    const aliases = Array.isArray(opts?.aliases) ? opts.aliases : [];
+    for (const alias of aliases) {
+      if (!alias) continue;
+      handlers.set(String(alias), fn);
+    }
+  };
   register.slash = (config, fn) => slashHandlers.set(config.name, fn);
   register.handlers = handlers;
   register.slashHandlers = slashHandlers;
@@ -496,5 +503,93 @@ describe("contest slash command", () => {
     expect(elimSpy).toHaveBeenCalledTimes(1);
     expect(elimSpy.mock.calls[0][0].winnerSuffix).toBe("Prize: **Bike**");
     elimSpy.mockRestore();
+  });
+});
+
+describe("contest role toggle bang command", () => {
+  test("!contest adds contest role when missing", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const handler = register.handlers.get("!contest");
+    expect(handler).toBeTypeOf("function");
+
+    const roleId = "398953158690471948";
+    const roleSet = new Set();
+    const add = vi.fn(async (id) => roleSet.add(String(id)));
+    const remove = vi.fn(async () => {});
+    const reply = vi.fn(async () => {});
+
+    const message = {
+      guildId: "329934860388925442",
+      author: { id: "u1" },
+      member: {
+        roles: {
+          cache: { has: (id) => roleSet.has(String(id)) },
+          add,
+          remove,
+        },
+      },
+      reply,
+    };
+
+    await handler({ message });
+
+    expect(add).toHaveBeenCalledWith(roleId, expect.stringContaining("!contest"));
+    expect(remove).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith(expect.stringContaining(`Added contest notifications role <@&${roleId}>`));
+  });
+
+  test("!contest removes contest role when already present", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const handler = register.handlers.get("!contest");
+    expect(handler).toBeTypeOf("function");
+
+    const roleId = "398953158690471948";
+    const roleSet = new Set([roleId]);
+    const add = vi.fn(async () => {});
+    const remove = vi.fn(async (id) => roleSet.delete(String(id)));
+    const reply = vi.fn(async () => {});
+
+    const message = {
+      guildId: "329934860388925442",
+      author: { id: "u1" },
+      member: {
+        roles: {
+          cache: { has: (id) => roleSet.has(String(id)) },
+          add,
+          remove,
+        },
+      },
+      reply,
+    };
+
+    await handler({ message });
+
+    expect(remove).toHaveBeenCalledWith(roleId, expect.stringContaining("!contest"));
+    expect(add).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith(
+      expect.stringContaining(`Removed contest notifications role <@&${roleId}>`)
+    );
+  });
+
+  test("!contests alias points to role-toggle command, not !conteststart", async () => {
+    const register = createRegister();
+    registerReactionContests(register);
+
+    const contest = register.handlers.get("!contest");
+    const contests = register.handlers.get("!contests");
+    const conteststart = register.handlers.get("!conteststart");
+    const startcontest = register.handlers.get("!startcontest");
+
+    expect(contest).toBeTypeOf("function");
+    expect(contests).toBeTypeOf("function");
+    expect(conteststart).toBeTypeOf("function");
+    expect(startcontest).toBeTypeOf("function");
+    expect(contests).toBe(contest);
+    expect(contest).not.toBe(conteststart);
+    expect(startcontest).toBe(conteststart);
   });
 });
