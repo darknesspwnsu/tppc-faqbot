@@ -638,12 +638,12 @@ export function registerReactionContests(register) {
         const hasRole = Boolean(member.roles.cache.has(roleId));
         if (hasRole) {
           await member.roles.remove(roleId, "User toggled contest role via !contest");
-          await message.reply(`✅ Removed contest notifications role <@&${roleId}>.`);
+          await message.reply("✅ Removed contest notifications role.");
           return;
         }
 
         await member.roles.add(roleId, "User toggled contest role via !contest");
-        await message.reply(`✅ Added contest notifications role <@&${roleId}>.`);
+        await message.reply("✅ Added contest notifications role.");
       } catch {
         await message.reply("❌ I couldn't update your contest role. Please contact staff.");
       }

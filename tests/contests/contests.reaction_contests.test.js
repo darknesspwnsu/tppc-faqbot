@@ -537,7 +537,8 @@ describe("contest role toggle bang command", () => {
 
     expect(add).toHaveBeenCalledWith(roleId, expect.stringContaining("!contest"));
     expect(remove).not.toHaveBeenCalled();
-    expect(reply).toHaveBeenCalledWith(expect.stringContaining(`Added contest notifications role <@&${roleId}>`));
+    expect(reply).toHaveBeenCalledWith(expect.stringContaining("Added contest notifications role."));
+    expect(reply).not.toHaveBeenCalledWith(expect.stringContaining("<@&"));
   });
 
   test("!contest removes contest role when already present", async () => {
@@ -570,9 +571,8 @@ describe("contest role toggle bang command", () => {
 
     expect(remove).toHaveBeenCalledWith(roleId, expect.stringContaining("!contest"));
     expect(add).not.toHaveBeenCalled();
-    expect(reply).toHaveBeenCalledWith(
-      expect.stringContaining(`Removed contest notifications role <@&${roleId}>`)
-    );
+    expect(reply).toHaveBeenCalledWith(expect.stringContaining("Removed contest notifications role."));
+    expect(reply).not.toHaveBeenCalledWith(expect.stringContaining("<@&"));
   });
 
   test("!contests alias points to role-toggle command, not !conteststart", async () => {
