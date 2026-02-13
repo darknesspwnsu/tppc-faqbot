@@ -521,6 +521,8 @@ export async function initDb() {
       guild_id VARCHAR(32) NOT NULL,
       user_id VARCHAR(32) NOT NULL,
       phrase TEXT NOT NULL,
+      target_user_id VARCHAR(32),
+      ignore_user_ids TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id),
       KEY notify_guild_idx (guild_id),
@@ -554,6 +556,33 @@ export async function initDb() {
       `,
         [],
         "init.notify_me_target_user"
+      );
+    }
+  }
+  {
+    const { DB_NAME } = process.env;
+    const [rows] = await execDb(
+      db,
+      `
+      SELECT COUNT(*) AS total
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+        AND TABLE_NAME = 'notify_me'
+        AND COLUMN_NAME = 'ignore_user_ids'
+    `,
+      [DB_NAME],
+      "init.notify_me_ignore_user_ids_check"
+    );
+    const total = Number(rows?.[0]?.total || 0);
+    if (!total) {
+      await execDb(
+        db,
+        `
+        ALTER TABLE notify_me
+        ADD COLUMN ignore_user_ids TEXT
+      `,
+        [],
+        "init.notify_me_ignore_user_ids"
       );
     }
   }

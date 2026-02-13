@@ -12,6 +12,7 @@ import { sendDm } from "../shared/dm.js";
 import { startTimeout, clearTimer } from "../shared/timer_utils.js";
 
 const MAX_NOTIFY_PER_USER = 10;
+const MAX_NOTIFY_IGNORED_USERS = 25;
 const MAX_REMIND_PER_USER = 10;
 const MAX_DURATION_SECONDS = 365 * 24 * 60 * 60;
 const MAX_TIMEOUT_MS = 2_000_000_000; // ~23 days (setTimeout limit safety)
@@ -36,7 +37,7 @@ const DATE_KEYWORDS = new Map([
   ["tomo", "tomorrow"],
 ]);
 
-const notifyByGuild = new Map(); // guildId -> { loaded, items: [{ id, userId, phrase, key }] }
+const notifyByGuild = new Map(); // guildId -> { loaded, items: [{ id, userId, phrase, key, targetUserId, ignoredUserIds }] }
 const remindersById = new Map(); // reminderId -> { reminder, timeout }
 let booted = false;
 
@@ -50,6 +51,44 @@ function norm(s) {
 
 function phraseKey(phrase) {
   return normalizeForMatch(phrase);
+}
+
+function normalizeUserIds(ids) {
+  return [...new Set((Array.isArray(ids) ? ids : []).map((x) => String(x || "").trim()).filter(Boolean))]
+    .filter((id) => /^\d{5,}$/.test(id))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function parseUserIdsFromInput(raw) {
+  const text = String(raw || "");
+  const ids = new Set();
+  for (const m of text.matchAll(/<@!?(\d{5,})>/g)) {
+    ids.add(String(m[1]));
+  }
+
+  const cleaned = text.replace(/<@!?(\d{5,})>/g, " ").replace(/[,\n\r\t]/g, " ");
+  for (const token of cleaned.split(" ").map((x) => x.trim()).filter(Boolean)) {
+    if (/^\d{5,}$/.test(token)) ids.add(token);
+  }
+
+  return normalizeUserIds([...ids]);
+}
+
+function parseIgnoredUserIds(raw) {
+  if (!raw) return [];
+  const text = String(raw).trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    return normalizeUserIds(parsed);
+  } catch {
+    return parseUserIdsFromInput(text);
+  }
+}
+
+function serializeIgnoredUserIds(ids) {
+  const normalized = normalizeUserIds(ids);
+  return normalized.length ? JSON.stringify(normalized) : null;
 }
 
 function formatLink({ guildId, channelId, messageId }) {
@@ -279,7 +318,7 @@ async function loadNotifyGuild(guildId) {
   if (state.loaded) return state;
   const db = getDb();
   const [rows] = await db.execute(
-    `SELECT id, user_id, phrase, target_user_id FROM notify_me WHERE guild_id = ?`,
+    `SELECT id, user_id, phrase, target_user_id, ignore_user_ids FROM notify_me WHERE guild_id = ?`,
     [String(guildId)]
   );
   state.items = (rows || []).map((row) => ({
@@ -287,20 +326,36 @@ async function loadNotifyGuild(guildId) {
     userId: String(row.user_id),
     phrase: String(row.phrase || ""),
     targetUserId: row.target_user_id ? String(row.target_user_id) : null,
+    ignoredUserIds: parseIgnoredUserIds(row.ignore_user_ids),
     key: phraseKey(row.phrase),
   }));
   state.loaded = true;
   return state;
 }
 
-async function addNotifyEntry({ guildId, userId, phrase, targetUserId }) {
+async function addNotifyEntry({ guildId, userId, phrase, targetUserId, ignoredUserIds = [] }) {
   const db = getDb();
   const [result] = await db.execute(
-    `INSERT INTO notify_me (guild_id, user_id, phrase, target_user_id) VALUES (?, ?, ?, ?)`,
-    [String(guildId), String(userId), String(phrase), targetUserId ? String(targetUserId) : null]
+    `INSERT INTO notify_me (guild_id, user_id, phrase, target_user_id, ignore_user_ids) VALUES (?, ?, ?, ?, ?)`,
+    [
+      String(guildId),
+      String(userId),
+      String(phrase),
+      targetUserId ? String(targetUserId) : null,
+      serializeIgnoredUserIds(ignoredUserIds),
+    ]
   );
   const id = Number(result?.insertId);
   return Number.isFinite(id) ? id : null;
+}
+
+async function updateNotifyEntryIgnoredUsers({ id, userId, ignoredUserIds }) {
+  const db = getDb();
+  await db.execute(`UPDATE notify_me SET ignore_user_ids = ? WHERE id = ? AND user_id = ?`, [
+    serializeIgnoredUserIds(ignoredUserIds),
+    Number(id),
+    String(userId),
+  ]);
 }
 
 async function deleteNotifyEntry({ id, userId }) {
@@ -322,13 +377,14 @@ async function clearNotifyEntries({ guildId, userId }) {
 async function listNotifyEntries({ guildId, userId }) {
   const db = getDb();
   const [rows] = await db.execute(
-    `SELECT id, phrase, target_user_id, created_at FROM notify_me WHERE guild_id = ? AND user_id = ? ORDER BY id ASC`,
+    `SELECT id, phrase, target_user_id, ignore_user_ids, created_at FROM notify_me WHERE guild_id = ? AND user_id = ? ORDER BY id ASC`,
     [String(guildId), String(userId)]
   );
   return (rows || []).map((row) => ({
     id: Number(row.id),
     phrase: String(row.phrase || ""),
     targetUserId: row.target_user_id ? String(row.target_user_id) : null,
+    ignoredUserIds: parseIgnoredUserIds(row.ignore_user_ids),
     createdAt: row.created_at ? new Date(row.created_at).getTime() : null,
   }));
 }
@@ -560,7 +616,12 @@ function buildReminderChoices(items, focused) {
 function renderNotifyList(items) {
   if (!items.length) return "You have no active notifications.";
   const lines = items.map((x, idx) => {
-    const suffix = x.targetUserId ? ` (from ${mention(x.targetUserId)})` : "";
+    const suffixParts = [];
+    if (x.targetUserId) suffixParts.push(`from ${mention(x.targetUserId)}`);
+    if (x.ignoredUserIds?.length) {
+      suffixParts.push(`ignore ${x.ignoredUserIds.map((id) => mention(id)).join(", ")}`);
+    }
+    const suffix = suffixParts.length ? ` (${suffixParts.join("; ")})` : "";
     return `${idx + 1}. ${x.phrase}${suffix}`;
   });
   return `Your notifications:\n${lines.join("\n")}`;
@@ -599,6 +660,7 @@ export function registerReminders(register) {
     const isBot = !!message.author?.bot;
     const matches = state.items.filter((item) => {
       if (item.targetUserId && item.targetUserId !== authorId) return false;
+      if (item.ignoredUserIds?.includes(authorId)) return false;
       if (isBot && !item.targetUserId) return false;
       return includesWholePhrase(normalized, item.phrase);
     });
@@ -680,6 +742,31 @@ export function registerReminders(register) {
               description: "Only notify when this user says the phrase",
               required: false,
             },
+            {
+              type: 3,
+              name: "ignore_users",
+              description: "User mentions/IDs to ignore for this phrase (space/comma-separated)",
+              required: false,
+            },
+          ],
+        },
+        {
+          type: 1,
+          name: "ignore",
+          description: "Add ignored users for an existing watched phrase",
+          options: [
+            {
+              type: 3,
+              name: "phrase",
+              description: "Existing phrase from your /notifyme list",
+              required: true,
+            },
+            {
+              type: 3,
+              name: "users",
+              description: "One or more user mentions/IDs (space/comma-separated)",
+              required: true,
+            },
           ],
         },
         {
@@ -718,9 +805,33 @@ export function registerReminders(register) {
         const phrase = norm(interaction.options?.getString?.("phrase"));
         const targetUser = interaction.options?.getUser?.("from_user") || null;
         const targetUserId = targetUser?.id || null;
+        const ignoreUsersRaw = norm(interaction.options?.getString?.("ignore_users"));
+        const ignoredUserIds = ignoreUsersRaw ? parseUserIdsFromInput(ignoreUsersRaw) : [];
         if (!phrase) {
           await interaction.reply({
             content: "Please provide a phrase to watch for.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (ignoreUsersRaw && !ignoredUserIds.length) {
+          await interaction.reply({
+            content:
+              "Please provide one or more valid @mentions/IDs in `ignore_users` (space or comma-separated).",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (ignoredUserIds.length > MAX_NOTIFY_IGNORED_USERS) {
+          await interaction.reply({
+            content: `You can ignore up to ${MAX_NOTIFY_IGNORED_USERS} users per phrase.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (targetUserId && ignoredUserIds.includes(targetUserId)) {
+          await interaction.reply({
+            content: "The `from_user` cannot also be in `ignore_users`.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -765,6 +876,7 @@ export function registerReminders(register) {
           userId,
           phrase,
           targetUserId,
+          ignoredUserIds,
         });
         if (!id) {
           await interaction.reply({
@@ -774,11 +886,87 @@ export function registerReminders(register) {
           return;
         }
 
-        state.items.push({ id, userId, phrase, key, targetUserId });
+        state.items.push({ id, userId, phrase, key, targetUserId, ignoredUserIds });
         void metrics.increment("notifyme.set", { status: "ok" });
-        const suffix = targetUserId ? ` (from ${mention(targetUserId)})` : "";
+        const suffixParts = [];
+        if (targetUserId) suffixParts.push(`from ${mention(targetUserId)}`);
+        if (ignoredUserIds.length) {
+          suffixParts.push(`ignoring ${ignoredUserIds.map((id) => mention(id)).join(", ")}`);
+        }
+        const suffix = suffixParts.length ? ` (${suffixParts.join("; ")})` : "";
         await interaction.reply({
           content: `✅ I’ll notify you when I see: "${phrase}"${suffix}`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (sub === "ignore") {
+        const phrase = norm(interaction.options?.getString?.("phrase"));
+        const usersRaw = norm(interaction.options?.getString?.("users"));
+        if (!phrase) {
+          await interaction.reply({
+            content: "Please provide an existing phrase from `/notifyme list`.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const idsToIgnore = parseUserIdsFromInput(usersRaw);
+        if (!idsToIgnore.length) {
+          await interaction.reply({
+            content: "Please provide one or more valid @mentions/IDs in `users`.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (idsToIgnore.length > MAX_NOTIFY_IGNORED_USERS) {
+          await interaction.reply({
+            content: `You can add up to ${MAX_NOTIFY_IGNORED_USERS} ignored users per update.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const state = await loadNotifyGuild(interaction.guildId);
+        const key = phraseKey(phrase);
+        const mine = state.items.filter((item) => item.userId === userId && item.key === key);
+        if (!mine.length) {
+          await interaction.reply({
+            content: `No existing notification found for phrase "${phrase}". Use \`/notifyme list\` first.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        let updatedCount = 0;
+        for (const item of mine) {
+          const nextIgnored = normalizeUserIds([...(item.ignoredUserIds || []), ...idsToIgnore]);
+          if (nextIgnored.length === (item.ignoredUserIds || []).length) continue;
+          // eslint-disable-next-line no-await-in-loop
+          await updateNotifyEntryIgnoredUsers({
+            id: item.id,
+            userId,
+            ignoredUserIds: nextIgnored,
+          });
+          item.ignoredUserIds = nextIgnored;
+          updatedCount += 1;
+        }
+
+        if (!updatedCount) {
+          await interaction.reply({
+            content: `All provided users are already ignored for "${phrase}".`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const mentions = idsToIgnore.map((id) => mention(id)).join(", ");
+        void metrics.increment("notifyme.ignore", { status: "ok" });
+        await interaction.reply({
+          content: `✅ Updated ignore list for "${phrase}" (${updatedCount} entr${
+            updatedCount === 1 ? "y" : "ies"
+          }). Added: ${mentions}`,
           flags: MessageFlags.Ephemeral,
         });
         return;

@@ -366,7 +366,8 @@ Tracks message counts in configured channels (may include forum threads if your 
 **Admin:** `/resetcount` → reset all counters (confirmation required)
 
 ### Reminders & NotifyMe
-- `/notifyme set <phrase>` — DM when phrase appears in guild
+- `/notifyme set phrase:<phrase> [from_user:@user] [ignore_users:<@user ...>]` — DM when phrase appears in guild
+- `/notifyme ignore phrase:<existing phrase> users:<@user ...>` — add ignored users for that phrase
 - `/notifyme list`
 - `/notifyme unset <number from /notifyme list>`
 - `/notifyme clear` — clear all for this server
