@@ -1,0 +1,416 @@
+# GoldMarket seed ranges (base-stage goldens only)
+# Fill seed_range with values like 950kx-1.3mx
+asset_key,seed_range
+"GoldenAbra|?",200-300k
+"GoldenAbra|F",15k
+"GoldenAbra|M",10k
+"GoldenAbsol|?",6mx-7mx
+"GoldenAbsol|F",6mx-7mx
+"GoldenAbsol|M",6mx-7mx
+"GoldenAerodactyl|?",40-50k
+"GoldenAerodactyl|F",20k
+"GoldenAerodactyl|M",15k
+"GoldenArchen|F",10k
+"GoldenArchen|M",10k
+"GoldenAron|?",80k
+"GoldenAron|F",5k
+"GoldenAron|M",3k
+"GoldenArticuno|?",120-200k
+"GoldenArticuno|G",20k
+"GoldenAxew|F",20-25k
+"GoldenAxew|M",20-25k
+"GoldenBagon|?",250-400k
+"GoldenBagon|F",10k
+"GoldenBagon|M",10k
+"GoldenBeldum|?",300-450k
+"GoldenBeldum|G",20k
+"GoldenBidoof|F",15k
+"GoldenBidoof|M",15k
+"GoldenBlitzle|F",10k
+"GoldenBlitzle|M",10k
+"GoldenBulbasaur|?",60k
+"GoldenBulbasaur|F",15k
+"GoldenBulbasaur|G",1mx-2mx
+"GoldenBulbasaur|M",10k
+"GoldenBuneary|M",4mx-7mx
+"GoldenBunnelby|F",500k-750k
+"GoldenBunnelby|M",500k-750k
+"GoldenCacnea|?",20k
+"GoldenCacnea|F",1kx
+"GoldenCacnea|M",1kx
+"GoldenCaterpie|?",60-80k
+"GoldenCaterpie|F",20-30k
+"GoldenCaterpie|M",20-30k
+"GoldenChansey|F",30-40k
+"GoldenChansey|G",2-4mx
+"GoldenCharmander|?",120k
+"GoldenCharmander|F",250k
+"GoldenCharmander|G",3mx-4mx
+"GoldenCharmander|M",100k
+"GoldenChatot|F",6-7mx
+"GoldenCherubi|F",40-60k
+"GoldenCherubi|M",40-60k
+"GoldenChespin|F",10k
+"GoldenChespin|M",5k
+"GoldenChimchar|F",3kx
+"GoldenChimchar|M",3kx
+"GoldenComfey|F",350-450k
+"GoldenComfey|M",350-450k
+"GoldenCranidos|F",3k
+"GoldenCranidos|M",2k
+"GoldenCryogonal|G",5k
+"GoldenCubone|?",40k
+"GoldenCubone|F",2k
+"GoldenCubone|M",2k
+"GoldenDeerling (Autumn)|F",750k
+"GoldenDeerling (Autumn)|M",750k
+"GoldenDeerling (Spring)|F",750k
+"GoldenDeerling (Spring)|M",750k
+"GoldenDeerling (Summer)|F",750k
+"GoldenDeerling (Winter)|F",750k
+"GoldenDeino|F",15-20k
+"GoldenDeino|M",15-20k
+"GoldenDelibird|?",40k
+"GoldenDelibird|F",150-300k
+"GoldenDelibird|M",150-300k
+"GoldenDeoxys (Attack)|G",1mx-2mx
+"GoldenDeoxys (Speed)|G",1mx-2mx
+"GoldenDeoxys|G",1mx-2mx
+"GoldenDhelmise|G",10kx
+"GoldenDiancie|G",30-35k
+"GoldenDratini|?",8-15k
+"GoldenDratini|F",2-3k
+"GoldenDratini|M",2-3k
+"GoldenDucklett|F",400-450k
+"GoldenDucklett|M",400-450k
+"GoldenDuskull|F",750k
+"GoldenDuskull|M",750k
+"GoldenEevee|?",500k
+"GoldenEevee|F",450-500k
+"GoldenEevee|G",7-15mx
+"GoldenEevee|M",400k
+"GoldenEkans|?",40-60k
+"GoldenEkans|F",30-40k
+"GoldenEkans|M",30-40k
+"GoldenElectrike|?",2.5mx-3.5mx
+"GoldenElectrike|F",40k
+"GoldenElectrike|M",40k
+"GoldenEspurr|F",20-40k
+"GoldenEspurr|M",20-40k
+"GoldenExeggcute|F",400-450k
+"GoldenExeggcute|M",400-450k
+"GoldenFarfetchd|?",20k
+"GoldenFarfetchd|F",60-80k
+"GoldenFarfetchd|G",1-2mx
+"GoldenFarfetchd|M",60-80k
+"GoldenFeebas|?",400-500k
+"GoldenFeebas|F",150k
+"GoldenFeebas|M",150k
+"GoldenFennekin|F",20k
+"GoldenFennekin|M",10k
+"GoldenFletchling|F",10k
+"GoldenFletchling|M",10k
+"GoldenFroakie|F",10-15k
+"GoldenFroakie|M",5-10k
+"GoldenGastly|?",40-60k
+"GoldenGastly|F",8-10k
+"GoldenGastly|M",8-10k
+"GoldenGenesect|G",60k
+"GoldenGeodude|?",60-100k
+"GoldenGeodude|F",3k
+"GoldenGeodude|M",2k
+"GoldenGible|F",10-15k
+"GoldenGible|M",10-15k
+"GoldenGrowlithe|?",200-300k
+"GoldenGrowlithe|F",15-20k
+"GoldenGrowlithe|M",15-20k
+"GoldenHappiny|F",300-400k
+"GoldenHeatmor|F",400-600k
+"GoldenHeatmor|M",400-600k
+"GoldenHeracross|?",1.8mx-2mx
+"GoldenHeracross|F",2mx-2.5mx
+"GoldenHeracross|M",2mx-2.5mx
+"GoldenHo-Oh|G",3-6mx
+"GoldenHonedge|F",100-120k
+"GoldenHonedge|M",100-120k
+"GoldenHoopa (Confined)|G",1.2-1.6mx
+"GoldenHoopa (Unbound)|G",1.2-1.6mx
+"GoldenHorsea|F",400-500k
+"GoldenHorsea|M",400-500k
+"GoldenHoundour|?",1.6mx-2mx
+"GoldenHoundour|F",2mx-3mx
+"GoldenHoundour|M",2mx-3mx
+"GoldenJirachi|?",6-15mx
+"GoldenJirachi|G",70-80kx
+"GoldenKabuto|?",20-30k
+"GoldenKabuto|F",15k
+"GoldenKabuto|M",10k
+"GoldenKangaskhan|?",150-200k
+"GoldenKangaskhan|F",5k
+"GoldenKangaskhan|G",15-20k
+"GoldenKlefki|F",1kx
+"GoldenKlefki|M",1kx
+"GoldenKrabby|?",20-40k
+"GoldenKrabby|F",1k
+"GoldenKrabby|M",1k
+"GoldenLapras|?",12-24mx
+"GoldenLarvesta|F",500-750kx
+"GoldenLarvesta|M",500-750kx
+"GoldenLarvitar|F",500-550k
+"GoldenLarvitar|M",450k
+"GoldenLitleo|?",600kx-1mx
+"GoldenLitleo|F",500-750k
+"GoldenLitleo|M",400-500k
+"GoldenLitten|F",2kx
+"GoldenLitten|M",1kx
+"GoldenLitwick|F",5kx
+"GoldenLitwick|M",5kx
+"GoldenLotad|?",20-30k
+"GoldenLotad|F",2kx
+"GoldenLotad|M",2kx
+"GoldenLugia|?",50-100mx
+"GoldenMachop|?",30-50kx
+"GoldenMachop|F",10kx
+"GoldenMachop|M",10kx
+"GoldenMagikarp|?",30-60kx
+"GoldenMagikarp|F",3-4kx
+"GoldenMagikarp|G",2mx-4mx
+"GoldenMagikarp|M",3-4kx
+"GoldenMagnemite|?",20-30k
+"GoldenMagnemite|G",1kx
+"GoldenMantine|?",30-50k
+"GoldenMantine|F",20k
+"GoldenMantine|G",2mx
+"GoldenMantine|M",20k
+"GoldenMantyke|?",2-2.5mx
+"GoldenMantyke|F",350-450k
+"GoldenMantyke|M",350-450k
+"GoldenMaractus|M",2-3mx
+"GoldenMareep|?",20-25k
+"GoldenMareep|F",5k
+"GoldenMareep|M",5k
+"GoldenMawile|?",80-120k
+"GoldenMawile|F",20-30k
+"GoldenMawile|M",20-30k
+"GoldenMeowth (Alola)|F",40-50k
+"GoldenMeowth (Alola)|M",40-50k
+"GoldenMeowth|?",10-15k
+"GoldenMeowth|F",150-200k
+"GoldenMeowth|G",1.5mx-2mx
+"GoldenMeowth|M",150-200k
+"GoldenMewtwo|?",1mx-1.2mx
+"GoldenMewtwo|G",100k
+"GoldenMiltank|?",1.6mx-2mx
+"GoldenMiltank|F",5-10k
+"GoldenMime Jr.|?",800k-1mx
+"GoldenMime Jr.|F",350-450k
+"GoldenMime Jr.|M",350-450k
+"GoldenMimikyu (Busted)|F",750k-1mx
+"GoldenMimikyu|F",750k-1mx
+"GoldenMimikyu|M",750k-1mx
+"GoldenMinccino|F",2-4mx
+"GoldenMinun|F",2kx
+"GoldenMinun|M",2kx
+"GoldenMoltres|?",120-300k
+"GoldenMoltres|G",20-30k
+"GoldenMudkip|F",750k-1mx
+"GoldenMudkip|M",600-750k
+"GoldenMunna|F",45-60k
+"GoldenMunna|M",40-50k
+"GoldenMurkrow|?",50-80k
+"GoldenMurkrow|F",15-20k
+"GoldenMurkrow|M",15-20k
+"GoldenOddish|?",
+"GoldenOddish|M",
+"GoldenOmanyte|F",10-15k
+"GoldenOmanyte|M",5k
+"GoldenOshawott|F",600k-1mx
+"GoldenOshawott|M",500-700k
+"GoldenPancham|F",10k
+"GoldenPancham|M",10k
+"GoldenPanpour|F",800kx-1.2mx
+"GoldenPanpour|M",800kx-1.2mx
+"GoldenPansage|M",800kx-1.2mx
+"GoldenPansear|M",800kx-1.2mx
+"GoldenPawniard|F",2k
+"GoldenPawniard|M",2k
+"GoldenPhione|G",800k
+"GoldenPichu|?",20-40k
+"GoldenPichu|F",5-10k
+"GoldenPichu|G",2mx-3mx
+"GoldenPichu|M",5-10k
+"GoldenPidgey|F",450-600k
+"GoldenPidgey|M",450-600k
+"GoldenPiplup|F",4-7k
+"GoldenPiplup|M",4-7k
+"GoldenPlusle|F",2kx
+"GoldenPlusle|M",2kx
+"GoldenPoliwag|?",20-30k
+"GoldenPoliwag|F",3-5k
+"GoldenPoliwag|M",3-5k
+"GoldenPonyta (Galar)|?",20-40k
+"GoldenPonyta (Galar)|F",5-10k
+"GoldenPonyta (Galar)|M",5-10k
+"GoldenPonyta|?",20-30k
+"GoldenPonyta|F",3-5k
+"GoldenPonyta|G",2-3mx
+"GoldenPonyta|M",3-5k
+"GoldenPoochyena|?",400k-1.5mx
+"GoldenPoochyena|F",10-15k
+"GoldenPoochyena|M",8-10k
+"GoldenPopplio|F",2-3k
+"GoldenPopplio|M",1k
+"GoldenPsyduck|?",15-30k
+"GoldenPsyduck|F",1-2k
+"GoldenPsyduck|M",1-2k
+"GoldenPumpkaboo (Average)|F",1-2k
+"GoldenPumpkaboo (Average)|M",1-2k
+"GoldenPumpkaboo (Large)|F",1-3k
+"GoldenPumpkaboo (Large)|M",1-3k
+"GoldenPumpkaboo (Small)|F",0.5kx-1kx
+"GoldenPumpkaboo (Small)|M",0.5kx-1kx
+"GoldenPumpkaboo (Super)|F",20-40k
+"GoldenPumpkaboo (Super)|M",20-40k
+"GoldenRalts|?",30-60k
+"GoldenRalts|F",10-15k
+"GoldenRalts|M",15k
+"GoldenRayquaza|?",1.2mx-1.4mx
+"GoldenRayquaza|G",25k
+"GoldenRiolu|F",50-60k
+"GoldenRiolu|M",40-50k
+"GoldenRockruff|F",70-90k
+"GoldenRockruff|M",60-70k
+"GoldenRoggenrola|F",1k
+"GoldenRoggenrola|M",1k
+"GoldenRotom (Fan)|G",3-5k
+"GoldenRotom (Frost)|G",3-5k
+"GoldenRotom (Heat)|G",3-5k
+"GoldenRotom (Mow)|G",3-5k
+"GoldenRotom (Wash)|G",3-5k
+"GoldenRotom|G",3-5k
+"GoldenRowlet|F",2-4k
+"GoldenRowlet|M",1.5-2kx
+"GoldenSandile|F",15-20k
+"GoldenSandile|M",15-20k
+"GoldenSandshrew (Alola)|?",60-80k
+"GoldenSandshrew (Alola)|F",20-30k
+"GoldenSandshrew (Alola)|M",20-30k
+"GoldenSandshrew|?",20-30k
+"GoldenSandshrew|F",2-3k
+"GoldenSandshrew|G",500kx-2mx
+"GoldenSandshrew|M",2-3k
+"GoldenSandygast|F",0.5kx-1kx
+"GoldenSandygast|M",0.5kx-1kx
+"GoldenScatterbug|F",1-3kx
+"GoldenScatterbug|M",1-3kx
+"GoldenScyther|?",12mx-30mx
+"GoldenScyther|F",12mx-30mx
+"GoldenScyther|M",12mx-30mx
+"GoldenShinx|F",5kx
+"GoldenShinx|M",5kx
+"GoldenShroomish|F",20kx
+"GoldenShroomish|M",20kx
+"GoldenShuckle|?",8-10k
+"GoldenSinistea|G",200-300k
+"GoldenSkiddo|F",10-15k
+"GoldenSkiddo|M",10-15k
+"GoldenSlowpoke|F",2-3k
+"GoldenSlowpoke|M",2-3k
+"GoldenSneasel (Hisui)|?",500k-1mx
+"GoldenSneasel (Hisui)|F",500-750k
+"GoldenSneasel (Hisui)|M",500-750k
+"GoldenSneasel|?",10-30k
+"GoldenSneasel|F",5-10k
+"GoldenSneasel|M",5-10k
+"GoldenSnivy|F",600-800k
+"GoldenSnivy|M",600-800k
+"GoldenSnover|F",2k
+"GoldenSnover|M",2k
+"GoldenSpheal|?",20-30k
+"GoldenSpheal|F",2-5k
+"GoldenSpheal|M",2-5k
+"GoldenSpritzee|F",4-6kx
+"GoldenSpritzee|M",4-6kx
+"GoldenSquirtle|?",40-70k
+"GoldenSquirtle|F",30-35k
+"GoldenSquirtle|M",25-30k
+"GoldenStantler|?",10-20kx
+"GoldenStantler|F",5kx
+"GoldenStantler|M",5kx
+"GoldenSunkern|?",20-30kx
+"GoldenSunkern|F",2-4kx
+"GoldenSunkern|M",2-4kx
+"GoldenSwinub|?",20-30kx
+"GoldenSwinub|F",1-3kx
+"GoldenSwinub|M",1-3kx
+"GoldenSwirlix|F",3-5kx
+"GoldenSwirlix|M",3-5kx
+"GoldenTauros|?",60-150kx
+"GoldenTauros|F",5-10k
+"GoldenTauros|M",3-5k
+"GoldenTeddiursa|?",10-25k
+"GoldenTeddiursa|F",5-10k
+"GoldenTeddiursa|M",5-10k
+"GoldenTepig|F",600-800k
+"GoldenTepig|M",600-800k
+"GoldenTimburr|F",30-40k
+"GoldenTimburr|M",30-40k
+"GoldenTogedemaru|F",10-20k
+"GoldenTogedemaru|M",10-20k
+"GoldenTogepi|F",450-600k
+"GoldenTogepi|M",450-600k
+"GoldenTorchic|?",300-400k
+"GoldenTorchic|F",10-15k
+"GoldenTorchic|M",10-15k
+"GoldenTotodile|?",20-40k
+"GoldenTotodile|F",10-15k
+"GoldenTotodile|M",10k
+"GoldenTrapinch|?",100-150k
+"GoldenTrapinch|F",30-40k
+"GoldenTrapinch|M",30-40k
+"GoldenTreecko|?",300-400k
+"GoldenTreecko|F",15-20k
+"GoldenTreecko|M",10-15k
+"GoldenTropius|?",100-150k
+"GoldenTropius|F",20-25k
+"GoldenTropius|M",20-25k
+"GoldenTurtwig|F",3-5k
+"GoldenTurtwig|M",3-5k
+"GoldenTyrogue|?",20-40k
+"GoldenTyrogue|G",1.5mx-2.5mx
+"GoldenTyrogue|M",5k
+"GoldenTyrunt|F",8-15k
+"GoldenTyrunt|M",8-10k
+"GoldenVolcanion|G",8-10k
+"GoldenVulpix (Alola)|?",120-200k
+"GoldenVulpix (Alola)|F",40k
+"GoldenVulpix (Alola)|M",40k
+"GoldenVulpix|?",20-40k
+"GoldenVulpix|F",8-15k
+"GoldenVulpix|M",8-15k
+"GoldenWailmer|?",30-60k
+"GoldenWailmer|F",5-10k
+"GoldenWailmer|M",5-10k
+"GoldenWeedle|?",15-25k
+"GoldenWeedle|F",2kx
+"GoldenWeedle|M",2kx
+"GoldenWooper|?",40-60k
+"GoldenWooper|F",80-150k
+"GoldenWooper|M",80-150k
+"GoldenXerneas|G",40-70k
+"GoldenYanma|?",20-40k
+"GoldenYanma|F",1-2k
+"GoldenYanma|G",1mx-2mx
+"GoldenYanma|M",1-2k
+"GoldenYveltal|G",40-70k
+"GoldenZapdos|?",120-250k
+"GoldenZapdos|G",20-25k
+"GoldenZorua (Hisui)|F",100-120k
+"GoldenZorua (Hisui)|M",50-60k
+"GoldenZorua|F",10-20k
+"GoldenZorua|M",10-20k
+"GoldenZubat|F",70-90k
+"GoldenZubat|M",70-90k
+"GoldenZygarde (10%)|G",600kx-1.2mx
+"GoldenZygarde (50%)|G",600kx-1.2mx
+"GoldenZygarde (Complete)|G",600kx-1.2mx

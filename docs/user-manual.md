@@ -286,6 +286,32 @@ Common commands:
 - Unknown Pokémon → error
 - Same Pokémon comparison → error
 
+### `!marketpoll` (aliases: `!market`, `!mp`) (bang-only)
+Golden market preference tooling (base-stage Goldens only).
+
+**Public commands:**
+- `!marketpoll help`
+- `!marketpoll status`
+- `!marketpoll history [asset_or_name] [gender] [limit]`
+- `!marketpoll leaderboard [limit]`
+
+**Admin/privileged commands:**
+- `!marketpoll config show`
+- `!marketpoll config channel <channel_id_or_mention>`
+- `!marketpoll config enabled <on|off>`
+- `!marketpoll config cadence <hours>`
+- `!marketpoll config duration <duration>` (e.g. `15m`, `2h`, `1 day`; max `1 day`)
+- `!marketpoll config cooldown <days>`
+- `!marketpoll config minvotes <n>`
+- `!marketpoll tiers [tier] [gender] [limit]`
+- `!marketpoll poll now`
+
+**Notes:**
+- Seed ranges are loaded from `data/marketpoll_seeds.csv` on startup/boot.
+- If seed validation fails, automated MarketPoll polling is skipped until fixed.
+- Public outputs hide raw x ranges; admin tier output includes ranges.
+- No slash commands are provided for MarketPoll.
+
 ### `!promo` / `!p` (Promo)
 Shows the current weekly promo Pokémon/item.
 - **Usage:** `!promo` or `!p`

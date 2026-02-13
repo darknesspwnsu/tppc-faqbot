@@ -22,6 +22,7 @@ export const COMMAND_EXPOSURE_BY_GUILD = {
     "trading.ft": "q",
     "trading.id": "q",
     "trading.lf": "q",
+    "marketpoll.main": "bang",
   },
 
   // Official: disable collisions entirely
@@ -33,6 +34,7 @@ export const COMMAND_EXPOSURE_BY_GUILD = {
     "trading.ft": "bang",
     "trading.id": "bang",
     "trading.lf": "bang",
+    "marketpoll.main": "bang",
     "giveaway": "off",
   },
 };

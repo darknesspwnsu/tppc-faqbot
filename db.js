@@ -214,6 +214,120 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS goldmarket_settings (
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32),
+      enabled TINYINT(1) NOT NULL DEFAULT 0,
+      cadence_minutes INT UNSIGNED NOT NULL DEFAULT 180,
+      poll_minutes INT UNSIGNED NOT NULL DEFAULT 15,
+      pair_cooldown_days INT UNSIGNED NOT NULL DEFAULT 90,
+      min_votes INT UNSIGNED NOT NULL DEFAULT 5,
+      updated_by VARCHAR(32),
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id),
+      KEY goldmarket_enabled_idx (enabled),
+      KEY goldmarket_channel_idx (channel_id)
+    )
+  `,
+    [],
+    "init.goldmarket_settings"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS goldmarket_poll_runs (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      message_id VARCHAR(32) NOT NULL,
+      pair_key VARCHAR(300) NOT NULL,
+      left_asset_key VARCHAR(128) NOT NULL,
+      right_asset_key VARCHAR(128) NOT NULL,
+      votes_left INT UNSIGNED NOT NULL DEFAULT 0,
+      votes_right INT UNSIGNED NOT NULL DEFAULT 0,
+      total_votes INT UNSIGNED NOT NULL DEFAULT 0,
+      result VARCHAR(16) NOT NULL DEFAULT 'error',
+      affects_score TINYINT(1) NOT NULL DEFAULT 0,
+      started_at_ms BIGINT UNSIGNED NOT NULL,
+      ends_at_ms BIGINT UNSIGNED NOT NULL,
+      closed_at_ms BIGINT UNSIGNED,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY goldmarket_poll_message_idx (message_id),
+      KEY goldmarket_poll_due_idx (closed_at_ms, ends_at_ms),
+      KEY goldmarket_poll_pair_idx (pair_key),
+      KEY goldmarket_poll_guild_open_idx (guild_id, closed_at_ms)
+    )
+  `,
+    [],
+    "init.goldmarket_poll_runs"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS goldmarket_pair_cooldowns (
+      pair_key VARCHAR(300) NOT NULL,
+      canonical_a_key VARCHAR(128) NOT NULL,
+      canonical_b_key VARCHAR(128) NOT NULL,
+      last_polled_at_ms BIGINT UNSIGNED NOT NULL,
+      next_eligible_at_ms BIGINT UNSIGNED NOT NULL,
+      poll_count INT UNSIGNED NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (pair_key),
+      KEY goldmarket_pair_next_idx (next_eligible_at_ms)
+    )
+  `,
+    [],
+    "init.goldmarket_pair_cooldowns"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS goldmarket_scores (
+      asset_key VARCHAR(128) NOT NULL,
+      elo DECIMAL(10,4) NOT NULL DEFAULT 1500.0000,
+      wins INT UNSIGNED NOT NULL DEFAULT 0,
+      losses INT UNSIGNED NOT NULL DEFAULT 0,
+      ties INT UNSIGNED NOT NULL DEFAULT 0,
+      polls_count INT UNSIGNED NOT NULL DEFAULT 0,
+      votes_for INT UNSIGNED NOT NULL DEFAULT 0,
+      votes_against INT UNSIGNED NOT NULL DEFAULT 0,
+      last_poll_at_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (asset_key),
+      KEY goldmarket_scores_elo_idx (elo)
+    )
+  `,
+    [],
+    "init.goldmarket_scores"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS goldmarket_scheduler_log (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      guild_id VARCHAR(32) NOT NULL,
+      run_at_ms BIGINT UNSIGNED NOT NULL,
+      status VARCHAR(32) NOT NULL,
+      reason VARCHAR(128) NOT NULL,
+      pair_key VARCHAR(300),
+      message_id VARCHAR(32),
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY goldmarket_sched_guild_run_idx (guild_id, run_at_ms)
+    )
+  `,
+    [],
+    "init.goldmarket_scheduler_log"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS giveaways (
       message_id VARCHAR(32) NOT NULL,
       guild_id VARCHAR(32) NOT NULL,

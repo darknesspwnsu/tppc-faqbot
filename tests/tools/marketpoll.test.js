@@ -1,0 +1,173 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const isAdminOrPrivileged = vi.fn(() => true);
+const registerScheduler = vi.fn();
+
+vi.mock("../../auth.js", () => ({ isAdminOrPrivileged }));
+vi.mock("../../shared/scheduler_registry.js", () => ({ registerScheduler }));
+vi.mock("../../shared/timer_utils.js", () => ({
+  startInterval: vi.fn(() => 1),
+  startTimeout: vi.fn(() => 1),
+  clearTimer: vi.fn(),
+}));
+
+vi.mock("../../tools/marketpoll_store.js", () => ({
+  MARKETPOLL_DEFAULTS: {
+    enabled: false,
+    channelId: null,
+    cadenceMinutes: 180,
+    pollMinutes: 15,
+    pairCooldownDays: 90,
+    minVotes: 5,
+  },
+  ensureMarketPollSettings: vi.fn(async () => {}),
+  getMarketPollSettings: vi.fn(async () => ({
+    enabled: false,
+    channelId: null,
+    cadenceMinutes: 180,
+    pollMinutes: 15,
+    pairCooldownDays: 90,
+    minVotes: 5,
+  })),
+  updateMarketPollSettings: vi.fn(async () => ({
+    enabled: false,
+    channelId: null,
+    cadenceMinutes: 180,
+    pollMinutes: 15,
+    pairCooldownDays: 90,
+    minVotes: 5,
+  })),
+  listEnabledMarketPollSettings: vi.fn(async () => []),
+  insertMarketPollSchedulerLog: vi.fn(async () => {}),
+  getLastMarketPollSchedulerRunMs: vi.fn(async () => null),
+  insertMarketPollRun: vi.fn(async () => 1),
+  listDueMarketPollRuns: vi.fn(async () => []),
+  closeMarketPollRun: vi.fn(async () => {}),
+  markMarketPollRunError: vi.fn(async () => {}),
+  listOpenMarketPollPairKeys: vi.fn(async () => new Set()),
+  getMarketPollCooldownMap: vi.fn(async () => new Map()),
+  upsertMarketPollCooldown: vi.fn(async () => {}),
+  getMarketPollScoresForAssets: vi.fn(async () => new Map()),
+  upsertMarketPollScores: vi.fn(async () => {}),
+  listMarketPollLeaderboard: vi.fn(async () => []),
+  listMarketPollHistory: vi.fn(async () => []),
+  countOpenMarketPolls: vi.fn(async () => 0),
+}));
+
+vi.mock("../../tools/marketpoll_model.js", () => ({
+  GOLDMARKET_TIERS: [
+    { id: "1-5kx", label: "1-5kx" },
+    { id: "5-10kx", label: "5-10kx" },
+  ],
+  parseSeedCsv: vi.fn(() => ({ rows: [], errors: ["mock"] })),
+  buildAssetUniverse: vi.fn(() => ({
+    allAssetsByKey: new Map(),
+    eligibleAssetsByKey: new Map(),
+    eligibleAssets: [],
+  })),
+  selectCandidatePair: vi.fn(() => null),
+  canonicalPairKey: vi.fn((a, b) => `${a}|${b}`),
+  applyEloFromVotes: vi.fn(() => ({
+    leftScore: 1500,
+    rightScore: 1500,
+    totalVotes: 0,
+    result: "tie",
+    affectsScore: false,
+  })),
+  resolveAssetQuery: vi.fn(() => ({ asset: null, matches: [] })),
+  formatX: vi.fn((n) => String(n)),
+}));
+
+describe("marketpoll registration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isAdminOrPrivileged.mockReturnValue(true);
+  });
+
+  it("registers as bang command only via register.expose", async () => {
+    const { registerMarketPoll } = await import("../../tools/marketpoll.js");
+
+    const register = vi.fn();
+    register.expose = vi.fn();
+    register.slash = vi.fn();
+    register.listener = vi.fn();
+
+    registerMarketPoll(register);
+
+    expect(register.expose).toHaveBeenCalledTimes(1);
+    expect(register.slash).not.toHaveBeenCalled();
+
+    const exposed = register.expose.mock.calls[0][0];
+    expect(exposed.logicalId).toBe("marketpoll.main");
+    expect(exposed.name).toBe("marketpoll");
+    expect(exposed.opts?.aliases || []).toEqual(expect.arrayContaining(["market", "mp"]));
+  });
+
+  it("returns help text", async () => {
+    const { registerMarketPoll } = await import("../../tools/marketpoll.js");
+
+    const register = vi.fn();
+    register.expose = vi.fn();
+    register.listener = vi.fn();
+
+    registerMarketPoll(register);
+    const handler = register.expose.mock.calls[0][0].handler;
+
+    const message = {
+      guildId: "g1",
+      reply: vi.fn(async () => {}),
+      channel: { send: vi.fn(async () => {}) },
+    };
+
+    await handler({ message, rest: "help", cmd: "!marketpoll" });
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("MarketPoll Commands"));
+  });
+
+  it("formats unknown gender as (?) and parses flexible durations", async () => {
+    const { __testables } = await import("../../tools/marketpoll.js");
+
+    expect(__testables.formatAssetDisplay("GoldenHeracross|?")).toBe("GoldenHeracross (?)");
+    expect(__testables.formatAssetDisplay("GoldenMiltank|F")).toBe("GoldenMiltank F");
+
+    expect(__testables.parseDurationMinutes(["15"])).toBe(15);
+    expect(__testables.parseDurationMinutes(["15m"])).toBe(15);
+    expect(__testables.parseDurationMinutes(["2h"])).toBe(120);
+    expect(__testables.parseDurationMinutes(["1", "day"])).toBe(1440);
+    expect(__testables.parseDurationMinutes(["1.5h"])).toBe(90);
+    expect(__testables.parseDurationMinutes(["0m"])).toBeNull();
+    expect(__testables.parseDurationMinutes(["abc"])).toBeNull();
+  });
+
+  it("blocks admin-only config for non-admin users", async () => {
+    const { registerMarketPoll } = await import("../../tools/marketpoll.js");
+
+    const register = vi.fn();
+    register.expose = vi.fn();
+    register.listener = vi.fn();
+
+    registerMarketPoll(register);
+    const handler = register.expose.mock.calls[0][0].handler;
+
+    isAdminOrPrivileged.mockReturnValue(false);
+    const message = {
+      guildId: "g1",
+      reply: vi.fn(async () => {}),
+      channel: { send: vi.fn(async () => {}) },
+    };
+
+    await handler({ message, rest: "config show", cmd: "!marketpoll" });
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("do not have permission")
+    );
+  });
+
+  it("registers scheduler hook", async () => {
+    const { registerMarketPollScheduler } = await import("../../tools/marketpoll.js");
+    registerMarketPollScheduler();
+    expect(registerScheduler).toHaveBeenCalledWith(
+      "marketpoll",
+      expect.any(Function),
+      expect.any(Function)
+    );
+  });
+});
