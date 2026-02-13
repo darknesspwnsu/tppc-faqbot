@@ -97,25 +97,70 @@ async function runGit(args, { cwd, repoLabel, logFailure = true } = {}) {
   }
 }
 
+async function isUsableGitRepo(dir, repoLabel) {
+  try {
+    const stat = await fs.stat(dir);
+    if (!stat.isDirectory()) return false;
+  } catch {
+    return false;
+  }
+
+  const revParse = await runGit(["rev-parse", "--is-inside-work-tree"], {
+    cwd: dir,
+    repoLabel,
+    logFailure: false,
+  });
+  return revParse.ok && revParse.stdout === "true";
+}
+
+async function resetAndCloneExportRepo(cfg, exportDir, repoLabel) {
+  try {
+    await fs.rm(exportDir, { recursive: true, force: true });
+    await fs.mkdir(path.dirname(exportDir), { recursive: true });
+  } catch (err) {
+    logger.warn("metrics.export.repo.reset_failed", {
+      repo: repoLabel,
+      dir: exportDir,
+      error: logger.serializeError(err),
+    });
+    return { ok: false, reason: "reset_failed" };
+  }
+
+  const authed = buildAuthedRepoUrl(cfg.repo, cfg.token);
+  const cloneArgs = ["clone", "--depth", "1", authed, exportDir];
+  const clone = await runGit(cloneArgs, { repoLabel });
+  if (!clone.ok) return { ok: false, reason: "clone_failed" };
+  return { ok: true };
+}
+
 async function ensureExportRepo(cfg) {
   const exportDir = path.resolve(cfg.exportDir);
   const repoLabel = scrubRepoUrl(cfg.repo);
 
-  try {
-    const stat = await fs.stat(exportDir);
-    if (!stat.isDirectory()) {
-      throw new Error("export dir is not a directory");
+  const repoUsable = await isUsableGitRepo(exportDir, repoLabel);
+  if (!repoUsable) {
+    const existed = await fs
+      .stat(exportDir)
+      .then(() => true)
+      .catch(() => false);
+    if (existed) {
+      logger.info("metrics.export.repo.recovering", { repo: repoLabel, dir: exportDir });
     }
-    await fs.stat(path.join(exportDir, ".git"));
-  } catch {
-    const authed = buildAuthedRepoUrl(cfg.repo, cfg.token);
-    const cloneArgs = ["clone", "--depth", "1", authed, exportDir];
-    const clone = await runGit(cloneArgs, { repoLabel });
-    if (!clone.ok) return { ok: false, reason: "clone_failed" };
+    const clone = await resetAndCloneExportRepo(cfg, exportDir, repoLabel);
+    if (!clone.ok) return clone;
   }
 
-  await runGit(["config", "user.name", cfg.gitName], { cwd: exportDir, repoLabel });
-  await runGit(["config", "user.email", cfg.gitEmail], { cwd: exportDir, repoLabel });
+  const setGitName = await runGit(["config", "user.name", cfg.gitName], {
+    cwd: exportDir,
+    repoLabel,
+  });
+  if (!setGitName.ok) return { ok: false, reason: "config_failed" };
+
+  const setGitEmail = await runGit(["config", "user.email", cfg.gitEmail], {
+    cwd: exportDir,
+    repoLabel,
+  });
+  if (!setGitEmail.ok) return { ok: false, reason: "config_failed" };
 
   const status = await runGit(["status", "--porcelain"], { cwd: exportDir, repoLabel });
   if (!status.ok) return { ok: false, reason: "status_failed" };
@@ -398,5 +443,6 @@ export const __testables = {
   parseBucketTs,
   parseTags,
   isErrorMetric,
+  isUsableGitRepo,
   msUntilNextHour,
 };

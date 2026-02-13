@@ -129,5 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# local metrics export working tree
+.metrics_export/
+
 **/.DS_Store
 docs/user-manual-wiki.md

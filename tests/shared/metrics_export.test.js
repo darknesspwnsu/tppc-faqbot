@@ -1,8 +1,14 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { describe, it, expect } from "vitest";
 
 import { __testables } from "../../shared/metrics_export.js";
 
-const { buildMetricsSnapshot, msUntilNextHour } = __testables;
+const execFileAsync = promisify(execFile);
+const { buildMetricsSnapshot, msUntilNextHour, isUsableGitRepo } = __testables;
 
 describe("metrics export snapshot", () => {
   it("builds overview and timeseries from rows", () => {
@@ -41,5 +47,19 @@ describe("metrics export snapshot", () => {
     const now = Date.parse("2026-01-04T10:30:15Z");
     const ms = msUntilNextHour(now);
     expect(ms).toBe(29 * 60 * 1000 + 45 * 1000);
+  });
+
+  it("detects corrupted git repos as unusable", async () => {
+    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "metrics-export-test-"));
+    const repoDir = path.join(tmpRoot, "repo");
+    try {
+      await execFileAsync("git", ["init", repoDir]);
+      await expect(isUsableGitRepo(repoDir, "test-repo")).resolves.toBe(true);
+
+      await fs.rm(path.join(repoDir, ".git", "HEAD"), { force: true });
+      await expect(isUsableGitRepo(repoDir, "test-repo")).resolves.toBe(false);
+    } finally {
+      await fs.rm(tmpRoot, { recursive: true, force: true });
+    }
   });
 });
