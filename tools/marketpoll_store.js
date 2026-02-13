@@ -21,6 +21,47 @@ function normalizeLimit(limit, { fallback = 25, max = 500 } = {}) {
   return Math.min(int, max);
 }
 
+function normalizeAssetKeyList(keys, fallback = null) {
+  const src = Array.isArray(keys) ? keys : [];
+  const out = [...new Set(src.map((x) => String(x || "").trim()).filter(Boolean))];
+  if (out.length) return out;
+  const fb = String(fallback || "").trim();
+  return fb ? [fb] : [];
+}
+
+function parseAssetKeyList(raw, fallback = null) {
+  try {
+    const parsed = JSON.parse(String(raw || "[]"));
+    return normalizeAssetKeyList(parsed, fallback);
+  } catch {
+    return normalizeAssetKeyList([], fallback);
+  }
+}
+
+function mapPollRunRow(row) {
+  const leftAssetKeys = parseAssetKeyList(row.left_assets_json, row.left_asset_key);
+  const rightAssetKeys = parseAssetKeyList(row.right_assets_json, row.right_asset_key);
+  return {
+    id: Number(row.id),
+    guildId: String(row.guild_id),
+    channelId: String(row.channel_id),
+    messageId: String(row.message_id),
+    pairKey: String(row.pair_key),
+    leftAssetKey: String(row.left_asset_key),
+    rightAssetKey: String(row.right_asset_key),
+    leftAssetKeys,
+    rightAssetKeys,
+    votesLeft: Number(row.votes_left || 0),
+    votesRight: Number(row.votes_right || 0),
+    totalVotes: Number(row.total_votes || 0),
+    result: String(row.result || "error"),
+    affectsScore: Boolean(row.affects_score),
+    startedAtMs: Number(row.started_at_ms || 0),
+    endsAtMs: Number(row.ends_at_ms || 0),
+    closedAtMs: Number(row.closed_at_ms || 0),
+  };
+}
+
 function toSetting(row, guildId) {
   if (!row) {
     return {
@@ -203,12 +244,19 @@ export async function insertMarketPollRun({
   channelId,
   messageId,
   pairKey,
+  leftAssetKeys,
+  rightAssetKeys,
   leftAssetKey,
   rightAssetKey,
   startedAtMs,
   endsAtMs,
 }) {
   const db = getDb();
+  const safeLeftKeys = normalizeAssetKeyList(leftAssetKeys, leftAssetKey);
+  const safeRightKeys = normalizeAssetKeyList(rightAssetKeys, rightAssetKey);
+  const safeLeftPrimary = String(safeLeftKeys[0] || leftAssetKey || "");
+  const safeRightPrimary = String(safeRightKeys[0] || rightAssetKey || "");
+
   const [result] = await db.execute(
     `
     INSERT INTO goldmarket_poll_runs (
@@ -217,18 +265,22 @@ export async function insertMarketPollRun({
       message_id,
       pair_key,
       left_asset_key,
+      left_assets_json,
       right_asset_key,
+      right_assets_json,
       started_at_ms,
       ends_at_ms
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       String(guildId),
       String(channelId),
       String(messageId),
       String(pairKey),
-      String(leftAssetKey),
-      String(rightAssetKey),
+      safeLeftPrimary,
+      JSON.stringify(safeLeftKeys),
+      safeRightPrimary,
+      JSON.stringify(safeRightKeys),
       Number(startedAtMs),
       Number(endsAtMs),
     ]
@@ -249,7 +301,9 @@ export async function listDueMarketPollRuns({ nowMs = Date.now(), limit = 25 }) 
       message_id,
       pair_key,
       left_asset_key,
+      left_assets_json,
       right_asset_key,
+      right_assets_json,
       started_at_ms,
       ends_at_ms
     FROM goldmarket_poll_runs
@@ -261,17 +315,7 @@ export async function listDueMarketPollRuns({ nowMs = Date.now(), limit = 25 }) 
     [Number(nowMs)]
   );
 
-  return (rows || []).map((row) => ({
-    id: Number(row.id),
-    guildId: String(row.guild_id),
-    channelId: String(row.channel_id),
-    messageId: String(row.message_id),
-    pairKey: String(row.pair_key),
-    leftAssetKey: String(row.left_asset_key),
-    rightAssetKey: String(row.right_asset_key),
-    startedAtMs: Number(row.started_at_ms),
-    endsAtMs: Number(row.ends_at_ms),
-  }));
+  return (rows || []).map((row) => mapPollRunRow(row));
 }
 
 export async function closeMarketPollRun({
@@ -498,6 +542,8 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
   const db = getDb();
   const safeLimit = normalizeLimit(limit, { fallback: 10, max: 200 });
   if (assetKey) {
+    const target = String(assetKey || "");
+    const expandedLimit = Math.min(1000, safeLimit * 25);
     const [rows] = await db.execute(
       `
       SELECT
@@ -507,7 +553,9 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
         message_id,
         pair_key,
         left_asset_key,
+        left_assets_json,
         right_asset_key,
+        right_assets_json,
         votes_left,
         votes_right,
         total_votes,
@@ -518,30 +566,15 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
         closed_at_ms
       FROM goldmarket_poll_runs
       WHERE closed_at_ms IS NOT NULL
-        AND (left_asset_key = ? OR right_asset_key = ?)
       ORDER BY closed_at_ms DESC
-      LIMIT ${safeLimit}
-    `,
-      [String(assetKey), String(assetKey)]
+      LIMIT ${expandedLimit}
+    `
     );
 
-    return (rows || []).map((row) => ({
-      id: Number(row.id),
-      guildId: String(row.guild_id),
-      channelId: String(row.channel_id),
-      messageId: String(row.message_id),
-      pairKey: String(row.pair_key),
-      leftAssetKey: String(row.left_asset_key),
-      rightAssetKey: String(row.right_asset_key),
-      votesLeft: Number(row.votes_left || 0),
-      votesRight: Number(row.votes_right || 0),
-      totalVotes: Number(row.total_votes || 0),
-      result: String(row.result || "error"),
-      affectsScore: Boolean(row.affects_score),
-      startedAtMs: Number(row.started_at_ms || 0),
-      endsAtMs: Number(row.ends_at_ms || 0),
-      closedAtMs: Number(row.closed_at_ms || 0),
-    }));
+    return (rows || [])
+      .map((row) => mapPollRunRow(row))
+      .filter((row) => row.leftAssetKeys.includes(target) || row.rightAssetKeys.includes(target))
+      .slice(0, safeLimit);
   }
 
   const [rows] = await db.execute(
@@ -553,7 +586,9 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
       message_id,
       pair_key,
       left_asset_key,
+      left_assets_json,
       right_asset_key,
+      right_assets_json,
       votes_left,
       votes_right,
       total_votes,
@@ -569,23 +604,7 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
   `
   );
 
-  return (rows || []).map((row) => ({
-    id: Number(row.id),
-    guildId: String(row.guild_id),
-    channelId: String(row.channel_id),
-    messageId: String(row.message_id),
-    pairKey: String(row.pair_key),
-    leftAssetKey: String(row.left_asset_key),
-    rightAssetKey: String(row.right_asset_key),
-    votesLeft: Number(row.votes_left || 0),
-    votesRight: Number(row.votes_right || 0),
-    totalVotes: Number(row.total_votes || 0),
-    result: String(row.result || "error"),
-    affectsScore: Boolean(row.affects_score),
-    startedAtMs: Number(row.started_at_ms || 0),
-    endsAtMs: Number(row.ends_at_ms || 0),
-    closedAtMs: Number(row.closed_at_ms || 0),
-  }));
+  return (rows || []).map((row) => mapPollRunRow(row));
 }
 
 export async function countOpenMarketPolls({ guildId }) {

@@ -33,9 +33,9 @@ import {
   GOLDMARKET_TIERS,
   parseSeedCsv,
   buildAssetUniverse,
-  selectCandidatePair,
+  selectCandidateMatchup,
   canonicalPairKey,
-  applyEloFromVotes,
+  applyEloFromVotesBundles,
   resolveAssetQuery,
   formatX,
 } from "./marketpoll_model.js";
@@ -48,6 +48,8 @@ const POLL_TICK_MS = 60_000;
 const MAX_HISTORY_LIMIT = 50;
 const MAX_LEADERBOARD_LIMIT = 50;
 const MAX_TIERS_LIMIT = 100;
+const MAX_SIDE_ASSETS = 2;
+const SIDE_SIZE_OPTIONS = [1, 2];
 
 let clientRef = null;
 let schedulerBooted = false;
@@ -196,6 +198,19 @@ function formatAssetDisplay(assetKey) {
   const [name, gender] = String(assetKey || "").split("|");
   const normalizedGender = gender === "?" ? "(?)" : gender || "";
   return `${name || "Unknown"} ${normalizedGender}`.trim();
+}
+
+function normalizeAssetKeyList(keys, fallback = "") {
+  const list = Array.isArray(keys) ? keys : [];
+  const deduped = [...new Set(list.map((x) => String(x || "").trim()).filter(Boolean))];
+  if (deduped.length) return deduped;
+  const fb = String(fallback || "").trim();
+  return fb ? [fb] : [];
+}
+
+function formatPollSide(assetKeys, fallback = "") {
+  const keys = normalizeAssetKeyList(assetKeys, fallback);
+  return keys.map((k) => formatAssetDisplay(k)).join(" + ");
 }
 
 function fileStatSignature(stat) {
@@ -403,37 +418,33 @@ async function finalizePollRun(run) {
     const votesLeft = leftVoters.length;
     const votesRight = rightVoters.length;
 
+    const leftAssetKeys = normalizeAssetKeyList(run.leftAssetKeys, run.leftAssetKey);
+    const rightAssetKeys = normalizeAssetKeyList(run.rightAssetKeys, run.rightAssetKey);
+    const allAssetKeys = [...new Set([...leftAssetKeys, ...rightAssetKeys])];
+
     const current = await getMarketPollScoresForAssets({
-      assetKeys: [run.leftAssetKey, run.rightAssetKey],
+      assetKeys: allAssetKeys,
     });
 
-    const leftBase = current.get(run.leftAssetKey) || {
-      assetKey: run.leftAssetKey,
-      elo: 1500,
-      wins: 0,
-      losses: 0,
-      ties: 0,
-      pollsCount: 0,
-      votesFor: 0,
-      votesAgainst: 0,
-      lastPollAtMs: 0,
-    };
+    const baseFor = (assetKey) =>
+      current.get(assetKey) || {
+        assetKey,
+        elo: 1500,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        pollsCount: 0,
+        votesFor: 0,
+        votesAgainst: 0,
+        lastPollAtMs: 0,
+      };
 
-    const rightBase = current.get(run.rightAssetKey) || {
-      assetKey: run.rightAssetKey,
-      elo: 1500,
-      wins: 0,
-      losses: 0,
-      ties: 0,
-      pollsCount: 0,
-      votesFor: 0,
-      votesAgainst: 0,
-      lastPollAtMs: 0,
-    };
+    const leftBaseRows = leftAssetKeys.map(baseFor);
+    const rightBaseRows = rightAssetKeys.map(baseFor);
 
-    const elo = applyEloFromVotes({
-      leftScore: leftBase.elo,
-      rightScore: rightBase.elo,
+    const elo = applyEloFromVotesBundles({
+      leftScores: leftBaseRows.map((x) => x.elo),
+      rightScores: rightBaseRows.map((x) => x.elo),
       votesLeft,
       votesRight,
       minVotes: settings.minVotes,
@@ -442,26 +453,35 @@ async function finalizePollRun(run) {
     const leftOutcome = elo.result === "left" ? "win" : elo.result === "right" ? "loss" : "tie";
     const rightOutcome = elo.result === "right" ? "win" : elo.result === "left" ? "loss" : "tie";
 
-    await upsertMarketPollScores({
-      updates: [
-        buildScoreRow(leftBase, {
-          elo: elo.leftScore,
+    const updates = [];
+    leftBaseRows.forEach((base, idx) => {
+      updates.push(
+        buildScoreRow(base, {
+          elo: elo.leftScores[idx] ?? base.elo,
           votesFor: votesLeft,
           votesAgainst: votesRight,
           outcome: leftOutcome,
-        }),
-        buildScoreRow(rightBase, {
-          elo: elo.rightScore,
+        })
+      );
+    });
+    rightBaseRows.forEach((base, idx) => {
+      updates.push(
+        buildScoreRow(base, {
+          elo: elo.rightScores[idx] ?? base.elo,
           votesFor: votesRight,
           votesAgainst: votesLeft,
           outcome: rightOutcome,
-        }),
-      ],
+        })
+      );
     });
 
-    const [aKey, bKey] = [run.leftAssetKey, run.rightAssetKey].sort((a, b) => a.localeCompare(b));
+    await upsertMarketPollScores({ updates });
+
+    const leftBundleKey = leftAssetKeys.join(" + ").slice(0, 128);
+    const rightBundleKey = rightAssetKeys.join(" + ").slice(0, 128);
+    const [aKey, bKey] = [leftBundleKey, rightBundleKey].sort((a, b) => a.localeCompare(b));
     await upsertMarketPollCooldown({
-      pairKey: canonicalPairKey(run.leftAssetKey, run.rightAssetKey),
+      pairKey: run.pairKey || canonicalPairKey(leftAssetKeys, rightAssetKeys),
       canonicalAKey: aKey,
       canonicalBKey: bKey,
       lastPolledAtMs: nowMs,
@@ -553,12 +573,14 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
   const openPairKeys = await listOpenMarketPollPairKeys({ guildId: setting.guildId });
   const cooldowns = await getMarketPollCooldownMap({ nowMs });
 
-  const candidate = selectCandidatePair({
+  const candidate = selectCandidateMatchup({
     assets: seedState.rows,
     cooldowns,
     openPairKeys,
     nowMs,
     preferSameGender: true,
+    maxSideSize: MAX_SIDE_ASSETS,
+    sideSizeOptions: SIDE_SIZE_OPTIONS,
   });
 
   if (!candidate) {
@@ -576,11 +598,12 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
   const flip = Math.random() < 0.5;
   const left = flip ? candidate.left : candidate.right;
   const right = flip ? candidate.right : candidate.left;
+  const pairKey = canonicalPairKey(left.assetKeys, right.assetKeys);
 
   const pollPayload = {
     poll: {
       question: { text: "Which Golden do you prefer?" },
-      answers: [{ text: formatAssetDisplay(left.assetKey) }, { text: formatAssetDisplay(right.assetKey) }],
+      answers: [{ text: formatPollSide(left.assetKeys) }, { text: formatPollSide(right.assetKeys) }],
       // Discord poll payload duration is hour-based; use a ceiling to avoid auto-closing
       // before our configured minute-based runtime closes it.
       duration: Math.max(1, Math.min(24, Math.ceil(Number(setting.pollMinutes || 1) / 60))),
@@ -608,9 +631,11 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
     guildId: setting.guildId,
     channelId: setting.channelId,
     messageId: String(pollMessage.id),
-    pairKey: canonicalPairKey(left.assetKey, right.assetKey),
-    leftAssetKey: left.assetKey,
-    rightAssetKey: right.assetKey,
+    pairKey,
+    leftAssetKeys: left.assetKeys,
+    rightAssetKeys: right.assetKeys,
+    leftAssetKey: left.assetKeys[0],
+    rightAssetKey: right.assetKeys[0],
     startedAtMs: nowMs,
     endsAtMs,
   });
@@ -625,7 +650,7 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
       runAtMs: nowMs,
       status: reason === "scheduled" ? "posted" : "posted_manual",
       reason,
-      pairKey: canonicalPairKey(left.assetKey, right.assetKey),
+      pairKey,
       messageId: String(pollMessage.id),
     });
   }
@@ -744,7 +769,10 @@ async function handleHistory({ message, tokens }) {
       const stamp = row.closedAtMs ? `<t:${Math.floor(row.closedAtMs / 1000)}:R>` : "(pending)";
       const scoreTag = row.affectsScore ? "counted" : "no-score";
       lines.push(
-        `${stamp} ${formatAssetDisplay(row.leftAssetKey)} vs ${formatAssetDisplay(row.rightAssetKey)} (${row.votesLeft}-${row.votesRight}, ${scoreTag})`
+        `${stamp} ${formatPollSide(row.leftAssetKeys, row.leftAssetKey)} vs ${formatPollSide(
+          row.rightAssetKeys,
+          row.rightAssetKey
+        )} (${row.votesLeft}-${row.votesRight}, ${scoreTag})`
       );
     }
 
@@ -773,14 +801,16 @@ async function handleHistory({ message, tokens }) {
 
   const lines = [`**History: ${resolved.asset.assetKey}**`];
   for (const row of rows) {
-    const isLeft = row.leftAssetKey === resolved.asset.assetKey;
+    const isLeft = (row.leftAssetKeys || []).includes(resolved.asset.assetKey);
     const myVotes = isLeft ? row.votesLeft : row.votesRight;
     const oppVotes = isLeft ? row.votesRight : row.votesLeft;
-    const opp = isLeft ? row.rightAssetKey : row.leftAssetKey;
+    const oppKeys = isLeft
+      ? normalizeAssetKeyList(row.rightAssetKeys, row.rightAssetKey)
+      : normalizeAssetKeyList(row.leftAssetKeys, row.leftAssetKey);
     const outcome = myVotes > oppVotes ? "W" : myVotes < oppVotes ? "L" : "T";
     const scoreTag = row.affectsScore ? "counted" : "no-score";
     const stamp = row.closedAtMs ? `<t:${Math.floor(row.closedAtMs / 1000)}:R>` : "(pending)";
-    lines.push(`${stamp} vs ${formatAssetDisplay(opp)} (${myVotes}-${oppVotes}, ${outcome}, ${scoreTag})`);
+    lines.push(`${stamp} vs ${formatPollSide(oppKeys)} (${myVotes}-${oppVotes}, ${outcome}, ${scoreTag})`);
   }
 
   await replyChunked(message, lines);
@@ -988,7 +1018,7 @@ async function handlePollNow({ message }) {
   }
 
   await message.reply(
-    `Posted MarketPoll poll: ${formatAssetDisplay(res.left.assetKey)} vs ${formatAssetDisplay(res.right.assetKey)}.`
+    `Posted MarketPoll poll: ${formatPollSide(res.left.assetKeys)} vs ${formatPollSide(res.right.assetKeys)}.`
   );
 }
 

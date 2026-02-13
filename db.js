@@ -243,7 +243,9 @@ export async function initDb() {
       message_id VARCHAR(32) NOT NULL,
       pair_key VARCHAR(300) NOT NULL,
       left_asset_key VARCHAR(128) NOT NULL,
+      left_assets_json TEXT NULL,
       right_asset_key VARCHAR(128) NOT NULL,
+      right_assets_json TEXT NULL,
       votes_left INT UNSIGNED NOT NULL DEFAULT 0,
       votes_right INT UNSIGNED NOT NULL DEFAULT 0,
       total_votes INT UNSIGNED NOT NULL DEFAULT 0,
@@ -263,6 +265,56 @@ export async function initDb() {
     [],
     "init.goldmarket_poll_runs"
   );
+
+  const [leftAssetsJsonCols] = await execDb(
+    db,
+    `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema = DATABASE()
+      AND table_name = ?
+      AND column_name = ?
+  `,
+    ["goldmarket_poll_runs", "left_assets_json"],
+    "check.goldmarket_poll_runs.left_assets_json"
+  );
+
+  if (!leftAssetsJsonCols?.length) {
+    await execDb(
+      db,
+      `
+      ALTER TABLE goldmarket_poll_runs
+        ADD COLUMN left_assets_json TEXT NULL AFTER left_asset_key
+    `,
+      [],
+      "alter.goldmarket_poll_runs.left_assets_json"
+    );
+  }
+
+  const [rightAssetsJsonCols] = await execDb(
+    db,
+    `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema = DATABASE()
+      AND table_name = ?
+      AND column_name = ?
+  `,
+    ["goldmarket_poll_runs", "right_assets_json"],
+    "check.goldmarket_poll_runs.right_assets_json"
+  );
+
+  if (!rightAssetsJsonCols?.length) {
+    await execDb(
+      db,
+      `
+      ALTER TABLE goldmarket_poll_runs
+        ADD COLUMN right_assets_json TEXT NULL AFTER right_asset_key
+    `,
+      [],
+      "alter.goldmarket_poll_runs.right_assets_json"
+    );
+  }
 
   await execDb(
     db,

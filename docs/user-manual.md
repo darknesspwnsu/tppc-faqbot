@@ -308,6 +308,7 @@ Golden market preference tooling (base-stage Goldens only).
 
 **Notes:**
 - Seed ranges are loaded from `data/marketpoll_seeds.csv` on startup/boot.
+- Poll matchups may be `1v1`, `1v2`, `2v1`, or `2v2`.
 - If seed validation fails, automated MarketPoll polling is skipped until fixed.
 - Public outputs hide raw x ranges; admin tier output includes ranges.
 - No slash commands are provided for MarketPoll.

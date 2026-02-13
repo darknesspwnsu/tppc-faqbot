@@ -65,11 +65,13 @@ vi.mock("../../tools/marketpoll_model.js", () => ({
     eligibleAssetsByKey: new Map(),
     eligibleAssets: [],
   })),
-  selectCandidatePair: vi.fn(() => null),
+  selectCandidateMatchup: vi.fn(() => null),
   canonicalPairKey: vi.fn((a, b) => `${a}|${b}`),
-  applyEloFromVotes: vi.fn(() => ({
+  applyEloFromVotesBundles: vi.fn(() => ({
     leftScore: 1500,
     rightScore: 1500,
+    leftScores: [1500],
+    rightScores: [1500],
     totalVotes: 0,
     result: "tie",
     affectsScore: false,

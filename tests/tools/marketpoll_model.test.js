@@ -5,8 +5,10 @@ import {
   buildAssetUniverse,
   parseSeedCsv,
   selectCandidatePair,
+  selectCandidateMatchup,
   canonicalPairKey,
   applyEloFromVotes,
+  applyEloFromVotesBundles,
 } from "../../tools/marketpoll_model.js";
 
 describe("marketpoll_model", () => {
@@ -127,6 +129,44 @@ describe("marketpoll_model", () => {
     expect(pick2.usedFallbackGender).toBe(true);
   });
 
+  it("selects eligible 1v2/2v1 matchups when max side size is 2", () => {
+    const assets = [
+      { assetKey: "GoldenA|M", gender: "M", minX: 1_000_000, maxX: 1_200_000, midX: 1_100_000, tierIndex: 8 },
+      { assetKey: "GoldenB|M", gender: "M", minX: 1_000_000, maxX: 1_200_000, midX: 1_100_000, tierIndex: 8 },
+      { assetKey: "GoldenC|M", gender: "M", minX: 900_000, maxX: 1_100_000, midX: 1_000_000, tierIndex: 8 },
+      { assetKey: "GoldenD|M", gender: "M", minX: 950_000, maxX: 1_150_000, midX: 1_050_000, tierIndex: 8 },
+    ];
+
+    const seq = [0.99, 0, 0, 0.99, 0.5, 0.25, 0.75, 0.1];
+    let idx = 0;
+    const rng = () => {
+      const v = seq[idx % seq.length];
+      idx += 1;
+      return v;
+    };
+
+    const pick = selectCandidateMatchup({
+      assets,
+      cooldowns: new Map(),
+      openPairKeys: new Set(),
+      nowMs: 1000,
+      maxSideSize: 2,
+      sideSizeOptions: [1, 2],
+      preferSameGender: true,
+      rng,
+    });
+
+    expect(pick).not.toBeNull();
+    expect(pick.left.assetKeys.length).toBeGreaterThanOrEqual(1);
+    expect(pick.left.assetKeys.length).toBeLessThanOrEqual(2);
+    expect(pick.right.assetKeys.length).toBeGreaterThanOrEqual(1);
+    expect(pick.right.assetKeys.length).toBeLessThanOrEqual(2);
+    expect(new Set([...pick.left.assetKeys, ...pick.right.assetKeys]).size).toBe(
+      pick.left.assetKeys.length + pick.right.assetKeys.length
+    );
+    expect(typeof pick.pairKey).toBe("string");
+  });
+
   it("applies elo only when vote floor is met", () => {
     const low = applyEloFromVotes({
       leftScore: 1500,
@@ -150,5 +190,22 @@ describe("marketpoll_model", () => {
     expect(high.affectsScore).toBe(true);
     expect(high.leftScore).toBeGreaterThan(1500);
     expect(high.rightScore).toBeLessThan(1500);
+  });
+
+  it("applies bundle elo updates for multi-asset sides", () => {
+    const result = applyEloFromVotesBundles({
+      leftScores: [1500, 1520],
+      rightScores: [1510],
+      votesLeft: 12,
+      votesRight: 5,
+      minVotes: 5,
+    });
+
+    expect(result.affectsScore).toBe(true);
+    expect(result.leftScores).toHaveLength(2);
+    expect(result.rightScores).toHaveLength(1);
+    expect(result.leftScores[0]).toBeGreaterThan(1500);
+    expect(result.leftScores[1]).toBeGreaterThan(1520);
+    expect(result.rightScores[0]).toBeLessThan(1510);
   });
 });
