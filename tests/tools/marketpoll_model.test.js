@@ -208,6 +208,31 @@ describe("marketpoll_model", () => {
     expect(twoVsTwo.right.assetKeys).toHaveLength(2);
   });
 
+  it("rejects bundle matchups when selected assets are too far apart in tiers", () => {
+    const assets = [
+      { assetKey: "GoldenA|F", gender: "F", minX: 3_000_000, maxX: 3_400_000, midX: 3_200_000, tierIndex: 10 },
+      { assetKey: "GoldenB|F", gender: "F", minX: 90_000, maxX: 110_000, midX: 100_000, tierIndex: 5 },
+      { assetKey: "GoldenC|F", gender: "F", minX: 3_100_000, maxX: 3_500_000, midX: 3_300_000, tierIndex: 10 },
+      { assetKey: "GoldenD|F", gender: "F", minX: 95_000, maxX: 120_000, midX: 107_500, tierIndex: 5 },
+    ];
+
+    const pick = selectCandidateMatchup({
+      assets,
+      cooldowns: new Map(),
+      openPairKeys: new Set(),
+      nowMs: 1000,
+      maxSideSize: 2,
+      sideSizeOptions: [1, 2],
+      matchupModes: ["2v2"],
+      maxAssetTierSpread: 3,
+      preferSameGender: true,
+      rng: () => 0,
+      maxAttempts: 30,
+    });
+
+    expect(pick).toBeNull();
+  });
+
   it("applies elo only when vote floor is met", () => {
     const low = applyEloFromVotes({
       leftScore: 1500,

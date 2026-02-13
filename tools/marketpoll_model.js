@@ -524,6 +524,7 @@ export function selectCandidateMatchup({
   maxSideSize = 2,
   sideSizeOptions = [1, 2],
   matchupModes = null,
+  maxAssetTierSpread = 3,
   rng = Math.random,
   maxAttempts = 1500,
 }) {
@@ -586,6 +587,14 @@ export function selectCandidateMatchup({
       const right = bundleFromKeys(rightKeys, byKey);
       if (!left || !right) continue;
       if (left.key === right.key) continue;
+
+      const tierIndexes = [...left.assets, ...right.assets]
+        .map((a) => Number(a?.tierIndex))
+        .filter((n) => Number.isFinite(n));
+      if (tierIndexes.length >= 2) {
+        const spread = Math.max(...tierIndexes) - Math.min(...tierIndexes);
+        if (spread > Math.max(0, Number(maxAssetTierSpread) || 0)) continue;
+      }
 
       if (strictGender) {
         if (!left.gender || !right.gender) continue;
