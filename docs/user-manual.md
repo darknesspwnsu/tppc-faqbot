@@ -367,7 +367,7 @@ Tracks message counts in configured channels (may include forum threads if your 
 
 ### Reminders & NotifyMe
 - `/notifyme set phrase:<phrase> [from_user:@user] [ignore_users:<@user ...>]` — DM when phrase appears in guild
-- `/notifyme ignore phrase:<existing phrase> users:<@user ...>` — add ignored users for that phrase
+- `/notifyme ignore phrase:<existing phrase or phrase number> users:<@user ...>` — add ignored users for that phrase (supports autocomplete dropdown)
 - `/notifyme list`
 - `/notifyme unset <number from /notifyme list>`
 - `/notifyme clear` — clear all for this server

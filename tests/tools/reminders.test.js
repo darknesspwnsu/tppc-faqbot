@@ -175,6 +175,39 @@ describe("tools/reminders", () => {
     );
   });
 
+  it("adds ignored users using notifyme phrase index", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, phrase, target_user_id, ignore_user_ids, created_at FROM notify_me")) {
+        return [[{ id: 41, phrase: "contest", ignore_user_ids: null }]];
+      }
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id, ignore_user_ids FROM notify_me")) {
+        return [[{ id: 41, user_id: "u1", phrase: "contest", ignore_user_ids: null }]];
+      }
+      if (sql.includes("UPDATE notify_me SET ignore_user_ids")) return [[]];
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
+
+    const interaction = makeInteraction({
+      sub: "ignore",
+      phrase: "1",
+      users: "<@11111>",
+    });
+    await notifySlash.handler({ interaction });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE notify_me SET ignore_user_ids"),
+      ["[\"11111\"]", 41, "u1"]
+    );
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining('Updated ignore list for "contest"') })
+    );
+  });
+
   it("rejects notifyme when DMs are closed", async () => {
     const execute = vi.fn(async () => [[]]);
     dbMocks.getDb.mockReturnValue({ execute });
@@ -312,6 +345,25 @@ describe("tools/reminders", () => {
     const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
 
     const interaction = makeInteraction({ sub: "unset", phrase: "b" });
+    await notifySlash.opts.autocomplete({ interaction });
+
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "1. beta", value: "1" }]);
+  });
+
+  it("responds with notifyme ignore autocomplete options", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, phrase, target_user_id, ignore_user_ids, created_at FROM notify_me")) {
+        return [[{ id: 2, user_id: "u1", phrase: "beta" }]];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
+
+    const interaction = makeInteraction({ sub: "ignore", phrase: "b" });
     await notifySlash.opts.autocomplete({ interaction });
 
     expect(interaction.respond).toHaveBeenCalledWith([{ name: "1. beta", value: "1" }]);

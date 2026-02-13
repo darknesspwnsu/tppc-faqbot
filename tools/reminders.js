@@ -758,8 +758,9 @@ export function registerReminders(register) {
             {
               type: 3,
               name: "phrase",
-              description: "Existing phrase from your /notifyme list",
+              description: "Existing phrase or phrase number from /notifyme list",
               required: true,
+              autocomplete: true,
             },
             {
               type: 3,
@@ -902,9 +903,9 @@ export function registerReminders(register) {
       }
 
       if (sub === "ignore") {
-        const phrase = norm(interaction.options?.getString?.("phrase"));
+        const phraseInput = norm(interaction.options?.getString?.("phrase"));
         const usersRaw = norm(interaction.options?.getString?.("users"));
-        if (!phrase) {
+        if (!phraseInput) {
           await interaction.reply({
             content: "Please provide an existing phrase from `/notifyme list`.",
             flags: MessageFlags.Ephemeral,
@@ -928,12 +929,39 @@ export function registerReminders(register) {
           return;
         }
 
+        let matchPhrase = phraseInput;
+        let matchKey = phraseKey(phraseInput);
+        if (/^\d+$/.test(phraseInput)) {
+          const index = Number(phraseInput);
+          if (!Number.isInteger(index) || index < 1) {
+            await interaction.reply({
+              content: "Please provide a valid phrase number from `/notifyme list`.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          const listed = await listNotifyEntries({
+            guildId: interaction.guildId,
+            userId,
+          });
+          const target = listed[index - 1];
+          if (!target) {
+            await interaction.reply({
+              content: "No notification found with that number. Use `/notifyme list` to check.",
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+          matchPhrase = target.phrase;
+          matchKey = phraseKey(target.phrase);
+        }
+
         const state = await loadNotifyGuild(interaction.guildId);
-        const key = phraseKey(phrase);
-        const mine = state.items.filter((item) => item.userId === userId && item.key === key);
+        const mine = state.items.filter((item) => item.userId === userId && item.key === matchKey);
         if (!mine.length) {
           await interaction.reply({
-            content: `No existing notification found for phrase "${phrase}". Use \`/notifyme list\` first.`,
+            content: `No existing notification found for phrase "${matchPhrase}". Use \`/notifyme list\` first.`,
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -964,7 +992,7 @@ export function registerReminders(register) {
         const mentions = idsToIgnore.map((id) => mention(id)).join(", ");
         void metrics.increment("notifyme.ignore", { status: "ok" });
         await interaction.reply({
-          content: `✅ Updated ignore list for "${phrase}" (${updatedCount} entr${
+          content: `✅ Updated ignore list for "${matchPhrase}" (${updatedCount} entr${
             updatedCount === 1 ? "y" : "ies"
           }). Added: ${mentions}`,
           flags: MessageFlags.Ephemeral,
@@ -1049,7 +1077,7 @@ export function registerReminders(register) {
     {
       autocomplete: async ({ interaction }) => {
         const sub = interaction.options?.getSubcommand?.() || "";
-        if (sub !== "unset") {
+        if (sub !== "unset" && sub !== "ignore") {
           await interaction.respond([]);
           return;
         }
