@@ -26,6 +26,8 @@ export const GOLDMARKET_TIERS = [
   { id: "3mx+", label: "3mx+", min: 3_000_000, max: null },
 ];
 
+export const MARKETPOLL_MATCHUP_MODES = ["1v1", "1v2", "2v1", "2v2"];
+
 function trimTrailingZeros(n) {
   return String(Number(n.toFixed(4)));
 }
@@ -521,6 +523,7 @@ export function selectCandidateMatchup({
   preferSameGender = true,
   maxSideSize = 2,
   sideSizeOptions = [1, 2],
+  matchupModes = null,
   rng = Math.random,
   maxAttempts = 1500,
 }) {
@@ -536,15 +539,43 @@ export function selectCandidateMatchup({
     .filter((n) => Number.isFinite(n) && n >= 1 && n <= Math.max(1, Number(maxSideSize) || 1));
   if (!sizes.length) return null;
 
+  const sizeSet = new Set(sizes);
+  const normalizedModes = [];
+  if (Array.isArray(matchupModes)) {
+    for (const rawMode of matchupModes) {
+      const m = String(rawMode || "")
+        .trim()
+        .toLowerCase()
+        .match(/^(\d+)v(\d+)$/);
+      if (!m) continue;
+      const leftSize = Number(m[1]);
+      const rightSize = Number(m[2]);
+      if (!sizeSet.has(leftSize) || !sizeSet.has(rightSize)) continue;
+      normalizedModes.push({ id: `${leftSize}v${rightSize}`, leftSize, rightSize });
+    }
+  }
+
+  if (!normalizedModes.length) {
+    for (const leftSize of sizes) {
+      for (const rightSize of sizes) {
+        normalizedModes.push({ id: `${leftSize}v${rightSize}`, leftSize, rightSize });
+      }
+    }
+  }
+
   let usedFallbackGender = false;
   const passes = preferSameGender ? [true, false] : [false];
 
   for (const strictGender of passes) {
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const lr = Number(rng());
-      const rr = Number(rng());
-      const leftSize = sizes[Math.floor((Number.isFinite(lr) ? Math.abs(lr) : 0) * sizes.length) % sizes.length];
-      const rightSize = sizes[Math.floor((Number.isFinite(rr) ? Math.abs(rr) : 0) * sizes.length) % sizes.length];
+      const mr = Number(rng());
+      const mode =
+        normalizedModes[
+          Math.floor((Number.isFinite(mr) ? Math.abs(mr) : 0) * normalizedModes.length) %
+            normalizedModes.length
+        ];
+      const leftSize = mode.leftSize;
+      const rightSize = mode.rightSize;
 
       const leftKeys = sampleUniqueAssetKeys(allKeys, leftSize, rng);
       if (!leftKeys) continue;

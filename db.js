@@ -222,6 +222,7 @@ export async function initDb() {
       poll_minutes INT UNSIGNED NOT NULL DEFAULT 15,
       pair_cooldown_days INT UNSIGNED NOT NULL DEFAULT 90,
       min_votes INT UNSIGNED NOT NULL DEFAULT 5,
+      matchup_modes VARCHAR(64) NOT NULL DEFAULT '1v1',
       updated_by VARCHAR(32),
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (guild_id),
@@ -313,6 +314,31 @@ export async function initDb() {
     `,
       [],
       "alter.goldmarket_poll_runs.right_assets_json"
+    );
+  }
+
+  const [matchupModesCols] = await execDb(
+    db,
+    `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema = DATABASE()
+      AND table_name = ?
+      AND column_name = ?
+  `,
+    ["goldmarket_settings", "matchup_modes"],
+    "check.goldmarket_settings.matchup_modes"
+  );
+
+  if (!matchupModesCols?.length) {
+    await execDb(
+      db,
+      `
+      ALTER TABLE goldmarket_settings
+        ADD COLUMN matchup_modes VARCHAR(64) NOT NULL DEFAULT '1v1' AFTER min_votes
+    `,
+      [],
+      "alter.goldmarket_settings.matchup_modes"
     );
   }
 

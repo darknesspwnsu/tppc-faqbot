@@ -167,6 +167,47 @@ describe("marketpoll_model", () => {
     expect(typeof pick.pairKey).toBe("string");
   });
 
+  it("respects configured matchup modes when selecting candidates", () => {
+    const assets = [
+      { assetKey: "GoldenA|M", gender: "M", minX: 1_000_000, maxX: 1_200_000, midX: 1_100_000, tierIndex: 8 },
+      { assetKey: "GoldenB|M", gender: "M", minX: 1_000_000, maxX: 1_200_000, midX: 1_100_000, tierIndex: 8 },
+      { assetKey: "GoldenC|M", gender: "M", minX: 950_000, maxX: 1_150_000, midX: 1_050_000, tierIndex: 8 },
+      { assetKey: "GoldenD|M", gender: "M", minX: 900_000, maxX: 1_100_000, midX: 1_000_000, tierIndex: 8 },
+    ];
+
+    const oneVsOne = selectCandidateMatchup({
+      assets,
+      cooldowns: new Map(),
+      openPairKeys: new Set(),
+      nowMs: 1000,
+      maxSideSize: 2,
+      sideSizeOptions: [1, 2],
+      matchupModes: ["1v1"],
+      preferSameGender: true,
+      rng: () => 0.2,
+    });
+
+    expect(oneVsOne).not.toBeNull();
+    expect(oneVsOne.left.assetKeys).toHaveLength(1);
+    expect(oneVsOne.right.assetKeys).toHaveLength(1);
+
+    const twoVsTwo = selectCandidateMatchup({
+      assets,
+      cooldowns: new Map(),
+      openPairKeys: new Set(),
+      nowMs: 1000,
+      maxSideSize: 2,
+      sideSizeOptions: [1, 2],
+      matchupModes: ["2v2"],
+      preferSameGender: true,
+      rng: () => 0.8,
+    });
+
+    expect(twoVsTwo).not.toBeNull();
+    expect(twoVsTwo.left.assetKeys).toHaveLength(2);
+    expect(twoVsTwo.right.assetKeys).toHaveLength(2);
+  });
+
   it("applies elo only when vote floor is met", () => {
     const low = applyEloFromVotes({
       leftScore: 1500,

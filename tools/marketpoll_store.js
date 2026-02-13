@@ -11,7 +11,20 @@ export const MARKETPOLL_DEFAULTS = {
   pollMinutes: 15,
   pairCooldownDays: 90,
   minVotes: 5,
+  matchupModes: ["1v1"],
 };
+
+const ALLOWED_MATCHUP_MODES = ["1v1", "1v2", "2v1", "2v2"];
+
+function normalizeMatchupModesValue(raw, fallback = MARKETPOLL_DEFAULTS.matchupModes) {
+  const base = Array.isArray(raw) ? raw : String(raw || "").split(/[,\s]+/);
+  const deduped = [...new Set(base.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))];
+  const valid = deduped.filter((x) => ALLOWED_MATCHUP_MODES.includes(x));
+  if (!valid.length) return [...fallback];
+  return valid.sort(
+    (a, b) => ALLOWED_MATCHUP_MODES.indexOf(a) - ALLOWED_MATCHUP_MODES.indexOf(b)
+  );
+}
 
 function normalizeLimit(limit, { fallback = 25, max = 500 } = {}) {
   const n = Number(limit);
@@ -78,6 +91,7 @@ function toSetting(row, guildId) {
     pollMinutes: Number(row.poll_minutes || MARKETPOLL_DEFAULTS.pollMinutes),
     pairCooldownDays: Number(row.pair_cooldown_days || MARKETPOLL_DEFAULTS.pairCooldownDays),
     minVotes: Number(row.min_votes || MARKETPOLL_DEFAULTS.minVotes),
+    matchupModes: normalizeMatchupModesValue(row.matchup_modes, MARKETPOLL_DEFAULTS.matchupModes),
   };
 }
 
@@ -93,8 +107,9 @@ export async function ensureMarketPollSettings({ guildId, updatedBy = "system" }
       poll_minutes,
       pair_cooldown_days,
       min_votes,
+      matchup_modes,
       updated_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE guild_id = VALUES(guild_id)
   `,
     [
@@ -105,6 +120,7 @@ export async function ensureMarketPollSettings({ guildId, updatedBy = "system" }
       MARKETPOLL_DEFAULTS.pollMinutes,
       MARKETPOLL_DEFAULTS.pairCooldownDays,
       MARKETPOLL_DEFAULTS.minVotes,
+      MARKETPOLL_DEFAULTS.matchupModes.join(","),
       String(updatedBy || "system"),
     ]
   );
@@ -114,7 +130,15 @@ export async function getMarketPollSettings({ guildId }) {
   const db = getDb();
   const [rows] = await db.execute(
     `
-    SELECT guild_id, channel_id, enabled, cadence_minutes, poll_minutes, pair_cooldown_days, min_votes
+    SELECT
+      guild_id,
+      channel_id,
+      enabled,
+      cadence_minutes,
+      poll_minutes,
+      pair_cooldown_days,
+      min_votes,
+      matchup_modes
     FROM goldmarket_settings
     WHERE guild_id = ?
     LIMIT 1
@@ -140,6 +164,7 @@ export async function updateMarketPollSettings({ guildId, patch, updatedBy }) {
     ["pollMinutes", "poll_minutes"],
     ["pairCooldownDays", "pair_cooldown_days"],
     ["minVotes", "min_votes"],
+    ["matchupModes", "matchup_modes"],
   ]);
 
   const sets = [];
@@ -152,6 +177,7 @@ export async function updateMarketPollSettings({ guildId, patch, updatedBy }) {
 
     if (key === "enabled") params.push(value ? 1 : 0);
     else if (key === "channelId") params.push(value ? String(value) : null);
+    else if (key === "matchupModes") params.push(normalizeMatchupModesValue(value).join(","));
     else params.push(Number(value));
   }
 
@@ -180,7 +206,15 @@ export async function listEnabledMarketPollSettings() {
   const db = getDb();
   const [rows] = await db.execute(
     `
-    SELECT guild_id, channel_id, enabled, cadence_minutes, poll_minutes, pair_cooldown_days, min_votes
+    SELECT
+      guild_id,
+      channel_id,
+      enabled,
+      cadence_minutes,
+      poll_minutes,
+      pair_cooldown_days,
+      min_votes,
+      matchup_modes
     FROM goldmarket_settings
     WHERE enabled = 1
       AND channel_id IS NOT NULL

@@ -19,6 +19,7 @@ vi.mock("../../tools/marketpoll_store.js", () => ({
     pollMinutes: 15,
     pairCooldownDays: 90,
     minVotes: 5,
+    matchupModes: ["1v1"],
   },
   ensureMarketPollSettings: vi.fn(async () => {}),
   getMarketPollSettings: vi.fn(async () => ({
@@ -28,6 +29,7 @@ vi.mock("../../tools/marketpoll_store.js", () => ({
     pollMinutes: 15,
     pairCooldownDays: 90,
     minVotes: 5,
+    matchupModes: ["1v1"],
   })),
   updateMarketPollSettings: vi.fn(async () => ({
     enabled: false,
@@ -36,6 +38,7 @@ vi.mock("../../tools/marketpoll_store.js", () => ({
     pollMinutes: 15,
     pairCooldownDays: 90,
     minVotes: 5,
+    matchupModes: ["1v1"],
   })),
   listEnabledMarketPollSettings: vi.fn(async () => []),
   insertMarketPollSchedulerLog: vi.fn(async () => {}),
@@ -59,6 +62,7 @@ vi.mock("../../tools/marketpoll_model.js", () => ({
     { id: "1-5kx", label: "1-5kx" },
     { id: "5-10kx", label: "5-10kx" },
   ],
+  MARKETPOLL_MATCHUP_MODES: ["1v1", "1v2", "2v1", "2v2"],
   parseSeedCsv: vi.fn(() => ({ rows: [], errors: ["mock"] })),
   buildAssetUniverse: vi.fn(() => ({
     allAssetsByKey: new Map(),
@@ -123,6 +127,10 @@ describe("marketpoll registration", () => {
 
     await handler({ message, rest: "help", cmd: "!marketpoll" });
     expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("MarketPoll Commands"));
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("config matchups"));
+    expect(message.reply).toHaveBeenCalledWith(
+      expect.stringContaining("Default matchup mode is `1v1`")
+    );
   });
 
   it("formats unknown gender as (?) and parses flexible durations", async () => {
@@ -138,6 +146,16 @@ describe("marketpoll registration", () => {
     expect(__testables.parseDurationMinutes(["1.5h"])).toBe(90);
     expect(__testables.parseDurationMinutes(["0m"])).toBeNull();
     expect(__testables.parseDurationMinutes(["abc"])).toBeNull();
+
+    expect(__testables.parseMatchupModesInput(["1v2", "2v1"]).modes).toEqual(["1v2", "2v1"]);
+    expect(__testables.parseMatchupModesInput(["all"]).modes).toEqual([
+      "1v1",
+      "1v2",
+      "2v1",
+      "2v2",
+    ]);
+    expect(__testables.parseMatchupModesInput(["default"]).modes).toEqual(["1v1"]);
+    expect(__testables.parseMatchupModesInput(["3v3"]).ok).toBe(false);
   });
 
   it("blocks admin-only config for non-admin users", async () => {

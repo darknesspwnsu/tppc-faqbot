@@ -31,6 +31,7 @@ import {
 } from "./marketpoll_store.js";
 import {
   GOLDMARKET_TIERS,
+  MARKETPOLL_MATCHUP_MODES,
   parseSeedCsv,
   buildAssetUniverse,
   selectCandidateMatchup,
@@ -50,6 +51,7 @@ const MAX_LEADERBOARD_LIMIT = 50;
 const MAX_TIERS_LIMIT = 100;
 const MAX_SIDE_ASSETS = 2;
 const SIDE_SIZE_OPTIONS = [1, 2];
+const MATCHUP_MODE_SET = new Set(MARKETPOLL_MATCHUP_MODES);
 
 let clientRef = null;
 let schedulerBooted = false;
@@ -152,6 +154,44 @@ function parseDurationMinutes(tokens) {
     return Math.round(amount * 24 * 60);
   }
   return Math.round(amount);
+}
+
+function normalizeMatchupModes(rawModes) {
+  const raw = Array.isArray(rawModes) ? rawModes : String(rawModes || "").split(/[,\s]+/);
+  const deduped = [...new Set(raw.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean))];
+  const valid = deduped.filter((x) => MATCHUP_MODE_SET.has(x));
+  if (!valid.length) return ["1v1"];
+  return valid.sort(
+    (a, b) => MARKETPOLL_MATCHUP_MODES.indexOf(a) - MARKETPOLL_MATCHUP_MODES.indexOf(b)
+  );
+}
+
+function parseMatchupModesInput(tokens) {
+  const joined = String(Array.isArray(tokens) ? tokens.join(" ") : tokens || "").trim().toLowerCase();
+  if (!joined) {
+    return {
+      ok: false,
+      error: "Usage: `!marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>`",
+    };
+  }
+
+  const parts = joined.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
+  if (parts.includes("all")) {
+    return { ok: true, modes: [...MARKETPOLL_MATCHUP_MODES] };
+  }
+  if (parts.includes("default") || parts.includes("reset")) {
+    return { ok: true, modes: ["1v1"] };
+  }
+
+  const invalid = parts.filter((x) => !MATCHUP_MODE_SET.has(x));
+  if (invalid.length) {
+    return {
+      ok: false,
+      error: `Invalid matchup mode(s): ${invalid.join(", ")}. Allowed: ${MARKETPOLL_MATCHUP_MODES.join(", ")}.`,
+    };
+  }
+
+  return { ok: true, modes: normalizeMatchupModes(parts) };
 }
 
 function genderToken(raw) {
@@ -283,8 +323,11 @@ function buildHelpText(prefix = "!") {
     `• \`${prefix}marketpoll config duration <duration>\``,
     `• \`${prefix}marketpoll config cooldown <days>\``,
     `• \`${prefix}marketpoll config minvotes <n>\``,
+    `• \`${prefix}marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>\``,
     `• \`${prefix}marketpoll tiers [tier] [gender] [limit]\``,
     `• \`${prefix}marketpoll poll now\``,
+    "",
+    "Default matchup mode is `1v1`. Multi-asset modes stay off until explicitly enabled.",
   ].join("\n");
 }
 
@@ -581,6 +624,7 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
     preferSameGender: true,
     maxSideSize: MAX_SIDE_ASSETS,
     sideSizeOptions: SIDE_SIZE_OPTIONS,
+    matchupModes: normalizeMatchupModes(setting.matchupModes),
   });
 
   if (!candidate) {
@@ -733,6 +777,7 @@ async function handleStatus({ message, isAdmin }) {
     `Poll Duration: **${settings.pollMinutes} minutes**`,
     `Pair Cooldown: **${settings.pairCooldownDays} days**`,
     `Min Votes: **${settings.minVotes}**`,
+    `Matchups: **${normalizeMatchupModes(settings.matchupModes).join(", ")}**`,
     `Base Golden Assets: **${seedState.universe?.eligibleAssets?.length || 0}**`,
     `Seeded Assets: **${seedState.rows.length}**`,
     `Open Polls (this guild): **${openPolls}**`,
@@ -847,6 +892,7 @@ async function handleConfig({ message, tokens }) {
       `Duration: **${settings.pollMinutes} min**`,
       `Cooldown: **${settings.pairCooldownDays} days**`,
       `Min Votes: **${settings.minVotes}**`,
+      `Matchups: **${normalizeMatchupModes(settings.matchupModes).join(", ")}**`,
     ]);
     return;
   }
@@ -946,6 +992,24 @@ async function handleConfig({ message, tokens }) {
       updatedBy: message.author?.id,
     });
     await message.reply(`MarketPoll minimum votes set to **${updated.minVotes}**.`);
+    return;
+  }
+
+  if (sub === "matchups") {
+    const parsed = parseMatchupModesInput(tokens);
+    if (!parsed.ok) {
+      await message.reply(parsed.error);
+      return;
+    }
+
+    const updated = await updateMarketPollSettings({
+      guildId: message.guildId,
+      patch: { matchupModes: parsed.modes },
+      updatedBy: message.author?.id,
+    });
+    await message.reply(
+      `MarketPoll matchup modes set to **${normalizeMatchupModes(updated.matchupModes).join(", ")}**.`
+    );
     return;
   }
 
@@ -1113,6 +1177,8 @@ export const __testables = {
   parseOnOff,
   parsePositiveInt,
   parseDurationMinutes,
+  parseMatchupModesInput,
+  normalizeMatchupModes,
   parseChannelId,
   parseHistoryArgs,
   parseTiersArgs,

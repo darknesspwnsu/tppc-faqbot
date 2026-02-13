@@ -303,12 +303,14 @@ Golden market preference tooling (base-stage Goldens only).
 - `!marketpoll config duration <duration>` (e.g. `15m`, `2h`, `1 day`; max `1 day`)
 - `!marketpoll config cooldown <days>`
 - `!marketpoll config minvotes <n>`
+- `!marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>`
 - `!marketpoll tiers [tier] [gender] [limit]`
 - `!marketpoll poll now`
 
 **Notes:**
 - Seed ranges are loaded from `data/marketpoll_seeds.csv` on startup/boot.
-- Poll matchups may be `1v1`, `1v2`, `2v1`, or `2v2`.
+- Matchups default to `1v1` only; enable multi-asset modes explicitly with `config matchups`.
+- Supported matchup modes are `1v1`, `1v2`, `2v1`, and `2v2`.
 - If seed validation fails, automated MarketPoll polling is skipped until fixed.
 - Public outputs hide raw x ranges; admin tier output includes ranges.
 - No slash commands are provided for MarketPoll.
