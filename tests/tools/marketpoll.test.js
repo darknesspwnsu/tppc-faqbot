@@ -137,6 +137,8 @@ describe("marketpoll registration", () => {
     const { __testables } = await import("../../tools/marketpoll.js");
 
     expect(__testables.formatAssetDisplay("GoldenHeracross|?")).toBe("GoldenHeracross (?)");
+    expect(__testables.formatAssetDisplay("GoldenSnorlax|U")).toBe("GoldenSnorlax (?)");
+    expect(__testables.formatAssetDisplay("GoldenGenesect|G")).toBe("GoldenGenesect G");
     expect(__testables.formatAssetDisplay("GoldenMiltank|F")).toBe("GoldenMiltank F");
 
     expect(__testables.parseDurationMinutes(["15"])).toBe(15);

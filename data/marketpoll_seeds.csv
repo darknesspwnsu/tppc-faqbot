@@ -325,9 +325,6 @@ asset_key,seed_range
 "GoldenSneasel|M",5-10k
 "GoldenSnivy|F",600-800k
 "GoldenSnivy|M",600-800k
-"GoldenSnorlax|F",250-300k
-"GoldenSnorlax|M",170-200k
-"GoldenSnorlax|U",500-600k
 "GoldenSnover|F",2k
 "GoldenSnover|M",2k
 "GoldenSpheal|?",20-30k
@@ -341,9 +338,6 @@ asset_key,seed_range
 "GoldenStantler|?",10-20kx
 "GoldenStantler|F",5kx
 "GoldenStantler|M",5kx
-"GoldenSudowoodo|F",120-200k
-"GoldenSudowoodo|M",120-200k
-"GoldenSudowoodo|U",15-20k
 "GoldenSunkern|?",20-30kx
 "GoldenSunkern|F",2-4kx
 "GoldenSunkern|M",2-4kx
@@ -389,7 +383,6 @@ asset_key,seed_range
 "GoldenTyrunt|F",8-15k
 "GoldenTyrunt|M",8-10k
 "GoldenVolcanion|G",8-10k
-"GoldenVolcarona|?",500-750k
 "GoldenVulpix (Alola)|?",120-200k
 "GoldenVulpix (Alola)|F",40k
 "GoldenVulpix (Alola)|M",40k

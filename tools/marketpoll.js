@@ -196,7 +196,7 @@ function parseMatchupModesInput(tokens) {
 
 function genderToken(raw) {
   const rawVal = String(raw || "").trim();
-  const v = rawVal === "(?)" ? "?" : rawVal.toUpperCase();
+  const v = rawVal === "(?)" ? "?" : rawVal.toUpperCase() === "U" ? "?" : rawVal.toUpperCase();
   return ["M", "F", "?", "G"].includes(v) ? v : "";
 }
 
@@ -236,7 +236,8 @@ function safeTierLabel(tierId) {
 
 function formatAssetDisplay(assetKey) {
   const [name, gender] = String(assetKey || "").split("|");
-  const normalizedGender = gender === "?" ? "(?)" : gender || "";
+  const normalizedRaw = String(gender || "").toUpperCase();
+  const normalizedGender = normalizedRaw === "?" || normalizedRaw === "U" ? "(?)" : normalizedRaw || "";
   return `${name || "Unknown"} ${normalizedGender}`.trim();
 }
 

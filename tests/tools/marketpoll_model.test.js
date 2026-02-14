@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseSeedRange,
+  normalizeAssetKey,
   buildAssetUniverse,
   parseSeedCsv,
   selectCandidatePair,
@@ -12,6 +13,11 @@ import {
 } from "../../tools/marketpoll_model.js";
 
 describe("marketpoll_model", () => {
+  it("normalizes U gender alias to ?", () => {
+    expect(normalizeAssetKey("GoldenSnorlax|U")).toBe("GoldenSnorlax|?");
+    expect(normalizeAssetKey("GoldenSudowoodo|u")).toBe("GoldenSudowoodo|?");
+  });
+
   it("parses seed ranges with mixed units and inherited units", () => {
     const a = parseSeedRange("950kx-1.3mx");
     expect(a.ok).toBe(true);

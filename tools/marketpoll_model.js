@@ -92,6 +92,7 @@ function normalizeGoldenName(nameRaw) {
 
 function normalizeGender(genderRaw) {
   const g = String(genderRaw || "").trim().toUpperCase();
+  if (g === "U") return "?";
   return ["M", "F", "?", "G"].includes(g) ? g : "";
 }
 
