@@ -82,6 +82,47 @@ describe("marketpoll_model", () => {
     expect(parsed.errors[0]).toContain("evolved asset not allowed");
   });
 
+  it("allows configured evolved exceptions (Snorlax/Sudowoodo) while still rejecting others", () => {
+    const goldenCsv = [
+      "name,genders,male,female,genderless,ungendered,total",
+      '"GoldenMunchlax",M/F/?,0,0,0,0,0',
+      '"GoldenSnorlax",M/F/?,0,0,0,0,0',
+      '"GoldenBonsly",M/F/?,0,0,0,0,0',
+      '"GoldenSudowoodo",M/F/?,0,0,0,0,0',
+      '"GoldenLarvesta",M/F,0,0,0,0,0',
+      '"GoldenVolcarona",?,0,0,0,0,0',
+    ].join("\n");
+
+    const evolutionData = {
+      base_by_name: {
+        munchlax: "Munchlax",
+        snorlax: "Munchlax",
+        bonsly: "Bonsly",
+        sudowoodo: "Bonsly",
+        larvesta: "Larvesta",
+        volcarona: "Larvesta",
+      },
+    };
+
+    const universe = buildAssetUniverse({
+      goldenGenderCsv: goldenCsv,
+      evolutionData,
+    });
+
+    const seedCsv = [
+      "asset_key,seed_range",
+      "GoldenSnorlax|M,170-200k",
+      "GoldenSudowoodo|?,15-20k",
+      "GoldenVolcarona|?,500-750k",
+    ].join("\n");
+
+    const parsed = parseSeedCsv(seedCsv, { assetUniverse: universe });
+    expect(parsed.rows.some((row) => row.assetKey === "GoldenSnorlax|M")).toBe(true);
+    expect(parsed.rows.some((row) => row.assetKey === "GoldenSudowoodo|?")).toBe(true);
+    expect(parsed.rows.some((row) => row.assetKey === "GoldenVolcarona|?")).toBe(false);
+    expect(parsed.errors.some((error) => error.includes("GoldenVolcarona|?"))).toBe(true);
+  });
+
   it("selects eligible pairs and respects cooldown/open-pair constraints", () => {
     const assets = [
       {
