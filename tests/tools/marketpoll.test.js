@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PermissionFlagsBits } from "discord.js";
 
 const isAdminOrPrivileged = vi.fn(() => true);
 const registerScheduler = vi.fn();
@@ -219,6 +220,66 @@ describe("marketpoll registration", () => {
     expect(message.reply).toHaveBeenCalledWith(
       expect.stringContaining("Cannot run poll now because seed validation failed.")
     );
+  });
+
+  it("surfaces missing SendPolls permission for manual poll now", async () => {
+    const { registerMarketPoll, __testables } = await import("../../tools/marketpoll.js");
+    const store = await import("../../tools/marketpoll_store.js");
+    const model = await import("../../tools/marketpoll_model.js");
+
+    store.getMarketPollSettings.mockResolvedValue({
+      guildId: "g1",
+      enabled: true,
+      channelId: "123",
+      cadenceMinutes: 180,
+      pollMinutes: 15,
+      pairCooldownDays: 90,
+      minVotes: 5,
+      matchupModes: ["1v1"],
+    });
+
+    model.parseSeedCsv.mockReturnValueOnce({
+      rows: [{ assetKey: "GoldenAbra|M" }],
+      errors: [],
+    });
+    await __testables.loadSeedState(true);
+    model.selectCandidateMatchup.mockReturnValueOnce({
+      left: { assetKeys: ["GoldenAbra|M"] },
+      right: { assetKeys: ["GoldenKadabra|M"] },
+    });
+
+    const channel = {
+      isTextBased: () => true,
+      isThread: () => false,
+      permissionsFor: vi.fn(() => ({
+        has: vi.fn((flag) => flag !== PermissionFlagsBits.SendPolls),
+      })),
+      send: vi.fn(async () => ({ id: "m1" })),
+    };
+
+    const register = vi.fn();
+    register.expose = vi.fn();
+    register.listener = vi.fn();
+
+    registerMarketPoll(register);
+    const handler = register.expose.mock.calls[0][0].handler;
+
+    const message = {
+      guildId: "g1",
+      author: { id: "u1" },
+      client: {
+        user: { id: "bot1" },
+        channels: { fetch: vi.fn(async () => channel) },
+      },
+      reply: vi.fn(async () => {}),
+      channel: { send: vi.fn(async () => {}) },
+    };
+
+    await handler({ message, rest: "poll now", cmd: "!marketpoll" });
+
+    expect(channel.send).not.toHaveBeenCalled();
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("missing_permissions"));
+    expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("SendPolls"));
   });
 
   it("registers scheduler hook", async () => {

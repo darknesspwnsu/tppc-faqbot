@@ -4,6 +4,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { PermissionFlagsBits } from "discord.js";
 
 import { isAdminOrPrivileged } from "../auth.js";
 import { logger } from "../shared/logger.js";
@@ -70,6 +71,52 @@ let seedCache = {
 
 function commandPrefix(cmd) {
   return String(cmd || "!").startsWith("?") ? "?" : "!";
+}
+
+function hasPermission(perms, flag) {
+  try {
+    return Boolean(perms?.has?.(flag));
+  } catch {
+    return false;
+  }
+}
+
+function getMissingPollPermissions(channel, clientUser) {
+  if (!channel || typeof channel.permissionsFor !== "function" || !clientUser) return [];
+
+  let perms = null;
+  try {
+    perms = channel.permissionsFor(clientUser);
+  } catch {
+    perms = null;
+  }
+  if (!perms) return [];
+
+  const missing = [];
+  if (!hasPermission(perms, PermissionFlagsBits.ViewChannel)) missing.push("ViewChannel");
+
+  const isThread = typeof channel.isThread === "function" ? channel.isThread() : false;
+  if (isThread) {
+    if (!hasPermission(perms, PermissionFlagsBits.SendMessagesInThreads)) {
+      missing.push("SendMessagesInThreads");
+    }
+  } else if (!hasPermission(perms, PermissionFlagsBits.SendMessages)) {
+    missing.push("SendMessages");
+  }
+
+  if (!hasPermission(perms, PermissionFlagsBits.SendPolls)) missing.push("SendPolls");
+  return missing;
+}
+
+function summarizeSendError(err) {
+  const parts = [];
+  const code = Number(err?.code);
+  const status = Number(err?.status);
+  const raw = String(err?.rawError?.message || err?.message || "").trim();
+  if (Number.isFinite(code)) parts.push(`Discord code ${code}`);
+  if (Number.isFinite(status)) parts.push(`HTTP ${status}`);
+  if (raw) parts.push(raw);
+  return parts.join(" | ").slice(0, 240);
 }
 
 function tokenizeArgs(input) {
@@ -614,6 +661,20 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
     return { ok: false, reason: "invalid_channel" };
   }
 
+  const missingPerms = getMissingPollPermissions(channel, clientRef.user);
+  if (missingPerms.length) {
+    const detail = `Missing channel permission(s): ${missingPerms.join(", ")}`;
+    if (shouldLog) {
+      await insertMarketPollSchedulerLog({
+        guildId: setting.guildId,
+        runAtMs: nowMs,
+        status: "error",
+        reason: "missing_permissions",
+      });
+    }
+    return { ok: false, reason: "missing_permissions", detail };
+  }
+
   const openPairKeys = await listOpenMarketPollPairKeys({ guildId: setting.guildId });
   const cooldowns = await getMarketPollCooldownMap({ nowMs });
 
@@ -659,7 +720,13 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
   let pollMessage;
   try {
     pollMessage = await channel.send(pollPayload);
-  } catch {
+  } catch (err) {
+    const detail = summarizeSendError(err);
+    logger.warn("marketpoll.poll_send_failed", {
+      guildId: setting.guildId,
+      channelId: setting.channelId,
+      error: logger.serializeError(err),
+    });
     if (shouldLog) {
       await insertMarketPollSchedulerLog({
         guildId: setting.guildId,
@@ -668,7 +735,7 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
         reason: "send_failed",
       });
     }
-    return { ok: false, reason: "send_failed" };
+    return { ok: false, reason: "send_failed", detail };
   }
 
   const endsAtMs = nowMs + setting.pollMinutes * 60_000;
@@ -1074,7 +1141,12 @@ async function handlePollNow({ message }) {
       ]);
       return;
     }
-    await message.reply(`Could not create poll now: ${res.reason}.`);
+    const detail = String(res.detail || "").trim();
+    await message.reply(
+      detail
+        ? `Could not create poll now: ${res.reason}. ${detail}.`
+        : `Could not create poll now: ${res.reason}.`
+    );
     return;
   }
 
