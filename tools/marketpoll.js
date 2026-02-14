@@ -621,7 +621,7 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
     cooldowns,
     openPairKeys,
     nowMs,
-    preferSameGender: true,
+    preferSameGender: false,
     maxSideSize: MAX_SIDE_ASSETS,
     sideSizeOptions: SIDE_SIZE_OPTIONS,
     matchupModes: normalizeMatchupModes(setting.matchupModes),
