@@ -21,6 +21,7 @@ const MAX_TIMEOUT_MS = 2_000_000_000; // setTimeout limit safety
 const ADMIN_ANNOUNCEMENT_EVENT_ID = "discord_announcements";
 const SUBSCRIPTION_SNAPSHOT_INTERVAL_MS = 60 * 60_000;
 const PROMO_ANNOUNCE_RETRY_MS = 15 * 60_000;
+const SPECIAL_DAY_RETRY_MS = 15 * 60_000;
 
 const pendingWeeklyPromoAnnouncements = new Set(); // startMs
 
@@ -406,8 +407,9 @@ async function notifySubscribers({ client, event, start, end }) {
 
 async function notifyChannels({ client, event, start, end }) {
   const channels = getAnnouncementChannels(client);
-  if (!channels.length) return;
+  if (!channels.length) return { attempted: 0, sent: 0 };
   const promoByGuild = new Map();
+  let sent = 0;
 
   for (const { guildId, channelId } of channels) {
     try {
@@ -430,6 +432,7 @@ async function notifyChannels({ client, event, start, end }) {
       }
       const content = buildEventMessage(event, start, end, { promo });
       await channel.send(content);
+      sent += 1;
       await recordNotification({
         eventId: event.id,
         startMs: start.getTime(),
@@ -447,12 +450,39 @@ async function notifyChannels({ client, event, start, end }) {
       });
     }
   }
+  return { attempted: channels.length, sent };
 }
 
-async function announceEvent({ client, event, start, end, source }) {
-  await recordOccurrence({ eventId: event.id, startMs: start.getTime(), endMs: end.getTime(), source });
+async function announceEvent({
+  client,
+  event,
+  start,
+  end,
+  source,
+  requireChannelSuccessBeforeRecord = false,
+}) {
+  if (!requireChannelSuccessBeforeRecord) {
+    await recordOccurrence({ eventId: event.id, startMs: start.getTime(), endMs: end.getTime(), source });
+    await notifySubscribers({ client, event, start, end });
+    await notifyChannels({ client, event, start, end });
+    return { ok: true, reason: "announced" };
+  }
+
+  // For special days, only mark occurrence after at least one channel post succeeds.
+  const channelResult = await notifyChannels({ client, event, start, end });
   await notifySubscribers({ client, event, start, end });
-  await notifyChannels({ client, event, start, end });
+  if ((channelResult?.sent || 0) < 1) {
+    logger.warn("events.special_day.channel_send.none", {
+      eventId: event.id,
+      startMs: start.getTime(),
+      attempted: Number(channelResult?.attempted || 0),
+      sent: Number(channelResult?.sent || 0),
+    });
+    return { ok: false, reason: "no_channel_success", channelResult };
+  }
+
+  await recordOccurrence({ eventId: event.id, startMs: start.getTime(), endMs: end.getTime(), source });
+  return { ok: true, reason: "announced", channelResult };
 }
 
 async function checkScheduledEvents(client, reason = "scheduled") {
@@ -503,6 +533,7 @@ async function checkRadioTowerEvent(client, reason = "scheduled") {
 async function checkSpecialDays(client, reason = "scheduled") {
   const now = new Date();
   const { defaults, days } = await loadSpecialDays();
+  let shouldRetrySoon = false;
   for (const day of days) {
     const window = computeSpecialDayWindow(day, defaults, now);
     if (!window) continue;
@@ -516,9 +547,20 @@ async function checkSpecialDays(client, reason = "scheduled") {
       name: day.name,
       description: day.message,
     };
-    await announceEvent({ client, event, start, end, source: reason });
+    const res = await announceEvent({
+      client,
+      event,
+      start,
+      end,
+      source: reason,
+      requireChannelSuccessBeforeRecord: true,
+    });
+    if (!res?.ok && res?.reason === "no_channel_success") {
+      shouldRetrySoon = true;
+    }
   }
   void metrics.incrementSchedulerRun("special_days", "ok");
+  return shouldRetrySoon;
 }
 
 function computeNextEventTick(now = new Date()) {
@@ -595,19 +637,17 @@ export function registerEventSchedulers({ client } = {}) {
   });
 
   registerScheduler("special_days", () => {
-    void checkSpecialDays(client, "startup");
-    const now = new Date();
-    void (async () => {
-      const next = await computeNextSpecialDayTick(now);
-      let delay = next.getTime() - now.getTime();
-      if (!Number.isFinite(delay) || delay < 0) delay = 60_000;
-      scheduleTimeout(async function tick() {
-        void checkSpecialDays(client, "scheduled");
+    void (async function tick(reason = "startup") {
+      const retrySoon = await checkSpecialDays(client, reason);
+      let nextDelay = SPECIAL_DAY_RETRY_MS;
+      if (!retrySoon) {
         const nextRun = await computeNextSpecialDayTick(new Date());
-        let nextDelay = nextRun.getTime() - Date.now();
-        if (!Number.isFinite(nextDelay) || nextDelay < 0) nextDelay = 60_000;
-        scheduleTimeout(tick, nextDelay);
-      }, delay);
+        nextDelay = nextRun.getTime() - Date.now();
+      }
+      if (!Number.isFinite(nextDelay) || nextDelay < 0) nextDelay = 60_000;
+      scheduleTimeout(() => {
+        void tick("scheduled");
+      }, nextDelay);
     })();
   });
 
@@ -986,4 +1026,8 @@ export const __testables = {
   isAdminAnnouncementChannel,
   buildAdminAnnouncementPayload,
   forwardAdminAnnouncement,
+  notifyChannels,
+  announceEvent,
+  checkSpecialDays,
+  computeNextSpecialDayTick,
 };

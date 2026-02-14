@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const dbExecute = vi.fn(async () => [[]]);
+const { dbExecute, loadSpecialDaysMock } = vi.hoisted(() => ({
+  dbExecute: vi.fn(async () => [[]]),
+  loadSpecialDaysMock: vi.fn(async () => ({
+    defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+    days: [],
+  })),
+}));
 vi.mock("../../db.js", () => ({ getDb: vi.fn(() => ({ execute: dbExecute })) }));
 vi.mock("../../shared/metrics.js", () => ({
   metrics: { incrementSchedulerRun: vi.fn(), increment: vi.fn() },
@@ -46,14 +52,26 @@ vi.mock("../../events/special_days.js", async () => {
   const actual = await vi.importActual("../../events/special_days.js");
   return {
     ...actual,
-    loadSpecialDays: async () => ({
-      defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
-      days: [],
-    }),
+    loadSpecialDays: loadSpecialDaysMock,
   };
 });
 
 import { __testables, registerEvents } from "../../events/events.js";
+import { RPG_EVENT_CHANNELS_BY_GUILD } from "../../configs/rpg_event_channels.js";
+
+beforeEach(() => {
+  dbExecute.mockReset();
+  dbExecute.mockImplementation(async () => [[]]);
+  loadSpecialDaysMock.mockReset();
+  loadSpecialDaysMock.mockResolvedValue({
+    defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+    days: [],
+  });
+  for (const guildId of Object.keys(RPG_EVENT_CHANNELS_BY_GUILD)) {
+    delete RPG_EVENT_CHANNELS_BY_GUILD[guildId];
+  }
+  vi.useRealTimers();
+});
 
 describe("events parsing helpers", () => {
   it("parses event ids and dedupes", () => {
@@ -90,6 +108,102 @@ describe("events parsing helpers", () => {
     );
     expect(message).toContain("Scatterbug Swarm");
     expect(message).toContain("Duration: **24h 0m**.");
+  });
+
+  it("does not record a special day occurrence when no channel send succeeds", async () => {
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => null) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    const result = await __testables.announceEvent({
+      client,
+      event: { id: "special_valentines", name: "Valentine's Day", description: "Happy Valentine's Day!" },
+      start: new Date("2026-02-14T05:00:00Z"),
+      end: new Date("2026-02-15T05:00:00Z"),
+      source: "test",
+      requireChannelSuccessBeforeRecord: true,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("no_channel_success");
+    expect(client.channels.fetch).toHaveBeenCalledTimes(1);
+
+    const occurrenceInserts = dbExecute.mock.calls.filter(([sql]) =>
+      String(sql).includes("INSERT IGNORE INTO event_occurrences")
+    );
+    expect(occurrenceInserts).toHaveLength(0);
+  });
+
+  it("retries special days only while the day window is active", async () => {
+    vi.useFakeTimers();
+    loadSpecialDaysMock.mockResolvedValue({
+      defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+      days: [
+        {
+          id: "valentines",
+          name: "Valentine's Day",
+          kind: "fixed_date",
+          month: 2,
+          day: 14,
+          message: "Happy Valentine's Day!",
+        },
+      ],
+    });
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => null) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    vi.setSystemTime(new Date("2026-02-14T12:00:00Z"));
+    const retryWithinWindow = await __testables.checkSpecialDays(client, "test");
+    expect(retryWithinWindow).toBe(true);
+    expect(client.channels.fetch).toHaveBeenCalledTimes(1);
+
+    client.channels.fetch.mockClear();
+    vi.setSystemTime(new Date("2026-02-15T06:00:00Z"));
+    const retryAfterWindow = await __testables.checkSpecialDays(client, "test");
+    expect(retryAfterWindow).toBe(false);
+    expect(client.channels.fetch).not.toHaveBeenCalled();
+  });
+
+  it("records special day occurrence after at least one successful channel post", async () => {
+    vi.useFakeTimers();
+    loadSpecialDaysMock.mockResolvedValue({
+      defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+      days: [
+        {
+          id: "valentines",
+          name: "Valentine's Day",
+          kind: "fixed_date",
+          month: 2,
+          day: 14,
+          message: "Happy Valentine's Day!",
+        },
+      ],
+    });
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const send = vi.fn(async () => ({}));
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => ({ send })) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    vi.setSystemTime(new Date("2026-02-14T12:00:00Z"));
+    const retryWithinWindow = await __testables.checkSpecialDays(client, "test");
+    expect(retryWithinWindow).toBe(false);
+    expect(send).toHaveBeenCalledTimes(1);
+
+    const occurrenceInserts = dbExecute.mock.calls.filter(([sql]) =>
+      String(sql).includes("INSERT IGNORE INTO event_occurrences")
+    );
+    expect(occurrenceInserts).toHaveLength(1);
+    expect(occurrenceInserts[0][1][0]).toBe("special_valentines");
   });
 
   it("responds with help text for !events help", async () => {
