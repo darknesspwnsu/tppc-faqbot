@@ -178,6 +178,22 @@ async function hasOccurrence(eventId, startMs) {
   return !!rows?.length;
 }
 
+async function hasChannelNotification(eventId, startMs) {
+  const db = getDb();
+  const [rows] = await db.execute(
+    `
+    SELECT 1
+    FROM event_notifications
+    WHERE event_id = ?
+      AND start_ms = ?
+      AND target_type = 'channel'
+    LIMIT 1
+  `,
+    [String(eventId), Number(startMs)]
+  );
+  return !!rows?.length;
+}
+
 async function wasNotified({ eventId, startMs, targetType, targetId, channelId }) {
   const db = getDb();
   const [rows] = await db.execute(
@@ -224,12 +240,20 @@ function formatDuration(ms) {
   return `${total}s`;
 }
 
-function buildEventMessage(event, start, end, { promo } = {}) {
+function buildEventMessage(event, start, end, { promo, now } = {}) {
   if (event.id === "weekly_promo") {
     const promoText = promo ? `Current promo: **${promo}**.` : "Current promo: **Not set**.";
     return `📣 **Weekly TPPC promo has been refreshed.**\n${promoText}\nDuration: **7 days**.`;
   }
-  const duration = end && start ? `Duration: **${formatDuration(end - start)}**.` : "";
+  let duration = "";
+  if (end && start) {
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const nowMs = now instanceof Date ? now.getTime() : Date.now();
+    const totalMs = Math.max(0, endMs - startMs);
+    const remainingMs = Math.max(0, endMs - nowMs);
+    duration = `Duration: **${formatDuration(Math.min(totalMs, remainingMs))}**.`;
+  }
   return `📣 **${event.name}** has begun.\n${event.description || ""}\n${duration}`.trim();
 }
 
@@ -541,7 +565,14 @@ async function checkSpecialDays(client, reason = "scheduled") {
     if (now.getTime() < start.getTime() || now.getTime() >= end.getTime()) continue;
     const eventId = `special_${day.id}`;
     const exists = await hasOccurrence(eventId, start.getTime());
-    if (exists) continue;
+    if (exists) {
+      const deliveredToChannel = await hasChannelNotification(eventId, start.getTime());
+      if (deliveredToChannel) continue;
+      logger.warn("events.special_day.occurrence.incomplete", {
+        eventId,
+        startMs: start.getTime(),
+      });
+    }
     const event = {
       id: eventId,
       name: day.name,

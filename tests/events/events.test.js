@@ -104,10 +104,22 @@ describe("events parsing helpers", () => {
     const message = __testables.buildEventMessage(
       { id: "scatterbug", name: "Scatterbug Swarm", description: "Scatterbug swarm (24h)." },
       new Date("2026-01-10T05:00:00Z"),
-      new Date("2026-01-11T05:00:00Z")
+      new Date("2026-01-11T05:00:00Z"),
+      { now: new Date("2026-01-10T05:00:00Z") }
     );
     expect(message).toContain("Scatterbug Swarm");
     expect(message).toContain("Duration: **24h 0m**.");
+  });
+
+  it("formats standard event messages with remaining duration when posted late", () => {
+    const message = __testables.buildEventMessage(
+      { id: "scatterbug", name: "Scatterbug Swarm", description: "Scatterbug swarm (24h)." },
+      new Date("2026-01-10T05:00:00Z"),
+      new Date("2026-01-11T05:00:00Z"),
+      { now: new Date("2026-01-10T17:00:00Z") }
+    );
+    expect(message).toContain("Scatterbug Swarm");
+    expect(message).toContain("Duration: **12h 0m**.");
   });
 
   it("does not record a special day occurrence when no channel send succeeds", async () => {
@@ -204,6 +216,85 @@ describe("events parsing helpers", () => {
     );
     expect(occurrenceInserts).toHaveLength(1);
     expect(occurrenceInserts[0][1][0]).toBe("special_valentines");
+  });
+
+  it("retries special day delivery when legacy occurrence exists without channel notification", async () => {
+    vi.useFakeTimers();
+    loadSpecialDaysMock.mockResolvedValue({
+      defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+      days: [
+        {
+          id: "valentines",
+          name: "Valentine's Day",
+          kind: "fixed_date",
+          month: 2,
+          day: 14,
+          message: "Happy Valentine's Day!",
+        },
+      ],
+    });
+    dbExecute.mockImplementation(async (sql) => {
+      const text = String(sql);
+      if (text.includes("FROM event_occurrences WHERE event_id = ? AND start_ms = ?")) {
+        return [[{ present: 1 }]];
+      }
+      if (text.includes("target_type = 'channel'")) {
+        return [[]];
+      }
+      return [[]];
+    });
+
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const send = vi.fn(async () => ({}));
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => ({ send })) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    vi.setSystemTime(new Date("2026-02-14T12:00:00Z"));
+    const retryWithinWindow = await __testables.checkSpecialDays(client, "test");
+    expect(retryWithinWindow).toBe(false);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips special day delivery when occurrence and channel notification already exist", async () => {
+    vi.useFakeTimers();
+    loadSpecialDaysMock.mockResolvedValue({
+      defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
+      days: [
+        {
+          id: "valentines",
+          name: "Valentine's Day",
+          kind: "fixed_date",
+          month: 2,
+          day: 14,
+          message: "Happy Valentine's Day!",
+        },
+      ],
+    });
+    dbExecute.mockImplementation(async (sql) => {
+      const text = String(sql);
+      if (text.includes("FROM event_occurrences WHERE event_id = ? AND start_ms = ?")) {
+        return [[{ present: 1 }]];
+      }
+      if (text.includes("target_type = 'channel'")) {
+        return [[{ present: 1 }]];
+      }
+      return [[]];
+    });
+
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => ({ send: vi.fn(async () => ({})) })) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    vi.setSystemTime(new Date("2026-02-14T12:00:00Z"));
+    const retryWithinWindow = await __testables.checkSpecialDays(client, "test");
+    expect(retryWithinWindow).toBe(false);
+    expect(client.channels.fetch).not.toHaveBeenCalled();
   });
 
   it("responds with help text for !events help", async () => {
