@@ -1,0 +1,21 @@
+{
+  "thread_url": "https://forums.tppc.info/showthread.php?t=641631",
+  "pages_scraped": 37,
+  "weeks_covered": 19,
+  "boundary_detection": {
+    "op_username": "haunter",
+    "min_gap_days": 6,
+    "cue_pattern": "/\\b(starts?\\s+now|new week starts|next week starts|you may now guess again|try again|week\\s+\\d+\\s+starts?)\\b/i"
+  },
+  "first_week_start": "2025-09-29",
+  "last_week_start": "2026-02-09",
+  "max_weekly_entrants": 68,
+  "total_unique_week_slots": 815,
+  "total_valid_entry_posts": 867,
+  "outputs": {
+    "boundaries_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/week_boundaries.csv",
+    "weekly_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/weekly_entrants.csv",
+    "valid_entries_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/valid_entries_raw.csv",
+    "chart_svg": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/weekly_entrants_line.svg"
+  }
+}

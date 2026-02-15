@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+  <rect x="0" y="0" width="1400" height="800" fill="#f8fafc" />
+  <text x="90" y="34" font-size="28" font-family="Arial, Helvetica, sans-serif" fill="#0f172a">TPPC Lottery Entrants Per Week</text>
+  <text x="90" y="56" font-size="14" font-family="Arial, Helvetica, sans-serif" fill="#475569">2025-09-29 to 2026-02-09 | 867 valid entry posts</text>
+
+  <line x1="90" y1="620.00" x2="1360" y2="620.00" stroke="#e6ecf3" stroke-width="1" />
+<line x1="90" y1="482.50" x2="1360" y2="482.50" stroke="#e6ecf3" stroke-width="1" />
+<line x1="90" y1="345.00" x2="1360" y2="345.00" stroke="#e6ecf3" stroke-width="1" />
+<line x1="90" y1="207.50" x2="1360" y2="207.50" stroke="#e6ecf3" stroke-width="1" />
+<line x1="90" y1="70.00" x2="1360" y2="70.00" stroke="#e6ecf3" stroke-width="1" />
+  <line x1="90" y1="70" x2="90" y2="620" stroke="#334155" stroke-width="1.5" />
+  <line x1="90" y1="620" x2="1360" y2="620" stroke="#334155" stroke-width="1.5" />
+
+  <text x="78" y="620.00" text-anchor="end" dominant-baseline="middle" font-size="13" fill="#334155">0</text>
+<text x="78" y="482.50" text-anchor="end" dominant-baseline="middle" font-size="13" fill="#334155">20</text>
+<text x="78" y="345.00" text-anchor="end" dominant-baseline="middle" font-size="13" fill="#334155">40</text>
+<text x="78" y="207.50" text-anchor="end" dominant-baseline="middle" font-size="13" fill="#334155">60</text>
+<text x="78" y="70.00" text-anchor="end" dominant-baseline="middle" font-size="13" fill="#334155">80</text>
+  <line x1="90.00" y1="620" x2="90.00" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="90.00" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 90.00 644)">29th September</text>
+<line x1="160.56" y1="620" x2="160.56" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="160.56" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 160.56 644)">5th October</text>
+<line x1="231.11" y1="620" x2="231.11" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="231.11" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 231.11 644)">12th October</text>
+<line x1="301.67" y1="620" x2="301.67" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="301.67" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 301.67 644)">19th October</text>
+<line x1="372.22" y1="620" x2="372.22" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="372.22" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 372.22 644)">26th October</text>
+<line x1="442.78" y1="620" x2="442.78" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="442.78" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 442.78 644)">2nd November</text>
+<line x1="513.33" y1="620" x2="513.33" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="513.33" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 513.33 644)">9th November</text>
+<line x1="583.89" y1="620" x2="583.89" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="583.89" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 583.89 644)">16th November</text>
+<line x1="654.44" y1="620" x2="654.44" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="654.44" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 654.44 644)">23rd November</text>
+<line x1="725.00" y1="620" x2="725.00" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="725.00" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 725.00 644)">30th November</text>
+<line x1="795.56" y1="620" x2="795.56" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="795.56" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 795.56 644)">7th December</text>
+<line x1="866.11" y1="620" x2="866.11" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="866.11" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 866.11 644)">21st December</text>
+<line x1="936.67" y1="620" x2="936.67" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="936.67" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 936.67 644)">28th December</text>
+<line x1="1007.22" y1="620" x2="1007.22" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1007.22" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1007.22 644)">4th January</text>
+<line x1="1077.78" y1="620" x2="1077.78" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1077.78" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1077.78 644)">11th January</text>
+<line x1="1148.33" y1="620" x2="1148.33" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1148.33" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1148.33 644)">18th January</text>
+<line x1="1218.89" y1="620" x2="1218.89" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1218.89" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1218.89 644)">25th January</text>
+<line x1="1289.44" y1="620" x2="1289.44" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1289.44" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1289.44 644)">1st February</text>
+<line x1="1360.00" y1="620" x2="1360.00" y2="626" stroke="#7b8aa0" stroke-width="1" />
+<text x="1360.00" y="644" text-anchor="end" font-size="11" fill="#334155" transform="rotate(-35 1360.00 644)">9th February</text>
+
+  <path d="M 90.00 620.00 L 90.00 269.38 L 160.56 386.25 L 231.11 372.50 L 301.67 379.38 L 372.22 338.13 L 442.78 379.38 L 513.33 406.88 L 583.89 324.38 L 654.44 413.75 L 725.00 345.00 L 795.56 186.88 L 866.11 152.50 L 936.67 310.63 L 1007.22 296.88 L 1077.78 290.00 L 1148.33 283.13 L 1218.89 310.63 L 1289.44 317.50 L 1360.00 413.75 L 1360.00 620.00 Z" fill="#99f6e4" opacity="0.35" />
+  <path d="M 90.00 269.38 L 160.56 386.25 L 231.11 372.50 L 301.67 379.38 L 372.22 338.13 L 442.78 379.38 L 513.33 406.88 L 583.89 324.38 L 654.44 413.75 L 725.00 345.00 L 795.56 186.88 L 866.11 152.50 L 936.67 310.63 L 1007.22 296.88 L 1077.78 290.00 L 1148.33 283.13 L 1218.89 310.63 L 1289.44 317.50 L 1360.00 413.75" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="90.00" y="259.38" text-anchor="middle" font-size="10" fill="#0f172a">29th September</text>
+<text x="160.56" y="366.25" text-anchor="middle" font-size="10" fill="#0f172a">5th October</text>
+<text x="231.11" y="362.50" text-anchor="middle" font-size="10" fill="#0f172a">12th October</text>
+<text x="301.67" y="359.38" text-anchor="middle" font-size="10" fill="#0f172a">19th October</text>
+<text x="372.22" y="328.13" text-anchor="middle" font-size="10" fill="#0f172a">26th October</text>
+<text x="442.78" y="359.38" text-anchor="middle" font-size="10" fill="#0f172a">2nd November</text>
+<text x="513.33" y="396.88" text-anchor="middle" font-size="10" fill="#0f172a">9th November</text>
+<text x="583.89" y="304.38" text-anchor="middle" font-size="10" fill="#0f172a">16th November</text>
+<text x="654.44" y="403.75" text-anchor="middle" font-size="10" fill="#0f172a">23rd November</text>
+<text x="725.00" y="325.00" text-anchor="middle" font-size="10" fill="#0f172a">30th November</text>
+<text x="795.56" y="176.88" text-anchor="middle" font-size="10" fill="#0f172a">7th December</text>
+<text x="866.11" y="132.50" text-anchor="middle" font-size="10" fill="#0f172a">21st December</text>
+<text x="936.67" y="300.63" text-anchor="middle" font-size="10" fill="#0f172a">28th December</text>
+<text x="1007.22" y="276.88" text-anchor="middle" font-size="10" fill="#0f172a">4th January</text>
+<text x="1077.78" y="280.00" text-anchor="middle" font-size="10" fill="#0f172a">11th January</text>
+<text x="1148.33" y="263.13" text-anchor="middle" font-size="10" fill="#0f172a">18th January</text>
+<text x="1218.89" y="300.63" text-anchor="middle" font-size="10" fill="#0f172a">25th January</text>
+<text x="1289.44" y="297.50" text-anchor="middle" font-size="10" fill="#0f172a">1st February</text>
+<text x="1360.00" y="403.75" text-anchor="middle" font-size="10" fill="#0f172a">9th February</text>
+  <circle cx="90.00" cy="269.38" r="3.2" fill="#0f766e" />
+<circle cx="160.56" cy="386.25" r="3.2" fill="#0f766e" />
+<circle cx="231.11" cy="372.50" r="3.2" fill="#0f766e" />
+<circle cx="301.67" cy="379.38" r="3.2" fill="#0f766e" />
+<circle cx="372.22" cy="338.13" r="3.2" fill="#0f766e" />
+<circle cx="442.78" cy="379.38" r="3.2" fill="#0f766e" />
+<circle cx="513.33" cy="406.88" r="3.2" fill="#0f766e" />
+<circle cx="583.89" cy="324.38" r="3.2" fill="#0f766e" />
+<circle cx="654.44" cy="413.75" r="3.2" fill="#0f766e" />
+<circle cx="725.00" cy="345.00" r="3.2" fill="#0f766e" />
+<circle cx="795.56" cy="186.88" r="3.2" fill="#0f766e" />
+<circle cx="866.11" cy="152.50" r="3.2" fill="#0f766e" />
+<circle cx="936.67" cy="310.63" r="3.2" fill="#0f766e" />
+<circle cx="1007.22" cy="296.88" r="3.2" fill="#0f766e" />
+<circle cx="1077.78" cy="290.00" r="3.2" fill="#0f766e" />
+<circle cx="1148.33" cy="283.13" r="3.2" fill="#0f766e" />
+<circle cx="1218.89" cy="310.63" r="3.2" fill="#0f766e" />
+<circle cx="1289.44" cy="317.50" r="3.2" fill="#0f766e" />
+<circle cx="1360.00" cy="413.75" r="3.2" fill="#0f766e" />
+  <line x1="90" y1="325.10" x2="1360" y2="325.10" stroke="#b45309" stroke-width="2" stroke-dasharray="8 6" />
+  <text x="1352" y="317.1" text-anchor="end" font-size="12" fill="#92400e">Avg entrants: 42.9</text>
+
+  <rect x="1070" y="82" width="270" height="72" rx="10" ry="10" fill="#ffffff" stroke="#cbd5e1" />
+  <text x="1085" y="108" font-size="14" fill="#0f172a" font-weight="bold">Stats</text>
+  <text x="1085" y="126" font-size="13" fill="#334155">Average entrants: 42.9</text>
+  <text x="1085" y="144" font-size="13" fill="#334155">Average win rate: 35.7%</text>
+
+  <text x="725" y="780" text-anchor="middle" font-size="13" fill="#334155">Lotto week start (OP boundary post date)</text>
+  <text x="24" y="345" text-anchor="middle" font-size="13" fill="#334155" transform="rotate(-90 24 345)">Unique entrants</text>
+</svg>
