@@ -13,9 +13,9 @@
   "total_unique_week_slots": 815,
   "total_valid_entry_posts": 867,
   "outputs": {
-    "boundaries_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/week_boundaries.csv",
-    "weekly_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/weekly_entrants.csv",
-    "valid_entries_csv": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/valid_entries_raw.csv",
-    "chart_svg": "/Users/shivadeviah/Desktop/tppc-faqbot/analysis/lotto/weekly_entrants_line.svg"
+    "boundaries_csv": "analysis/lotto/week_boundaries.csv",
+    "weekly_csv": "analysis/lotto/weekly_entrants.csv",
+    "valid_entries_csv": "analysis/lotto/valid_entries_raw.csv",
+    "chart_svg": "analysis/lotto/weekly_entrants_line.svg"
   }
 }
