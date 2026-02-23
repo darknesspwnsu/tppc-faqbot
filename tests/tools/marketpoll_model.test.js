@@ -47,6 +47,19 @@ describe("marketpoll_model", () => {
     expect(single.maxX).toBe(1_500_000);
   });
 
+  it("maps sub-1kx ranges to the lowest tier", () => {
+    const lowRange = parseSeedRange("0.5kx-1kx");
+    expect(lowRange.ok).toBe(true);
+    expect(lowRange.midX).toBe(750);
+    expect(lowRange.tierId).toBe("1-5kx");
+    expect(lowRange.tierIndex).toBe(0);
+
+    const lowSingle = parseSeedRange("750x");
+    expect(lowSingle.ok).toBe(true);
+    expect(lowSingle.tierId).toBe("1-5kx");
+    expect(lowSingle.tierIndex).toBe(0);
+  });
+
   it("builds base-only universe and rejects evolved assets in seed csv", () => {
     const goldenCsv = [
       "name,genders,male,female,genderless,ungendered,total",
@@ -278,6 +291,49 @@ describe("marketpoll_model", () => {
     });
 
     expect(pick).toBeNull();
+  });
+
+  it("rejects cross-realm candidates in 1v1, 1v2, and 2v2", () => {
+    function buildAsset(assetKey, gender, seedRange) {
+      const parsed = parseSeedRange(seedRange);
+      expect(parsed.ok).toBe(true);
+      return {
+        assetKey,
+        gender,
+        minX: parsed.minX,
+        maxX: parsed.maxX,
+        midX: parsed.midX,
+        tierIndex: parsed.tierIndex,
+      };
+    }
+
+    const highA = buildAsset("GoldenHeracross|?", "?", "1.8mx-2mx");
+    const highB = buildAsset("GoldenPichu|G", "G", "2mx-3mx");
+    const lowA = buildAsset("GoldenSandygast|F", "F", "0.5kx-1kx");
+    const lowB = buildAsset("GoldenSandygast|M", "M", "0.5kx-1kx");
+
+    const scenarios = [
+      { mode: "1v1", assets: [highA, lowA] },
+      { mode: "1v2", assets: [highA, highB, lowA] },
+      { mode: "2v2", assets: [highA, highB, lowA, lowB] },
+    ];
+
+    for (const scenario of scenarios) {
+      const pick = selectCandidateMatchup({
+        assets: scenario.assets,
+        cooldowns: new Map(),
+        openPairKeys: new Set(),
+        nowMs: 1000,
+        maxSideSize: 2,
+        sideSizeOptions: [1, 2],
+        matchupModes: [scenario.mode],
+        preferSameGender: false,
+        rng: () => 0.25,
+        maxAttempts: 300,
+      });
+
+      expect(pick, scenario.mode).toBeNull();
+    }
   });
 
   it("applies elo only when vote floor is met", () => {

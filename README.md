@@ -156,7 +156,7 @@ Slash command exposure can be controlled per guild in `configs/command_exposure.
 
 ## 🧪 Requirements
 
-- **Node.js 20+**
+- **Node.js 20.19+** (22 LTS recommended; `.nvmrc` pinned to `22.12.0`)
 - **Discord.js v14**
 - **MySQL / MariaDB** (required for most features)
 - Discord bot permissions:

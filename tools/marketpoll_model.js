@@ -141,6 +141,11 @@ export function parseRateToken(raw, { fallbackMultiplier = null } = {}) {
 
 export function tierForMidX(midX) {
   const val = Number(midX);
+  const first = GOLDMARKET_TIERS[0];
+  if (!Number.isFinite(val) || val < first.min) {
+    return { ...first, index: 0 };
+  }
+
   for (let i = 0; i < GOLDMARKET_TIERS.length; i += 1) {
     const tier = GOLDMARKET_TIERS[i];
     if (val < tier.min) continue;
