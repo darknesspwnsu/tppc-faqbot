@@ -75,3 +75,59 @@ describe("roll command", () => {
     );
   });
 });
+
+describe("dexroll command", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("rolls a Pokemon in default range when no args are provided", async () => {
+    const register = vi.fn();
+    register.expose = vi.fn();
+    registerRng(register);
+
+    const dexRollCall = register.expose.mock.calls.find((call) => call[0].name === "dexroll");
+    const handler = dexRollCall[0].handler;
+
+    const send = vi.fn(async () => {});
+    const message = { channel: { send }, author: { id: "u1" } };
+
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    await handler({ message, rest: "", cmd: "!dexroll" });
+
+    expect(send).toHaveBeenCalledWith("#1 - Bulbasaur");
+  });
+
+  test("supports gen mode", async () => {
+    const register = vi.fn();
+    register.expose = vi.fn();
+    registerRng(register);
+
+    const dexRollCall = register.expose.mock.calls.find((call) => call[0].name === "dexroll");
+    const handler = dexRollCall[0].handler;
+
+    const send = vi.fn(async () => {});
+    const message = { channel: { send }, author: { id: "u1" } };
+
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    await handler({ message, rest: "gen 1", cmd: "!dexroll" });
+
+    expect(send).toHaveBeenCalledWith("#1 - Bulbasaur");
+  });
+
+  test("validates lower/upper ranges after max-supported cap", async () => {
+    const register = vi.fn();
+    register.expose = vi.fn();
+    registerRng(register);
+
+    const dexRollCall = register.expose.mock.calls.find((call) => call[0].name === "dexroll");
+    const handler = dexRollCall[0].handler;
+
+    const send = vi.fn(async () => {});
+    const message = { channel: { send }, author: { id: "u1" } };
+
+    await handler({ message, rest: "9999 9999", cmd: "!dexroll" });
+
+    expect(send).toHaveBeenCalledWith(expect.stringContaining("Invalid dex range:"));
+  });
+});
