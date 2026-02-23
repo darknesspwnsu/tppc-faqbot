@@ -19,6 +19,7 @@ const MAX_TIMEOUT_MS = 2_000_000_000; // ~23 days (setTimeout limit safety)
 const DEFAULT_REMINDME_TZ = "America/New_York";
 const NOTIFY_SNIPPET_MAX_CHARS = 200;
 const NOTIFY_SNIPPET_MAX_LINES = 3;
+const NOTIFY_ANY_MESSAGE_LABEL = "(any message)";
 
 const TZ_ALIASES = new Map([
   ["UTC", "UTC"],
@@ -51,6 +52,17 @@ function norm(s) {
 
 function phraseKey(phrase) {
   return normalizeForMatch(phrase);
+}
+
+function notifyPhraseLabel(phrase) {
+  const text = norm(phrase);
+  return text || NOTIFY_ANY_MESSAGE_LABEL;
+}
+
+function isAnyMessagePhraseInput(raw) {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return false;
+  return value === "any" || value === "any message" || value === NOTIFY_ANY_MESSAGE_LABEL;
 }
 
 function normalizeUserIds(ids) {
@@ -584,9 +596,13 @@ function buildNotifyChoices(items, focused) {
     item,
     index: idx + 1,
   }));
-  const filtered = indexed.filter(({ item }) => !q || item.phrase.toLowerCase().includes(q));
+  const filtered = indexed.filter(({ item }) => {
+    const label = notifyPhraseLabel(item.phrase);
+    return !q || label.toLowerCase().includes(q);
+  });
   return filtered.slice(0, 25).map(({ item, index }) => {
-    const label = item.phrase.length > 84 ? `${item.phrase.slice(0, 81)}…` : item.phrase;
+    const phrase = notifyPhraseLabel(item.phrase);
+    const label = phrase.length > 84 ? `${phrase.slice(0, 81)}…` : phrase;
     return {
       name: `${index}. ${label}`,
       value: String(index),
@@ -622,7 +638,7 @@ function renderNotifyList(items) {
       suffixParts.push(`ignore ${x.ignoredUserIds.map((id) => mention(id)).join(", ")}`);
     }
     const suffix = suffixParts.length ? ` (${suffixParts.join("; ")})` : "";
-    return `${idx + 1}. ${x.phrase}${suffix}`;
+    return `${idx + 1}. ${notifyPhraseLabel(x.phrase)}${suffix}`;
   });
   return `Your notifications:\n${lines.join("\n")}`;
 }
@@ -642,6 +658,7 @@ export function registerReminders(register) {
    * /notifyme
    * - Guild-scoped phrase watcher: triggers only for messages in the same server.
    * - Case-insensitive whole-phrase matching.
+   * - Phrase is optional when targeting a specific user (matches any message by that user).
    * - Optional target user to match only messages from that user (including bots).
    * - Limit: 10 notifications per user across all servers (admin/privileged exempt).
    * - /notifyme clear removes all notifications for the current server only.
@@ -653,16 +670,18 @@ export function registerReminders(register) {
     const state = await loadNotifyGuild(message.guildId);
     if (!state.items.length) return;
 
-    const normalized = normalizeForMatch(message.content || "");
-    if (!normalized || normalized === " ") return;
-
     const authorId = message.author?.id || "";
     const isBot = !!message.author?.bot;
+    let normalized = null;
     const matches = state.items.filter((item) => {
       if (item.targetUserId && item.targetUserId !== authorId) return false;
       if (item.ignoredUserIds?.includes(authorId)) return false;
       if (isBot && !item.targetUserId) return false;
-      return includesWholePhrase(normalized, item.phrase);
+      const phrase = norm(item.phrase);
+      if (!phrase) return true;
+      if (normalized === null) normalized = normalizeForMatch(message.content || "");
+      if (!normalized || normalized === " ") return false;
+      return includesWholePhrase(normalized, phrase);
     });
     if (!matches.length) return;
 
@@ -682,35 +701,45 @@ export function registerReminders(register) {
           channelId: message.channelId,
           messageId: message.id,
         });
-        const phrases = items.map((entry) => String(entry.phrase || "").trim()).filter(Boolean);
-        const listBlock =
-          phrases.length > 1
-            ? `\n${phrases.map((phrase) => `• "${phrase}"`).join("\n")}`
-            : "";
+        const phrases = items.map((entry) => norm(entry.phrase)).filter(Boolean);
+        const anyMessageCount = Math.max(items.length - phrases.length, 0);
+        const listBlock = phrases.length > 1 ? `\n${phrases.map((phrase) => `• "${phrase}"`).join("\n")}` : "";
         const snippet = buildNotifySnippet(message.content);
         const quote = snippet ? `\n${formatQuoteBlock(snippet)}\n` : "\n";
-        const header =
-          phrases.length > 1
-            ? `🔔 **NotifyMe**: ${phrases.length} phrases mentioned by ${mention(
-                message.author?.id
-              )} in <#${message.channelId}>.${listBlock}`
-            : `🔔 **NotifyMe**: "${phrases[0]}" mentioned by ${mention(
-                message.author?.id
-              )} in <#${message.channelId}>.`;
+        let header = "";
+        if (!anyMessageCount && phrases.length > 1) {
+          header = `🔔 **NotifyMe**: ${phrases.length} phrases mentioned by ${mention(
+            message.author?.id
+          )} in <#${message.channelId}>.${listBlock}`;
+        } else if (!anyMessageCount && phrases.length === 1) {
+          header = `🔔 **NotifyMe**: "${phrases[0]}" mentioned by ${mention(
+            message.author?.id
+          )} in <#${message.channelId}>.`;
+        } else if (anyMessageCount && !phrases.length) {
+          header = `🔔 **NotifyMe**: Message by ${mention(message.author?.id)} in <#${message.channelId}>.`;
+        } else {
+          const phrasePart = `${phrases.length} phrase${phrases.length === 1 ? "" : "s"}`;
+          const anyPart = `${anyMessageCount} user watch${
+            anyMessageCount === 1 ? "" : "es"
+          }`;
+          header = `🔔 **NotifyMe**: ${phrasePart} and ${anyPart} matched for ${mention(
+            message.author?.id
+          )} in <#${message.channelId}>.${listBlock}`;
+        }
 
         const res = await sendDm({
           user,
           payload:
             `${header}` +
-            `${quote}${link}\n\nNotifyMe will continue to notify you of this phrase. To stop receiving notifications for this message, use \`/notifyme unset\` in the server.`,
+            `${quote}${link}\n\nNotifyMe will continue to notify you for this watch. To stop receiving notifications like this, use \`/notifyme unset\` in the server.`,
           feature: "notifyme",
         });
         if (res.ok) {
-          void metrics.increment("notifyme.trigger", { status: "ok" }, phrases.length || 1);
+          void metrics.increment("notifyme.trigger", { status: "ok" }, items.length || 1);
         } else if (res.code === 50007) {
-          void metrics.increment("notifyme.trigger", { status: "blocked" }, phrases.length || 1);
+          void metrics.increment("notifyme.trigger", { status: "blocked" }, items.length || 1);
         } else {
-          void metrics.increment("notifyme.trigger", { status: "error" }, phrases.length || 1);
+          void metrics.increment("notifyme.trigger", { status: "error" }, items.length || 1);
           console.warn("[notifyme] DM failed:", res.error);
         }
       } catch (err) {
@@ -723,23 +752,23 @@ export function registerReminders(register) {
   register.slash(
     {
       name: "notifyme",
-      description: "Get a DM when a phrase is mentioned",
+      description: "Get a DM when a phrase is mentioned or a user posts",
       options: [
         {
           type: 1,
           name: "set",
-          description: "Add a phrase to watch (case-insensitive)",
+          description: "Add a phrase to watch, or watch all messages from a user",
           options: [
             {
               type: 3,
               name: "phrase",
-              description: "Phrase to watch for",
-              required: true,
+              description: "Phrase to watch for (optional when from_user is set)",
+              required: false,
             },
             {
               type: 6,
               name: "from_user",
-              description: "Only notify when this user says the phrase",
+              description: "Only notify when this user says the phrase (or any message if phrase is empty)",
               required: false,
             },
             {
@@ -808,9 +837,9 @@ export function registerReminders(register) {
         const targetUserId = targetUser?.id || null;
         const ignoreUsersRaw = norm(interaction.options?.getString?.("ignore_users"));
         const ignoredUserIds = ignoreUsersRaw ? parseUserIdsFromInput(ignoreUsersRaw) : [];
-        if (!phrase) {
+        if (!phrase && !targetUserId) {
           await interaction.reply({
-            content: "Please provide a phrase to watch for.",
+            content: "Please provide a phrase to watch for, or set `from_user` to watch all messages from a user.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -865,8 +894,10 @@ export function registerReminders(register) {
           return (item.targetUserId || null) === (targetUserId || null);
         });
         if (exists) {
+          const targetLabel = targetUserId ? ` from ${mention(targetUserId)}` : "";
+          const label = phrase ? `"${phrase}"` : `any message${targetLabel}`;
           await interaction.reply({
-            content: `You are already watching: "${phrase}"`,
+            content: `You are already watching: ${label}`,
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -895,8 +926,9 @@ export function registerReminders(register) {
           suffixParts.push(`ignoring ${ignoredUserIds.map((id) => mention(id)).join(", ")}`);
         }
         const suffix = suffixParts.length ? ` (${suffixParts.join("; ")})` : "";
+        const watchLabel = phrase ? `"${phrase}"` : "any message";
         await interaction.reply({
-          content: `✅ I’ll notify you when I see: "${phrase}"${suffix}`,
+          content: `✅ I’ll notify you when I see: ${watchLabel}${suffix}`,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -931,6 +963,10 @@ export function registerReminders(register) {
 
         let matchPhrase = phraseInput;
         let matchKey = phraseKey(phraseInput);
+        if (isAnyMessagePhraseInput(phraseInput)) {
+          matchPhrase = NOTIFY_ANY_MESSAGE_LABEL;
+          matchKey = phraseKey("");
+        }
         if (/^\d+$/.test(phraseInput)) {
           const index = Number(phraseInput);
           if (!Number.isInteger(index) || index < 1) {
@@ -983,7 +1019,7 @@ export function registerReminders(register) {
 
         if (!updatedCount) {
           await interaction.reply({
-            content: `All provided users are already ignored for "${phrase}".`,
+            content: `All provided users are already ignored for "${matchPhrase}".`,
             flags: MessageFlags.Ephemeral,
           });
           return;

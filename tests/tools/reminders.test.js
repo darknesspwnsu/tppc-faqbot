@@ -115,6 +115,53 @@ describe("tools/reminders", () => {
     );
   });
 
+  it("sets notifyme with from_user and no phrase", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id, ignore_user_ids FROM notify_me")) return [[]];
+      if (sql.includes("INSERT INTO notify_me")) return [{ insertId: 14 }];
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
+
+    const interaction = makeInteraction({
+      sub: "set",
+      phrase: "",
+      fromUserId: "44444",
+    });
+    await notifySlash.handler({ interaction });
+
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO notify_me"),
+      ["g1", "u1", "", "44444", null]
+    );
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("✅ I’ll notify you when I see: any message (from <@44444>)"),
+      })
+    );
+  });
+
+  it("rejects notifyme set without phrase and without from_user", async () => {
+    const execute = vi.fn(async () => [[]]);
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const notifySlash = register.calls.slash.find((c) => c.config.name === "notifyme");
+
+    const interaction = makeInteraction({ sub: "set", phrase: "" });
+    await notifySlash.handler({ interaction });
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("set `from_user`") })
+    );
+    expect(execute).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notify_me"), expect.anything());
+  });
+
   it("sets a notifyme phrase with ignored users", async () => {
     const execute = vi.fn(async (sql) => {
       if (sql.includes("SELECT id, user_id, phrase, target_user_id, ignore_user_ids FROM notify_me")) return [[]];
@@ -514,6 +561,35 @@ describe("tools/reminders", () => {
 
     await listener({ message });
     expect(send).toHaveBeenCalled();
+  });
+
+  it("matches any message when notifyme uses from_user without phrase", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("SELECT id, user_id, phrase, target_user_id, ignore_user_ids FROM notify_me")) {
+        return [[{ id: 40, user_id: "u1", phrase: "", target_user_id: "b1" }]];
+      }
+      return [[]];
+    });
+    dbMocks.getDb.mockReturnValue({ execute });
+
+    const register = makeRegister();
+    registerReminders(register);
+    const listener = register.calls.listener[0];
+
+    const send = vi.fn(async () => {});
+    const message = {
+      guildId: "g1",
+      channelId: "c1",
+      id: "m20",
+      content: "",
+      author: { id: "b1", bot: true },
+      client: { users: { fetch: vi.fn(async () => ({ send })) } },
+    };
+
+    await listener({ message });
+    expect(send).toHaveBeenCalled();
+    const payload = send.mock.calls[0][0];
+    expect(payload).toContain("NotifyMe**: Message by <@b1>");
   });
 
   it("does not notify when author is in phrase ignore list", async () => {

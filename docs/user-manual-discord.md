@@ -45,8 +45,8 @@ _Practical helpers for otherwise tedious rpg stuff._
   Example: `!eggtime Larvesta`
 - **!count** - message counts and leaderboard  
   Example: `!count leaderboard`
-- **/notifyme set <phrase> [ignore_users]** - DM on phrase with optional ignored users  
-  Example: `/notifyme set phrase:golden ignore_users:@user1 @user2`
+- **/notifyme set [phrase] [from_user] [ignore_users]** - DM on phrase with optional ignored users; if phrase is omitted, notify on any message from `from_user`  
+  Example: `/notifyme set from_user:@GiveawayBot`
 - **/notifyme ignore <phrase|phrase_id> <users>** - add ignored users to an existing watched phrase (autocomplete enabled)  
   Example: `/notifyme ignore phrase:1 users:@user1 @user2`
 - **/remindme set <phrase> <time|at>** - timed reminder (supports today/tomorrow)  
