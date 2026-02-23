@@ -29,6 +29,12 @@ export const GOLDMARKET_TIERS = [
 export const MARKETPOLL_MATCHUP_MODES = ["1v1", "1v2", "2v1", "2v2"];
 const EVOLVED_SEED_EXCEPTIONS = new Set(["goldensnorlax", "goldensudowoodo"]);
 
+export function isSeedableKnownAsset(known) {
+  return Boolean(
+    known && (known.isBase || EVOLVED_SEED_EXCEPTIONS.has(String(known.normalizedName || "")))
+  );
+}
+
 function trimTrailingZeros(n) {
   return String(Number(n.toFixed(4)));
 }
@@ -341,7 +347,7 @@ export function parseSeedCsv(seedCsvText, { assetUniverse }) {
       continue;
     }
 
-    if (!known.isBase && !EVOLVED_SEED_EXCEPTIONS.has(String(known.normalizedName || ""))) {
+    if (!isSeedableKnownAsset(known)) {
       errors.push(
         `line ${lineNo}: evolved asset not allowed (${assetKey}); base is ${known.baseName}`
       );

@@ -260,6 +260,20 @@ function findEntry({ lowerIndex, normIndex }, qRaw) {
   return null;
 }
 
+export async function resolveRarityEntry(qRaw) {
+  const query = String(qRaw || "").trim();
+  if (!query) return { ok: false, reason: "not_found" };
+
+  if (!rarityNorm) await refresh();
+  if (!rarityNorm || !rarity) {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  const hit = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, query);
+  if (!hit) return { ok: false, reason: "not_found" };
+  return { ok: true, entry: hit };
+}
+
 function prettyVariantGuess(qRaw) {
   const q = String(qRaw ?? "").trim();
   if (!q) return null;

@@ -7,9 +7,11 @@ import path from "node:path";
 import { PermissionFlagsBits } from "discord.js";
 
 import { isAdminOrPrivileged } from "../auth.js";
+import { normalizeKey } from "../shared/pokename_utils.js";
 import { logger } from "../shared/logger.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { startInterval, clearTimer, startTimeout } from "../shared/timer_utils.js";
+import { resolveRarityEntry } from "./rarity.js";
 import {
   ensureMarketPollSettings,
   getMarketPollSettings,
@@ -29,17 +31,24 @@ import {
   listMarketPollLeaderboard,
   listMarketPollHistory,
   countOpenMarketPolls,
+  listMarketPollSeedOverrides,
+  upsertMarketPollSeedOverride,
+  deleteMarketPollSeedOverride,
+  countMarketPollSeedOverrides,
 } from "./marketpoll_store.js";
 import {
   GOLDMARKET_TIERS,
   MARKETPOLL_MATCHUP_MODES,
   parseSeedCsv,
+  parseSeedRange,
+  normalizeAssetKey,
   buildAssetUniverse,
   selectCandidateMatchup,
   canonicalPairKey,
   applyEloFromVotesBundles,
   resolveAssetQuery,
   formatX,
+  isSeedableKnownAsset,
 } from "./marketpoll_model.js";
 
 const SEED_FILE = path.resolve("data/marketpoll_seeds.csv");
@@ -53,6 +62,8 @@ const MAX_TIERS_LIMIT = 100;
 const MAX_SIDE_ASSETS = 2;
 const SIDE_SIZE_OPTIONS = [1, 2];
 const MATCHUP_MODE_SET = new Set(MARKETPOLL_MATCHUP_MODES);
+const SCORE_MODE_COUNTED = "counted";
+const SCORE_MODE_EXHIBITION = "exhibition";
 
 let clientRef = null;
 let schedulerBooted = false;
@@ -301,26 +312,108 @@ function formatPollSide(assetKeys, fallback = "") {
   return keys.map((k) => formatAssetDisplay(k)).join(" + ");
 }
 
+function isGoldenPollOption(option) {
+  const raw = String(option || "").trim();
+  if (!raw) return false;
+  const [name] = raw.split("|");
+  return /^golden/i.test(String(name || "").trim());
+}
+
+function buildPollQuestionText({ leftAssetKeys, rightAssetKeys }) {
+  const options = [...normalizeAssetKeyList(leftAssetKeys), ...normalizeAssetKeyList(rightAssetKeys)];
+  return options.length > 0 && options.every((option) => isGoldenPollOption(option))
+    ? "Which Golden do you prefer?"
+    : "Which Pokemon do you prefer?";
+}
+
 function fileStatSignature(stat) {
   if (!stat) return "0:0";
   return `${Number(stat.mtimeMs || 0)}:${Number(stat.size || 0)}`;
 }
 
+function toBoolean(value) {
+  return value === true || value === 1 || String(value || "").toLowerCase() === "true";
+}
+
+function buildSeedRowFromOverride({ assetKey, known, parsedRange }) {
+  const [name, gender] = String(assetKey || "").split("|");
+  const bareName = String(name || "")
+    .replace(/^golden\s*/i, "")
+    .trim();
+
+  return {
+    assetKey,
+    name: known?.name || name,
+    bareName: known?.bareName || bareName,
+    gender: known?.gender || gender,
+    normalizedName: known?.normalizedName || normalizeKey(name),
+    normalizedBareName: known?.normalizedBareName || normalizeKey(bareName),
+    ...parsedRange,
+  };
+}
+
+function applySeedOverrides({ baseRows, overrides, universe }) {
+  const out = new Map((Array.isArray(baseRows) ? baseRows : []).map((row) => [row.assetKey, row]));
+  const errors = [];
+
+  for (const override of Array.isArray(overrides) ? overrides : []) {
+    const assetKey = normalizeAssetKey(override?.assetKey || "");
+    const rangeRaw = String(override?.seedRange || "").trim();
+    const isProvisional = toBoolean(override?.isProvisional);
+    if (!assetKey) {
+      errors.push(`seed override has invalid asset_key: ${String(override?.assetKey || "").trim() || "(blank)"}`);
+      continue;
+    }
+
+    const parsedRange = parseSeedRange(rangeRaw);
+    if (!parsedRange.ok) {
+      errors.push(`seed override ${assetKey}: ${parsedRange.error}`);
+      continue;
+    }
+
+    const known = universe?.allAssetsByKey?.get(assetKey) || null;
+    if (known && !isSeedableKnownAsset(known)) {
+      errors.push(`seed override ${assetKey}: evolved asset not allowed; base is ${known.baseName}`);
+      continue;
+    }
+
+    if (!known && !isProvisional) {
+      errors.push(`seed override ${assetKey}: unknown asset requires provisional flag`);
+      continue;
+    }
+
+    out.set(
+      assetKey,
+      buildSeedRowFromOverride({
+        assetKey,
+        known,
+        parsedRange,
+      })
+    );
+  }
+
+  const rows = [...out.values()].sort((a, b) => a.assetKey.localeCompare(b.assetKey));
+  return { rows, errors };
+}
+
 async function loadSeedState(force = false) {
   try {
-    const [seedStat, goldStat, evoStat] = await Promise.all([
+    const [seedStat, goldStat, evoStat, overrideSignature] = await Promise.all([
       fs.stat(SEED_FILE),
       fs.stat(GOLDEN_GENDER_FILE),
       fs.stat(EVOLUTION_FILE),
+      countMarketPollSeedOverrides(),
     ]);
 
-    const signature = `${fileStatSignature(seedStat)}|${fileStatSignature(goldStat)}|${fileStatSignature(evoStat)}`;
+    const dbSig = `${Number(overrideSignature?.total || 0)}:${Number(overrideSignature?.latestUpdatedAtMs || 0)}`;
+    const signature = `${fileStatSignature(seedStat)}|${fileStatSignature(goldStat)}|${fileStatSignature(evoStat)}|${dbSig}`;
     if (!force && seedCache.signature === signature) return seedCache;
 
-    const [seedCsv, goldenGenderCsv, evolutionJsonRaw] = await Promise.all([
+    const [seedCsv, goldenGenderCsv, evolutionJsonRaw, overrides] = await Promise.all([
       fs.readFile(SEED_FILE, "utf8"),
       fs.readFile(GOLDEN_GENDER_FILE, "utf8"),
       fs.readFile(EVOLUTION_FILE, "utf8"),
+      listMarketPollSeedOverrides(),
     ]);
 
     const evolutionData = JSON.parse(evolutionJsonRaw);
@@ -330,13 +423,19 @@ async function loadSeedState(force = false) {
     });
 
     const parsed = parseSeedCsv(seedCsv, { assetUniverse: universe });
-    const valid = parsed.errors.length === 0;
+    const merged = applySeedOverrides({
+      baseRows: parsed.rows,
+      overrides,
+      universe,
+    });
+    const errors = [...parsed.errors, ...merged.errors];
+    const valid = errors.length === 0;
 
     seedCache = {
       signature,
       valid,
-      rows: parsed.rows,
-      errors: parsed.errors,
+      rows: merged.rows,
+      errors,
       universe,
       loadedAtMs: Date.now(),
     };
@@ -372,10 +471,15 @@ function buildHelpText(prefix = "!") {
     `• \`${prefix}marketpoll config cooldown <days>\``,
     `• \`${prefix}marketpoll config minvotes <n>\``,
     `• \`${prefix}marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>\``,
+    `• \`${prefix}marketpoll seeds upsert <asset_key> <seed_range>\``,
+    `• \`${prefix}marketpoll seeds unset <asset_key>\``,
+    `• \`${prefix}marketpoll seeds get <asset_or_name> [gender]\``,
     `• \`${prefix}marketpoll tiers [tier] [gender] [limit]\``,
     `• \`${prefix}marketpoll poll now\``,
+    `• \`${prefix}marketpoll poll now "<left>" vs "<right>" [counted] [force]\``,
     "",
     "Default matchup mode is `1v1`. Multi-asset modes stay off until explicitly enabled.",
+    "Targeted polls default to exhibition mode (no Elo/cooldown updates).",
   ].join("\n");
 }
 
@@ -436,6 +540,245 @@ function parseTiersArgs(tokens) {
   }
 
   return { tierId, gender, limit };
+}
+
+function parsePollNowArgs(tokens) {
+  const args = Array.isArray(tokens) ? [...tokens] : [];
+  const usage =
+    'Usage: `!marketpoll poll now` or `!marketpoll poll now "<left>" vs "<right>" [counted] [force]`';
+
+  let force = false;
+  let counted = false;
+  while (args.length) {
+    const tail = String(args[args.length - 1] || "").trim().toLowerCase();
+    if (tail === "force") {
+      force = true;
+      args.pop();
+      continue;
+    }
+    if (tail === "counted") {
+      counted = true;
+      args.pop();
+      continue;
+    }
+    break;
+  }
+
+  if (!args.length) {
+    if (force || counted) return { ok: false, error: usage };
+    return { ok: true, targeted: false, scoreMode: SCORE_MODE_COUNTED, force: false };
+  }
+
+  const vsIndex = args.findIndex((x) => String(x || "").trim().toLowerCase() === "vs");
+  if (vsIndex <= 0 || vsIndex >= args.length - 1) return { ok: false, error: usage };
+
+  const leftRaw = args.slice(0, vsIndex).join(" ").trim();
+  const rightRaw = args.slice(vsIndex + 1).join(" ").trim();
+  if (!leftRaw || !rightRaw) return { ok: false, error: usage };
+
+  return {
+    ok: true,
+    targeted: true,
+    leftRaw,
+    rightRaw,
+    scoreMode: counted ? SCORE_MODE_COUNTED : SCORE_MODE_EXHIBITION,
+    force,
+  };
+}
+
+function splitPollSide(raw) {
+  return String(raw || "")
+    .split("+")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function tierIndexForMidX(midX) {
+  const val = Number(midX);
+  const first = GOLDMARKET_TIERS[0];
+  if (!Number.isFinite(val) || val < first.min) return 0;
+
+  for (let i = 0; i < GOLDMARKET_TIERS.length; i += 1) {
+    const tier = GOLDMARKET_TIERS[i];
+    if (val < tier.min) continue;
+    if (tier.max !== null && val >= tier.max) continue;
+    return i;
+  }
+
+  return GOLDMARKET_TIERS.length - 1;
+}
+
+function bundleFromSeedRows(seedRows) {
+  const rows = Array.isArray(seedRows) ? seedRows : [];
+  const minX = rows.reduce((sum, r) => sum + Number(r.minX || 0), 0);
+  const maxX = rows.reduce((sum, r) => sum + Number(r.maxX || 0), 0);
+  const midX = rows.reduce((sum, r) => sum + Number(r.midX || 0), 0);
+  return {
+    minX,
+    maxX,
+    midX,
+    tierIndex: tierIndexForMidX(midX),
+  };
+}
+
+function rangesOverlap(a, b) {
+  return Math.min(Number(a.maxX), Number(b.maxX)) > Math.max(Number(a.minX), Number(b.minX));
+}
+
+async function resolveTargetedEntry({ rawEntry, seedByKey, scoreMode }) {
+  const raw = String(rawEntry || "").trim();
+  if (!raw) return { ok: false, error: "Poll sides cannot contain empty entries." };
+
+  const maybeAssetKey = normalizeAssetKey(raw);
+  if (maybeAssetKey) {
+    const seeded = seedByKey.get(maybeAssetKey) || null;
+    if (seeded) {
+      return {
+        ok: true,
+        entry: {
+          token: seeded.assetKey,
+          seeded: true,
+          seedRow: seeded,
+          isGolden: true,
+        },
+      };
+    }
+
+    if (scoreMode === SCORE_MODE_COUNTED) {
+      return {
+        ok: false,
+        error: `Counted targeted polls require seeded assets. Missing seed for \`${maybeAssetKey}\`.`,
+      };
+    }
+
+    const rarity = await resolveRarityEntry(maybeAssetKey.split("|")[0]);
+    if (!rarity.ok) {
+      if (rarity.reason === "unavailable") {
+        return {
+          ok: false,
+          error:
+            "Rarity data is currently unavailable, so unseeded assets cannot be verified right now. Please retry shortly.",
+        };
+      }
+      return { ok: false, error: `Could not verify unseeded asset \`${maybeAssetKey}\`.` };
+    }
+
+    return {
+      ok: true,
+      entry: {
+        token: maybeAssetKey,
+        seeded: false,
+        seedRow: null,
+        isGolden: /^golden/i.test(String(rarity.entry?.name || maybeAssetKey)),
+      },
+    };
+  }
+
+  if (scoreMode === SCORE_MODE_COUNTED) {
+    return {
+      ok: false,
+      error: `Counted targeted polls only support seeded asset keys. Invalid entry: \`${raw}\`.`,
+    };
+  }
+
+  const rarity = await resolveRarityEntry(raw);
+  if (!rarity.ok) {
+    if (rarity.reason === "unavailable") {
+      return {
+        ok: false,
+        error:
+          "Rarity data is currently unavailable, so plain-name entries cannot be verified right now. Please retry shortly.",
+      };
+    }
+    return { ok: false, error: `Unknown Pokemon/asset: \`${raw}\`.` };
+  }
+
+  return {
+    ok: true,
+    entry: {
+      token: String(rarity.entry?.name || raw),
+      seeded: false,
+      seedRow: null,
+      isGolden: /^golden/i.test(String(rarity.entry?.name || raw)),
+    },
+  };
+}
+
+async function resolveTargetedSide({ raw, seedByKey, scoreMode, label }) {
+  const items = splitPollSide(raw);
+  if (!items.length) {
+    return { ok: false, error: `${label} side is empty.` };
+  }
+  if (items.length > MAX_SIDE_ASSETS) {
+    return { ok: false, error: `${label} side has too many entries. Maximum is ${MAX_SIDE_ASSETS}.` };
+  }
+
+  const entries = [];
+  for (const rawEntry of items) {
+    // eslint-disable-next-line no-await-in-loop
+    const resolved = await resolveTargetedEntry({ rawEntry, seedByKey, scoreMode });
+    if (!resolved.ok) return resolved;
+    entries.push(resolved.entry);
+  }
+
+  const unique = new Set(entries.map((e) => String(e.token || "").toLowerCase()));
+  if (unique.size !== entries.length) {
+    return { ok: false, error: `${label} side contains duplicate entries.` };
+  }
+
+  return {
+    ok: true,
+    side: {
+      entries,
+      assetKeys: entries.map((e) => e.token),
+      seededRows: entries.map((e) => e.seedRow).filter(Boolean),
+      allSeeded: entries.every((e) => e.seeded),
+    },
+  };
+}
+
+function validateStrictTargetedMatchup({
+  left,
+  right,
+  pairKey,
+  openPairKeys,
+  cooldowns,
+  nowMs,
+  force = false,
+}) {
+  if (force) return { ok: true };
+  if (!left.allSeeded || !right.allSeeded) return { ok: true };
+
+  const tierIndexes = [...left.seededRows, ...right.seededRows]
+    .map((row) => Number(row.tierIndex))
+    .filter((n) => Number.isFinite(n));
+  if (tierIndexes.length >= 2) {
+    const spread = Math.max(...tierIndexes) - Math.min(...tierIndexes);
+    if (spread > 3) {
+      return { ok: false, error: "Targeted matchup rejected: asset tier spread is too large." };
+    }
+  }
+
+  const leftBundle = bundleFromSeedRows(left.seededRows);
+  const rightBundle = bundleFromSeedRows(right.seededRows);
+  const tierDiff = Math.abs(Number(leftBundle.tierIndex) - Number(rightBundle.tierIndex));
+  if (tierDiff > 1) {
+    return { ok: false, error: "Targeted matchup rejected: sides are too far apart in tier." };
+  }
+  if (tierDiff === 1 && !rangesOverlap(leftBundle, rightBundle)) {
+    return { ok: false, error: "Targeted matchup rejected: adjacent tiers must overlap in range." };
+  }
+
+  if (openPairKeys instanceof Set && openPairKeys.has(pairKey)) {
+    return { ok: false, error: "Targeted matchup rejected: this pair already has an active poll." };
+  }
+
+  const nextEligibleAtMs = cooldowns instanceof Map ? Number(cooldowns.get(pairKey) || 0) : 0;
+  if (Number.isFinite(nextEligibleAtMs) && nextEligibleAtMs > Number(nowMs || Date.now())) {
+    return { ok: false, error: "Targeted matchup rejected: pair cooldown is still active." };
+  }
+
+  return { ok: true };
 }
 
 async function fetchAllVoters(answer) {
@@ -508,6 +851,25 @@ async function finalizePollRun(run) {
     const rightVoters = await fetchAllVoters(answers[1]);
     const votesLeft = leftVoters.length;
     const votesRight = rightVoters.length;
+    const scoreMode =
+      String(run.scoreMode || SCORE_MODE_COUNTED).toLowerCase() === SCORE_MODE_EXHIBITION
+        ? SCORE_MODE_EXHIBITION
+        : SCORE_MODE_COUNTED;
+
+    if (scoreMode === SCORE_MODE_EXHIBITION) {
+      const totalVotes = votesLeft + votesRight;
+      const result = votesLeft > votesRight ? "left" : votesLeft < votesRight ? "right" : "tie";
+      await closeMarketPollRun({
+        id: run.id,
+        votesLeft,
+        votesRight,
+        totalVotes,
+        result,
+        affectsScore: false,
+        closedAtMs: nowMs,
+      });
+      return;
+    }
 
     const leftAssetKeys = normalizeAssetKeyList(run.leftAssetKeys, run.leftAssetKey);
     const rightAssetKeys = normalizeAssetKeyList(run.rightAssetKeys, run.rightAssetKey);
@@ -600,6 +962,83 @@ async function processDuePollRuns() {
     // eslint-disable-next-line no-await-in-loop
     await finalizePollRun(run);
   }
+}
+
+async function postAndTrackPoll({
+  setting,
+  channel,
+  leftAssetKeys,
+  rightAssetKeys,
+  pairKey,
+  scoreMode = SCORE_MODE_COUNTED,
+  nowMs = Date.now(),
+  reason = "manual",
+  shouldLog = false,
+}) {
+  const questionText = buildPollQuestionText({ leftAssetKeys, rightAssetKeys });
+  const pollPayload = {
+    poll: {
+      question: { text: questionText },
+      answers: [{ text: formatPollSide(leftAssetKeys) }, { text: formatPollSide(rightAssetKeys) }],
+      // Discord poll payload duration is hour-based; use a ceiling to avoid auto-closing
+      // before our configured minute-based runtime closes it.
+      duration: Math.max(1, Math.min(24, Math.ceil(Number(setting.pollMinutes || 1) / 60))),
+      allowMultiselect: false,
+    },
+  };
+
+  let pollMessage;
+  try {
+    pollMessage = await channel.send(pollPayload);
+  } catch (err) {
+    const detail = summarizeSendError(err);
+    logger.warn("marketpoll.poll_send_failed", {
+      guildId: setting.guildId,
+      channelId: setting.channelId,
+      error: logger.serializeError(err),
+    });
+    if (shouldLog) {
+      await insertMarketPollSchedulerLog({
+        guildId: setting.guildId,
+        runAtMs: nowMs,
+        status: "error",
+        reason: "send_failed",
+      });
+    }
+    return { ok: false, reason: "send_failed", detail };
+  }
+
+  const endsAtMs = nowMs + setting.pollMinutes * 60_000;
+  await insertMarketPollRun({
+    guildId: setting.guildId,
+    channelId: setting.channelId,
+    messageId: String(pollMessage.id),
+    pairKey,
+    leftAssetKeys,
+    rightAssetKeys,
+    leftAssetKey: leftAssetKeys[0],
+    rightAssetKey: rightAssetKeys[0],
+    scoreMode,
+    startedAtMs: nowMs,
+    endsAtMs,
+  });
+
+  try {
+    await channel.send(`⏰ MarketPoll poll closes in ${setting.pollMinutes} minute(s).`);
+  } catch {}
+
+  if (shouldLog) {
+    await insertMarketPollSchedulerLog({
+      guildId: setting.guildId,
+      runAtMs: nowMs,
+      status: reason === "scheduled" ? "posted" : "posted_manual",
+      reason,
+      pairKey,
+      messageId: String(pollMessage.id),
+    });
+  }
+
+  return { ok: true, messageId: String(pollMessage.id) };
 }
 
 async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog = true }) {
@@ -705,69 +1144,19 @@ async function postAutoPollForGuild({ setting, reason = "scheduled", shouldLog =
   const left = flip ? candidate.left : candidate.right;
   const right = flip ? candidate.right : candidate.left;
   const pairKey = canonicalPairKey(left.assetKeys, right.assetKeys);
-
-  const pollPayload = {
-    poll: {
-      question: { text: "Which Golden do you prefer?" },
-      answers: [{ text: formatPollSide(left.assetKeys) }, { text: formatPollSide(right.assetKeys) }],
-      // Discord poll payload duration is hour-based; use a ceiling to avoid auto-closing
-      // before our configured minute-based runtime closes it.
-      duration: Math.max(1, Math.min(24, Math.ceil(Number(setting.pollMinutes || 1) / 60))),
-      allowMultiselect: false,
-    },
-  };
-
-  let pollMessage;
-  try {
-    pollMessage = await channel.send(pollPayload);
-  } catch (err) {
-    const detail = summarizeSendError(err);
-    logger.warn("marketpoll.poll_send_failed", {
-      guildId: setting.guildId,
-      channelId: setting.channelId,
-      error: logger.serializeError(err),
-    });
-    if (shouldLog) {
-      await insertMarketPollSchedulerLog({
-        guildId: setting.guildId,
-        runAtMs: nowMs,
-        status: "error",
-        reason: "send_failed",
-      });
-    }
-    return { ok: false, reason: "send_failed", detail };
-  }
-
-  const endsAtMs = nowMs + setting.pollMinutes * 60_000;
-  await insertMarketPollRun({
-    guildId: setting.guildId,
-    channelId: setting.channelId,
-    messageId: String(pollMessage.id),
-    pairKey,
+  const posted = await postAndTrackPoll({
+    setting,
+    channel,
     leftAssetKeys: left.assetKeys,
     rightAssetKeys: right.assetKeys,
-    leftAssetKey: left.assetKeys[0],
-    rightAssetKey: right.assetKeys[0],
-    startedAtMs: nowMs,
-    endsAtMs,
+    pairKey,
+    scoreMode: SCORE_MODE_COUNTED,
+    nowMs,
+    reason,
+    shouldLog,
   });
-
-  try {
-    await channel.send(`⏰ MarketPoll poll closes in ${setting.pollMinutes} minute(s).`);
-  } catch {}
-
-  if (shouldLog) {
-    await insertMarketPollSchedulerLog({
-      guildId: setting.guildId,
-      runAtMs: nowMs,
-      status: reason === "scheduled" ? "posted" : "posted_manual",
-      reason,
-      pairKey,
-      messageId: String(pollMessage.id),
-    });
-  }
-
-  return { ok: true, left, right, messageId: String(pollMessage.id) };
+  if (!posted.ok) return posted;
+  return { ok: true, left, right, messageId: posted.messageId };
 }
 
 async function schedulerTick() {
@@ -1123,7 +1512,195 @@ async function handleTiers({ message, tokens }) {
   await replyChunked(message, lines);
 }
 
-async function handlePollNow({ message }) {
+function isGoldenAssetKey(assetKey) {
+  const [name] = String(assetKey || "").split("|");
+  return /^golden/i.test(String(name || "").trim());
+}
+
+function parseSeedGetArgs(tokens) {
+  const args = [...(Array.isArray(tokens) ? tokens : [])];
+  let gender = "";
+  if (args.length) {
+    const maybeGender = genderToken(args[args.length - 1]);
+    if (maybeGender) {
+      gender = maybeGender;
+      args.pop();
+    }
+  }
+  return {
+    nameQuery: args.join(" ").trim(),
+    gender,
+  };
+}
+
+function parseGoldenSeedAssetKeyInput(assetKeyInput) {
+  const raw = String(assetKeyInput || "").trim();
+  if (!raw) {
+    return { ok: false, error: "Asset key is required in format `GoldenName|M/F/?/G`." };
+  }
+
+  const assetKey = normalizeAssetKey(raw);
+  if (!assetKey) {
+    return { ok: false, error: `Invalid asset key: \`${raw}\`. Expected \`GoldenName|M/F/?/G\`.` };
+  }
+
+  if (!isGoldenAssetKey(assetKey)) {
+    return {
+      ok: false,
+      error: `Invalid MarketPoll seed asset key: \`${raw}\`. Asset key must begin with \`Golden\` and include gender \`M/F/?/G\`.`,
+    };
+  }
+
+  return { ok: true, assetKey };
+}
+
+async function handleSeeds({ message, tokens }) {
+  const sub = String(tokens.shift() || "").toLowerCase();
+  if (!sub) {
+    await message.reply(
+      "Usage: `!marketpoll seeds <upsert|unset|get> ...`"
+    );
+    return;
+  }
+
+  if (sub === "upsert") {
+    const assetKeyInput = String(tokens.shift() || "").trim();
+    const seedRangeRaw = String(tokens.join(" ") || "").trim();
+    const parsedKey = parseGoldenSeedAssetKeyInput(assetKeyInput);
+    if (!seedRangeRaw) {
+      await message.reply("Usage: `!marketpoll seeds upsert <asset_key> <seed_range>`");
+      return;
+    }
+    if (!parsedKey.ok) {
+      await message.reply(parsedKey.error);
+      return;
+    }
+    const assetKey = parsedKey.assetKey;
+
+    const parsedRange = parseSeedRange(seedRangeRaw);
+    if (!parsedRange.ok) {
+      await message.reply(`Invalid seed range: ${parsedRange.error}`);
+      return;
+    }
+
+    const seedState = await loadSeedState();
+    const known = seedState.universe?.allAssetsByKey?.get(assetKey) || null;
+    let isProvisional = false;
+    if (known) {
+      if (!isSeedableKnownAsset(known)) {
+        await message.reply(`Cannot seed evolved asset \`${assetKey}\`; base is \`${known.baseName}\`.`);
+        return;
+      }
+    } else {
+      const rarity = await resolveRarityEntry(assetKey.split("|")[0]);
+      if (!rarity.ok) {
+        if (rarity.reason === "unavailable") {
+          await message.reply(
+            "Rarity data is currently unavailable, so provisional seed validation cannot run right now. Please retry shortly."
+          );
+          return;
+        }
+        await message.reply(`Unknown Pokemon for provisional seed: \`${assetKey}\`.`);
+        return;
+      }
+
+      const resolvedName = String(rarity.entry?.name || "");
+      if (!/^golden/i.test(resolvedName)) {
+        await message.reply("Only Golden assets are allowed for MarketPoll seeds.");
+        return;
+      }
+      isProvisional = true;
+    }
+
+    await upsertMarketPollSeedOverride({
+      assetKey,
+      seedRange: seedRangeRaw,
+      isProvisional,
+      updatedBy: message.author?.id || "system",
+    });
+    await loadSeedState(true);
+
+    const parsedLabel =
+      Number(parsedRange.minX) === Number(parsedRange.maxX)
+        ? formatX(parsedRange.minX)
+        : `${formatX(parsedRange.minX)}-${formatX(parsedRange.maxX)}`;
+    await message.reply(
+      `Saved seed override: \`${assetKey}\` = **${parsedLabel}**${isProvisional ? " (provisional)" : ""}. Baseline CSV seeds are unchanged.`
+    );
+    return;
+  }
+
+  if (sub === "unset") {
+    const assetKeyInput = String(tokens.join(" ") || "").trim();
+    const parsedKey = parseGoldenSeedAssetKeyInput(assetKeyInput);
+    if (!parsedKey.ok) {
+      await message.reply(parsedKey.error);
+      return;
+    }
+    const assetKey = parsedKey.assetKey;
+
+    const overrides = await listMarketPollSeedOverrides();
+    const exists = overrides.some((row) => row.assetKey === assetKey);
+    if (!exists) {
+      await message.reply(
+        `No seed override exists for \`${assetKey}\`. Baseline CSV seeds are not removable via this command.`
+      );
+      return;
+    }
+
+    await deleteMarketPollSeedOverride({ assetKey });
+    await loadSeedState(true);
+    await message.reply(
+      `Removed seed override for \`${assetKey}\`. Baseline CSV seeds are unchanged.`
+    );
+    return;
+  }
+
+  if (sub === "get") {
+    const { nameQuery, gender } = parseSeedGetArgs(tokens);
+    if (!nameQuery) {
+      await message.reply("Usage: `!marketpoll seeds get <asset_or_name> [gender]`");
+      return;
+    }
+
+    const seedState = await loadSeedState();
+    const resolved = resolveAssetQuery({
+      rows: seedState.rows,
+      queryName: nameQuery,
+      gender,
+    });
+    if (!resolved.asset && resolved.matches.length > 1) {
+      await message.reply(
+        `Multiple assets match \`${nameQuery}\`. Please include gender (M/F/?/G) or full asset key.`
+      );
+      return;
+    }
+
+    if (!resolved.asset) {
+      await message.reply(`No seeded asset found for \`${nameQuery}\`.`);
+      return;
+    }
+
+    const overrides = await listMarketPollSeedOverrides();
+    const override = overrides.find((row) => row.assetKey === resolved.asset.assetKey) || null;
+    const rangeLabel =
+      override?.seedRange ||
+      (Number(resolved.asset.minX) === Number(resolved.asset.maxX)
+        ? formatX(resolved.asset.minX)
+        : `${formatX(resolved.asset.minX)}-${formatX(resolved.asset.maxX)}`);
+    const source = override
+      ? `override${override.isProvisional ? " (provisional)" : ""}`
+      : "baseline";
+    await message.reply(
+      `Seed for \`${resolved.asset.assetKey}\`: **${rangeLabel}** (source: ${source}).`
+    );
+    return;
+  }
+
+  await message.reply("Unknown seeds command. Use `!marketpoll seeds <upsert|unset|get>`.");
+}
+
+async function handlePollNow({ message, tokens }) {
   const settings = await getMarketPollSettings({ guildId: message.guildId });
   if (!settings.channelId) {
     await message.reply("MarketPoll channel is not configured. Use `!marketpoll config channel <id>`. ");
@@ -1131,27 +1708,143 @@ async function handlePollNow({ message }) {
   }
 
   clientRef = message.client || clientRef;
-  const res = await postAutoPollForGuild({ setting: settings, reason: "manual", shouldLog: false });
-  if (!res.ok) {
-    const seedState = await loadSeedState();
-    if (res.reason === "seed_invalid") {
-      await replyChunked(message, [
-        "Cannot run poll now because seed validation failed.",
-        ...seedState.errors.slice(0, 10).map((e) => `• ${e}`),
-      ]);
+  const parsed = parsePollNowArgs(tokens);
+  if (!parsed.ok) {
+    await message.reply(parsed.error);
+    return;
+  }
+
+  if (!parsed.targeted) {
+    const res = await postAutoPollForGuild({ setting: settings, reason: "manual", shouldLog: false });
+    if (!res.ok) {
+      const seedState = await loadSeedState();
+      if (res.reason === "seed_invalid") {
+        await replyChunked(message, [
+          "Cannot run poll now because seed validation failed.",
+          ...seedState.errors.slice(0, 10).map((e) => `• ${e}`),
+        ]);
+        return;
+      }
+      const detail = String(res.detail || "").trim();
+      await message.reply(
+        detail
+          ? `Could not create poll now: ${res.reason}. ${detail}.`
+          : `Could not create poll now: ${res.reason}.`
+      );
       return;
     }
-    const detail = String(res.detail || "").trim();
+
+    await message.reply(
+      `Posted MarketPoll poll: ${formatPollSide(res.left.assetKeys)} vs ${formatPollSide(res.right.assetKeys)}.`
+    );
+    return;
+  }
+
+  if (!clientRef) {
+    await message.reply("Could not create poll now: missing_client.");
+    return;
+  }
+
+  let channel;
+  try {
+    channel = await clientRef.channels.fetch(settings.channelId);
+  } catch {
+    channel = null;
+  }
+  if (!channel?.isTextBased?.()) {
+    await message.reply("Could not create poll now: invalid_channel.");
+    return;
+  }
+
+  const missingPerms = getMissingPollPermissions(channel, clientRef.user);
+  if (missingPerms.length) {
+    await message.reply(`Could not create poll now: missing_permissions. Missing channel permission(s): ${missingPerms.join(", ")}.`);
+    return;
+  }
+
+  const nowMs = Date.now();
+  const seedState = await loadSeedState();
+  const seedByKey = new Map((seedState.rows || []).map((row) => [row.assetKey, row]));
+
+  const leftResolved = await resolveTargetedSide({
+    raw: parsed.leftRaw,
+    seedByKey,
+    scoreMode: parsed.scoreMode,
+    label: "Left",
+  });
+  if (!leftResolved.ok) {
+    await message.reply(leftResolved.error);
+    return;
+  }
+  const rightResolved = await resolveTargetedSide({
+    raw: parsed.rightRaw,
+    seedByKey,
+    scoreMode: parsed.scoreMode,
+    label: "Right",
+  });
+  if (!rightResolved.ok) {
+    await message.reply(rightResolved.error);
+    return;
+  }
+
+  const left = leftResolved.side;
+  const right = rightResolved.side;
+  const overlap = new Set([...left.assetKeys, ...right.assetKeys].map((x) => String(x).toLowerCase()));
+  if (overlap.size !== left.assetKeys.length + right.assetKeys.length) {
+    await message.reply("Left and right sides must not contain duplicate entries.");
+    return;
+  }
+
+  if (parsed.scoreMode === SCORE_MODE_COUNTED && (!left.allSeeded || !right.allSeeded)) {
+    await message.reply("Counted targeted polls require all entries to be seeded asset keys.");
+    return;
+  }
+
+  const pairKey = canonicalPairKey(left.assetKeys, right.assetKeys);
+  const [openPairKeys, cooldowns] = await Promise.all([
+    listOpenMarketPollPairKeys({ guildId: settings.guildId }),
+    getMarketPollCooldownMap({ nowMs }),
+  ]);
+
+  const strict = validateStrictTargetedMatchup({
+    left,
+    right,
+    pairKey,
+    openPairKeys,
+    cooldowns,
+    nowMs,
+    force: parsed.force,
+  });
+  if (!strict.ok) {
+    await message.reply(`${strict.error}${parsed.force ? "" : " Add `force` to bypass this strict check."}`);
+    return;
+  }
+
+  const posted = await postAndTrackPoll({
+    setting: settings,
+    channel,
+    leftAssetKeys: left.assetKeys,
+    rightAssetKeys: right.assetKeys,
+    pairKey,
+    scoreMode: parsed.scoreMode,
+    nowMs,
+    reason: "manual_targeted",
+    shouldLog: false,
+  });
+  if (!posted.ok) {
+    const detail = String(posted.detail || "").trim();
     await message.reply(
       detail
-        ? `Could not create poll now: ${res.reason}. ${detail}.`
-        : `Could not create poll now: ${res.reason}.`
+        ? `Could not create targeted poll now: ${posted.reason}. ${detail}.`
+        : `Could not create targeted poll now: ${posted.reason}.`
     );
     return;
   }
 
   await message.reply(
-    `Posted MarketPoll poll: ${formatPollSide(res.left.assetKeys)} vs ${formatPollSide(res.right.assetKeys)}.`
+    `Posted targeted MarketPoll (${parsed.scoreMode === SCORE_MODE_COUNTED ? "counted" : "exhibition"}): ${formatPollSide(
+      left.assetKeys
+    )} vs ${formatPollSide(right.assetKeys)}.`
   );
 }
 
@@ -1213,6 +1906,15 @@ export function registerMarketPoll(register) {
         return;
       }
 
+      if (sub === "seeds") {
+        if (!isAdmin) {
+          await message.reply("You do not have permission to edit MarketPoll seeds.");
+          return;
+        }
+        await handleSeeds({ message, tokens });
+        return;
+      }
+
       if (sub === "tiers") {
         if (!isAdmin) {
           await message.reply("You do not have permission to view tier ranges.");
@@ -1227,13 +1929,13 @@ export function registerMarketPoll(register) {
           await message.reply("You do not have permission to run MarketPoll polls manually.");
           return;
         }
-        await handlePollNow({ message });
+        await handlePollNow({ message, tokens: tokens.slice(1) });
         return;
       }
 
       await message.reply(buildHelpText(prefix));
     },
-    help: "!marketpoll <help|status|history|leaderboard|config|tiers|poll now> — market poll tools",
+    help: "!marketpoll <help|status|history|leaderboard|config|seeds|tiers|poll now> — market poll tools",
     opts: {
       category: "Tools",
       aliases: ["market", "mp"],
@@ -1251,7 +1953,9 @@ export const __testables = {
   parseChannelId,
   parseHistoryArgs,
   parseTiersArgs,
+  parsePollNowArgs,
   formatAssetDisplay,
+  buildPollQuestionText,
   loadSeedState,
   stopScheduler,
   startScheduler,

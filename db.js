@@ -252,6 +252,7 @@ export async function initDb() {
       total_votes INT UNSIGNED NOT NULL DEFAULT 0,
       result VARCHAR(16) NOT NULL DEFAULT 'error',
       affects_score TINYINT(1) NOT NULL DEFAULT 0,
+      score_mode VARCHAR(16) NOT NULL DEFAULT 'counted',
       started_at_ms BIGINT UNSIGNED NOT NULL,
       ends_at_ms BIGINT UNSIGNED NOT NULL,
       closed_at_ms BIGINT UNSIGNED,
@@ -314,6 +315,31 @@ export async function initDb() {
     `,
       [],
       "alter.goldmarket_poll_runs.right_assets_json"
+    );
+  }
+
+  const [scoreModeCols] = await execDb(
+    db,
+    `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema = DATABASE()
+      AND table_name = ?
+      AND column_name = ?
+  `,
+    ["goldmarket_poll_runs", "score_mode"],
+    "check.goldmarket_poll_runs.score_mode"
+  );
+
+  if (!scoreModeCols?.length) {
+    await execDb(
+      db,
+      `
+      ALTER TABLE goldmarket_poll_runs
+        ADD COLUMN score_mode VARCHAR(16) NOT NULL DEFAULT 'counted' AFTER affects_score
+    `,
+      [],
+      "alter.goldmarket_poll_runs.score_mode"
     );
   }
 
@@ -381,6 +407,24 @@ export async function initDb() {
   `,
     [],
     "init.goldmarket_scores"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS goldmarket_seed_overrides (
+      asset_key VARCHAR(128) NOT NULL,
+      seed_range VARCHAR(64) NOT NULL,
+      is_provisional TINYINT(1) NOT NULL DEFAULT 0,
+      updated_by VARCHAR(32) NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (asset_key),
+      KEY goldmarket_seed_override_updated_idx (updated_at)
+    )
+  `,
+    [],
+    "init.goldmarket_seed_overrides"
   );
 
   await execDb(

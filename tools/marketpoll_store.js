@@ -34,6 +34,13 @@ function normalizeLimit(limit, { fallback = 25, max = 500 } = {}) {
   return Math.min(int, max);
 }
 
+function toUnixMs(value) {
+  if (value === null || value === undefined) return 0;
+  const date = value instanceof Date ? value : new Date(value);
+  const ms = Number(date.getTime());
+  return Number.isFinite(ms) ? ms : 0;
+}
+
 function normalizeAssetKeyList(keys, fallback = null) {
   const src = Array.isArray(keys) ? keys : [];
   const out = [...new Set(src.map((x) => String(x || "").trim()).filter(Boolean))];
@@ -54,6 +61,8 @@ function parseAssetKeyList(raw, fallback = null) {
 function mapPollRunRow(row) {
   const leftAssetKeys = parseAssetKeyList(row.left_assets_json, row.left_asset_key);
   const rightAssetKeys = parseAssetKeyList(row.right_assets_json, row.right_asset_key);
+  const scoreModeRaw = String(row.score_mode || "counted").toLowerCase();
+  const scoreMode = scoreModeRaw === "exhibition" ? "exhibition" : "counted";
   return {
     id: Number(row.id),
     guildId: String(row.guild_id),
@@ -69,6 +78,7 @@ function mapPollRunRow(row) {
     totalVotes: Number(row.total_votes || 0),
     result: String(row.result || "error"),
     affectsScore: Boolean(row.affects_score),
+    scoreMode,
     startedAtMs: Number(row.started_at_ms || 0),
     endsAtMs: Number(row.ends_at_ms || 0),
     closedAtMs: Number(row.closed_at_ms || 0),
@@ -224,6 +234,89 @@ export async function listEnabledMarketPollSettings() {
   return (rows || []).map((row) => toSetting(row, row.guild_id));
 }
 
+export async function listMarketPollSeedOverrides() {
+  const db = getDb();
+  const [rows] = await db.execute(
+    `
+    SELECT
+      asset_key,
+      seed_range,
+      is_provisional,
+      updated_by,
+      created_at,
+      updated_at
+    FROM goldmarket_seed_overrides
+    ORDER BY asset_key ASC
+  `
+  );
+
+  return (rows || []).map((row) => ({
+    assetKey: String(row.asset_key),
+    seedRange: String(row.seed_range),
+    isProvisional: Boolean(row.is_provisional),
+    updatedBy: row.updated_by ? String(row.updated_by) : null,
+    createdAtMs: toUnixMs(row.created_at),
+    updatedAtMs: toUnixMs(row.updated_at),
+  }));
+}
+
+export async function upsertMarketPollSeedOverride({
+  assetKey,
+  seedRange,
+  isProvisional = false,
+  updatedBy = null,
+}) {
+  const db = getDb();
+  await db.execute(
+    `
+    INSERT INTO goldmarket_seed_overrides (
+      asset_key,
+      seed_range,
+      is_provisional,
+      updated_by
+    ) VALUES (?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      seed_range = VALUES(seed_range),
+      is_provisional = VALUES(is_provisional),
+      updated_by = VALUES(updated_by)
+  `,
+    [
+      String(assetKey),
+      String(seedRange),
+      isProvisional ? 1 : 0,
+      updatedBy ? String(updatedBy) : null,
+    ]
+  );
+}
+
+export async function deleteMarketPollSeedOverride({ assetKey }) {
+  const db = getDb();
+  await db.execute(
+    `
+    DELETE FROM goldmarket_seed_overrides
+    WHERE asset_key = ?
+  `,
+    [String(assetKey)]
+  );
+}
+
+export async function countMarketPollSeedOverrides() {
+  const db = getDb();
+  const [rows] = await db.execute(
+    `
+    SELECT
+      COUNT(*) AS total,
+      MAX(updated_at) AS latest_updated_at
+    FROM goldmarket_seed_overrides
+  `
+  );
+
+  return {
+    total: Number(rows?.[0]?.total || 0),
+    latestUpdatedAtMs: toUnixMs(rows?.[0]?.latest_updated_at),
+  };
+}
+
 export async function insertMarketPollSchedulerLog({
   guildId,
   runAtMs = Date.now(),
@@ -282,6 +375,7 @@ export async function insertMarketPollRun({
   rightAssetKeys,
   leftAssetKey,
   rightAssetKey,
+  scoreMode = "counted",
   startedAtMs,
   endsAtMs,
 }) {
@@ -290,6 +384,7 @@ export async function insertMarketPollRun({
   const safeRightKeys = normalizeAssetKeyList(rightAssetKeys, rightAssetKey);
   const safeLeftPrimary = String(safeLeftKeys[0] || leftAssetKey || "");
   const safeRightPrimary = String(safeRightKeys[0] || rightAssetKey || "");
+  const safeScoreMode = String(scoreMode || "").toLowerCase() === "exhibition" ? "exhibition" : "counted";
 
   const [result] = await db.execute(
     `
@@ -302,9 +397,10 @@ export async function insertMarketPollRun({
       left_assets_json,
       right_asset_key,
       right_assets_json,
+      score_mode,
       started_at_ms,
       ends_at_ms
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       String(guildId),
@@ -315,6 +411,7 @@ export async function insertMarketPollRun({
       JSON.stringify(safeLeftKeys),
       safeRightPrimary,
       JSON.stringify(safeRightKeys),
+      safeScoreMode,
       Number(startedAtMs),
       Number(endsAtMs),
     ]
@@ -338,6 +435,7 @@ export async function listDueMarketPollRuns({ nowMs = Date.now(), limit = 25 }) 
       left_assets_json,
       right_asset_key,
       right_assets_json,
+      score_mode,
       started_at_ms,
       ends_at_ms
     FROM goldmarket_poll_runs
@@ -595,6 +693,7 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
         total_votes,
         result,
         affects_score,
+        score_mode,
         started_at_ms,
         ends_at_ms,
         closed_at_ms
@@ -628,6 +727,7 @@ export async function listMarketPollHistory({ assetKey = null, limit = 10 }) {
       total_votes,
       result,
       affects_score,
+      score_mode,
       started_at_ms,
       ends_at_ms,
       closed_at_ms

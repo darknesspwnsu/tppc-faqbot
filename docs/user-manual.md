@@ -304,13 +304,22 @@ Golden market preference tooling (base-stage Goldens only).
 - `!marketpoll config cooldown <days>`
 - `!marketpoll config minvotes <n>`
 - `!marketpoll config matchups <1v1,1v2,2v1,2v2|all|default>`
+- `!marketpoll seeds upsert <asset_key> <seed_range>`
+- `!marketpoll seeds unset <asset_key>`
+- `!marketpoll seeds get <asset_or_name> [gender]`
 - `!marketpoll tiers [tier] [gender] [limit]`
 - `!marketpoll poll now` (works even if `config enabled` is off)
+- `!marketpoll poll now "<left>" vs "<right>" [counted] [force]`
 
 **Notes:**
 - Seed ranges are loaded from `data/marketpoll_seeds.csv` on startup/boot.
+- Runtime DB seed overrides are merged on top of file seeds.
+- `!marketpoll seeds upsert/unset` modifies **runtime overrides only** and does **not** edit/remove baseline CSV seeds.
 - Matchups default to `1v1` only; enable multi-asset modes explicitly with `config matchups`.
 - Supported matchup modes are `1v1`, `1v2`, `2v1`, and `2v2`.
+- Targeted polls default to exhibition mode (`no-score`/no Elo/cooldown update).
+- `counted` targeted polls require seeded asset keys.
+- Non-golden/plain-name entries are allowed only for exhibition targeted polls and are rarity-validated.
 - If seed validation fails, automated MarketPoll polling is skipped until fixed.
 - Public outputs hide raw x ranges; admin tier output includes ranges.
 - No slash commands are provided for MarketPoll.
