@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { dbExecute, loadSpecialDaysMock } = vi.hoisted(() => ({
+const { dbExecute, loadSpecialDaysMock, detectRadioTowerMock } = vi.hoisted(() => ({
   dbExecute: vi.fn(async () => [[]]),
   loadSpecialDaysMock: vi.fn(async () => ({
     defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
     days: [],
   })),
+  detectRadioTowerMock: vi.fn(async () => false),
 }));
 vi.mock("../../db.js", () => ({ getDb: vi.fn(() => ({ execute: dbExecute })) }));
 vi.mock("../../shared/metrics.js", () => ({
@@ -45,7 +46,7 @@ vi.mock("../../configs/rpg_events.js", () => ({
   ],
 }));
 vi.mock("../../rpg/radio_tower.js", () => ({
-  detectRadioTower: vi.fn(async () => false),
+  detectRadioTower: detectRadioTowerMock,
   buildRadioTowerMessage: () => "Rocket!",
 }));
 vi.mock("../../events/special_days.js", async () => {
@@ -67,6 +68,8 @@ beforeEach(() => {
     defaults: { timezone: "America/New_York", announceHour: 0, announceMinute: 0 },
     days: [],
   });
+  detectRadioTowerMock.mockReset();
+  detectRadioTowerMock.mockResolvedValue(false);
   for (const guildId of Object.keys(RPG_EVENT_CHANNELS_BY_GUILD)) {
     delete RPG_EVENT_CHANNELS_BY_GUILD[guildId];
   }
@@ -295,6 +298,24 @@ describe("events parsing helpers", () => {
     const retryWithinWindow = await __testables.checkSpecialDays(client, "test");
     expect(retryWithinWindow).toBe(false);
     expect(client.channels.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not record radio tower occurrence when no channel send succeeds", async () => {
+    detectRadioTowerMock.mockResolvedValueOnce(true);
+    RPG_EVENT_CHANNELS_BY_GUILD.g1 = ["c1"];
+    const client = {
+      guilds: { cache: { get: vi.fn(() => ({ id: "g1" })) } },
+      channels: { fetch: vi.fn(async () => null) },
+      users: { fetch: vi.fn(async () => null) },
+    };
+
+    await __testables.checkRadioTowerEvent(client, "test");
+
+    expect(client.channels.fetch).toHaveBeenCalledTimes(1);
+    const occurrenceInserts = dbExecute.mock.calls.filter(([sql]) =>
+      String(sql).includes("INSERT IGNORE INTO event_occurrences")
+    );
+    expect(occurrenceInserts).toHaveLength(0);
   });
 
   it("responds with help text for !events help", async () => {

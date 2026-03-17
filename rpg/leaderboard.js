@@ -101,6 +101,7 @@ const CHALLENGES = {
 
 const POKEMON_TTL_MS = 24 * 60 * 60_000;
 const POKEMON_REFRESH_ET = { hour: 6, minute: 5 };
+const HISTORY_CAPTURE_WINDOW_MINUTES = 10;
 
 const pokemonCache = new Map(); // lookupKey -> { rows, pageCount, updatedAtMs }
 
@@ -660,6 +661,19 @@ function getEtDayOfWeek() {
   return map[short] ?? null;
 }
 
+function isHistoryScheduleDue({ hour, minute }, schedule, windowMinutes = 0) {
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false;
+  const scheduleHour = Number(schedule?.hour);
+  const scheduleMinute = Number(schedule?.minute);
+  if (!Number.isFinite(scheduleHour) || !Number.isFinite(scheduleMinute)) return false;
+  if (hour < scheduleHour) return false;
+  const safeWindow = Math.max(0, Number(windowMinutes) || 0);
+  const minuteWindow = Math.min(safeWindow, Math.max(0, scheduleMinute));
+  const minMinute = Math.max(0, scheduleMinute - minuteWindow);
+  if (hour === scheduleHour && minute < minMinute) return false;
+  return true;
+}
+
 function scheduleHistoryCapture(client) {
   const schedules = [
     { key: "ssanne", hour: 23, minute: 58 },
@@ -700,8 +714,9 @@ function scheduleHistoryCapture(client) {
 
     for (const schedule of schedules) {
       if (schedule.days && !schedule.days.includes(day)) continue;
-      if (hour < schedule.hour) continue;
-      if (hour === schedule.hour && minute < schedule.minute) continue;
+      if (!isHistoryScheduleDue({ hour, minute }, schedule, HISTORY_CAPTURE_WINDOW_MINUTES)) {
+        continue;
+      }
 
       const lastKey = lastRunByKey.get(schedule.key);
       if (lastKey === dateKey) continue;
@@ -1380,4 +1395,5 @@ export const __testables = {
   renderSpeedHallOfFame,
   buildPokemonSuggestions,
   recordChallengeWinner,
+  isHistoryScheduleDue,
 };

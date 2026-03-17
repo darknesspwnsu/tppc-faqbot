@@ -2,42 +2,26 @@
 //
 // Radio Tower detection helpers for the Team Rocket takeover event.
 
-import https from "node:https";
-import http from "node:http";
 import { parse } from "node-html-parser";
+import { createRpgClientFactory } from "./client_factory.js";
 
 const RADIO_TOWER_URL = "https://www.tppcrpg.net/radio_tower.php";
-const NEEDLE = /team rocket/i;
-
-function fetchText(url) {
-  return new Promise((resolve, reject) => {
-    const lib = url.startsWith("https://") ? https : http;
-    const req = lib.get(url, (res) => {
-      if (res.statusCode && res.statusCode >= 400) {
-        reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        res.resume();
-        return;
-      }
-
-      let data = "";
-      res.setEncoding("utf8");
-      res.on("data", (c) => (data += c));
-      res.on("end", () => resolve(data));
-    });
-
-    req.on("error", reject);
-  });
-}
+const NEEDLE = /rocket/i;
+const getRpgClient = createRpgClientFactory();
 
 function extractInnerText(html) {
   const root = parse(String(html || ""));
   return String(root.text || "").replace(/\s+/g, " ").trim();
 }
 
+function isRadioTowerHit(text) {
+  return NEEDLE.test(String(text || ""));
+}
+
 export async function detectRadioTower() {
-  const html = await fetchText(RADIO_TOWER_URL);
+  const html = await getRpgClient().fetchPage(RADIO_TOWER_URL);
   const text = extractInnerText(html);
-  return NEEDLE.test(text);
+  return isRadioTowerHit(text);
 }
 
 export function buildRadioTowerMessage() {
@@ -49,4 +33,5 @@ export function buildRadioTowerMessage() {
 
 export const __testables = {
   extractInnerText,
+  isRadioTowerHit,
 };

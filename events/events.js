@@ -545,7 +545,22 @@ async function checkRadioTowerEvent(client, reason = "scheduled") {
     };
     const exists = await hasOccurrence(event.id, start.getTime());
     if (!exists) {
-      await announceEvent({ client, event, start, end, source: reason });
+      const res = await announceEvent({
+        client,
+        event,
+        start,
+        end,
+        source: reason,
+        requireChannelSuccessBeforeRecord: true,
+      });
+      if (!res?.ok) {
+        logger.warn("events.radio_tower.announce.deferred", {
+          reason: res?.reason || "unknown",
+          startMs: start.getTime(),
+          attempted: Number(res?.channelResult?.attempted || 0),
+          sent: Number(res?.channelResult?.sent || 0),
+        });
+      }
     }
     void metrics.incrementSchedulerRun("radio_tower_event", "ok");
   } catch (err) {
@@ -1059,6 +1074,7 @@ export const __testables = {
   forwardAdminAnnouncement,
   notifyChannels,
   announceEvent,
+  checkRadioTowerEvent,
   checkSpecialDays,
   computeNextSpecialDayTick,
 };

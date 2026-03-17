@@ -8,4 +8,10 @@ describe("radio tower helpers", () => {
     );
     expect(text).toBe("Team Rocket here");
   });
+
+  it("matches on relaxed rocket keyword", () => {
+    expect(radioTower.__testables.isRadioTowerHit("Team Rocket takeover")).toBe(true);
+    expect(radioTower.__testables.isRadioTowerHit("Rocket activity reported")).toBe(true);
+    expect(radioTower.__testables.isRadioTowerHit("No event active")).toBe(false);
+  });
 });

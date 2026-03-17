@@ -41,7 +41,8 @@ vi.mock("../../rpg/rpg_client.js", () => ({
 }));
 
 import { registerLeaderboard, handleLeaderboardInteraction, __testables } from "../../rpg/leaderboard.js";
-const { recordChallengeWinner, parseSpeedHallOfFame, renderSpeedHallOfFame } = __testables;
+const { recordChallengeWinner, parseSpeedHallOfFame, renderSpeedHallOfFame, isHistoryScheduleDue } =
+  __testables;
 
 function makeRegister() {
   const calls = [];
@@ -771,5 +772,20 @@ describe("rpg leaderboard interaction", () => {
     const updated = interaction.update.mock.calls[0][0];
     const updatedRow = updated.components[0].toJSON();
     expect(updatedRow.components[0].disabled).toBe(true);
+  });
+});
+
+describe("history schedule due checks", () => {
+  it("treats :58 schedules as due from :48 with the 10-minute window", () => {
+    const schedule = { key: "speedtower", hour: 23, minute: 58 };
+    expect(isHistoryScheduleDue({ hour: 23, minute: 47 }, schedule, 10)).toBe(false);
+    expect(isHistoryScheduleDue({ hour: 23, minute: 48 }, schedule, 10)).toBe(true);
+    expect(isHistoryScheduleDue({ hour: 23, minute: 53 }, schedule, 10)).toBe(true);
+  });
+
+  it("does not start minute-0 schedules early", () => {
+    const schedule = { key: "safarizone", hour: 22, minute: 0 };
+    expect(isHistoryScheduleDue({ hour: 21, minute: 59 }, schedule, 10)).toBe(false);
+    expect(isHistoryScheduleDue({ hour: 22, minute: 0 }, schedule, 10)).toBe(true);
   });
 });
