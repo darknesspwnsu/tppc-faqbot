@@ -335,19 +335,18 @@ export function registerRpgInfo(register) {
             "**RPG info options:**",
             `• \`${cmd} ssanne\` — SS Anne Golden Volcanion requirement`,
             `• \`${cmd} tc\` — Training Challenge ineligible list`,
-            `• \`${cmd} tc iseligible <pokemon>\` — Check Training Challenge eligibility`,
             `• \`${cmd} tc eligible <pokemon>\` — Check Training Challenge eligibility`,
-            `• \`${cmd} traininggyms [count]\` — Top training gyms by exp`,
+            `• \`${cmd} gym [count]\` — Top training gyms by exp`,
           ].join("\n")
         );
         return;
       }
 
-      if (sub === "traininggyms" || sub === "gyms") {
+      if (sub === "traininggyms" || sub === "gyms" || sub === "gym") {
         const countRaw = parts[1];
         const requested = countRaw ? Number(countRaw) : 5;
         if (!Number.isFinite(requested) || requested <= 0) {
-          await message.reply(`Usage: \`${cmd} traininggyms [count]\``);
+          await message.reply(`Usage: \`${cmd} gym [count]\``);
           return;
         }
         const maxCount = 25;
@@ -405,7 +404,7 @@ export function registerRpgInfo(register) {
           if (markerIndex >= 0) {
             const nameTokens = tail.slice(markerIndex + 1);
             if (!nameTokens.length) {
-              await message.reply(`Usage: \`${cmd} tc iseligible <pokemon>\``);
+              await message.reply(`Usage: \`${cmd} tc eligible <pokemon>\``);
               return;
             }
             const nameRaw = nameTokens.join(" ").trim();
@@ -475,7 +474,7 @@ export function registerRpgInfo(register) {
       }
 
       await message.reply(
-        `Usage: \`${cmd} ssanne|tc|trainingchallenge\` or \`${cmd} tc iseligible <pokemon>\``
+        `Usage: \`${cmd} ssanne|tc|trainingchallenge|gym\` or \`${cmd} tc eligible <pokemon>\``
       );
     },
     `${cmd} <topic> — show SS Anne or Training Challenge info`,

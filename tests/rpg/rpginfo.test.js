@@ -102,6 +102,22 @@ describe("rpginfo command", () => {
     expect(call?.opts?.aliases || []).toContain("!info");
   });
 
+  it("shows de-duplicated aliases in help", async () => {
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "help" });
+
+    const reply = message.reply.mock.calls[0][0];
+    expect(reply).toContain("`!rpginfo tc eligible <pokemon>`");
+    expect(reply).not.toContain("`!rpginfo tc iseligible <pokemon>`");
+    expect(reply).toContain("`!rpginfo gym [count]`");
+    expect(reply).not.toContain("`!rpginfo traininggyms [count]`");
+  });
+
   it("lists top training gyms", async () => {
     fsMocks.readFile.mockImplementation((filePath) => {
       if (String(filePath).includes("training_gyms.json")) {
@@ -136,7 +152,7 @@ describe("rpginfo command", () => {
     expect(reply).toContain("GymA");
   });
 
-  it("supports a custom count for training gyms", async () => {
+  it("supports a custom count for training gym aliases", async () => {
     fsMocks.readFile.mockImplementation((filePath) => {
       if (String(filePath).includes("training_gyms.json")) {
         return Promise.resolve(
@@ -158,7 +174,7 @@ describe("rpginfo command", () => {
     const handler = getHandler(register, "!rpginfo");
 
     const message = makeMessage();
-    await handler({ message, rest: "gyms 2" });
+    await handler({ message, rest: "gym 2" });
 
     const reply = message.reply.mock.calls[0][0];
     expect(reply).toContain("GymB");
