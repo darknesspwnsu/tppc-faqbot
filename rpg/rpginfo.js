@@ -12,6 +12,7 @@ import { createRpgClientFactory } from "./client_factory.js";
 import { requireRpgCredentials, hasRpgCredentials } from "./credentials.js";
 import { getLeaderboard, upsertLeaderboard } from "./storage.js";
 import { findPokedexEntry, parsePokemonQuery } from "./pokedex.js";
+import { lookupSwapStatus } from "./swap_status.js";
 import { normalizeKey } from "../shared/pokename_utils.js";
 import {
   buildDidYouMeanButtons,
@@ -29,6 +30,15 @@ const TC_INELIGIBLE_KEY = "rpginfo:tc_ineligible";
 
 const SS_ANNE_TTL_MS = 24 * 60 * 60_000;
 const TC_INELIGIBLE_TTL_MS = 7 * 24 * 60 * 60_000;
+const SWAP_SUBCOMMANDS = new Set([
+  "swap",
+  "swaps",
+  "isswap",
+  "secretswap",
+  "issecretswap",
+  "isss",
+  "ss",
+]);
 
 const EVOLUTION_PATH = path.resolve("data/pokemon_evolutions.json");
 const TRAINING_GYMS_PATH = path.resolve("data/training_gyms.json");
@@ -336,6 +346,7 @@ export function registerRpgInfo(register) {
             `• \`${cmd} ssanne\` — SS Anne Golden Volcanion requirement`,
             `• \`${cmd} tc\` — Training Challenge ineligible list`,
             `• \`${cmd} tc eligible <pokemon>\` — Check Training Challenge eligibility`,
+            "• `!info swap <pokemon>` — Check Secret Swap availability",
             `• \`${cmd} gym [count]\` — Top training gyms by exp`,
           ].join("\n")
         );
@@ -388,6 +399,39 @@ export function registerRpgInfo(register) {
           logger.error("rpginfo.ssanne.error", { error: logger.serializeError(err) });
           console.error("[rpg] failed to load SS Anne info:", err);
           await message.reply("❌ Unable to load SS Anne info right now.");
+        }
+        return;
+      }
+
+      if (SWAP_SUBCOMMANDS.has(sub)) {
+        const queryRaw = parts.slice(1).join(" ").trim();
+        if (!queryRaw) {
+          await message.reply("Usage: `!info swap <pokemon>`");
+          return;
+        }
+
+        try {
+          const result = await lookupSwapStatus(queryRaw);
+          if (result.status === "unavailable") {
+            await message.reply("❌ Swap status data is unavailable right now.");
+            return;
+          }
+          if (result.status === "not-found") {
+            await message.reply(result.summary);
+            return;
+          }
+          if (result.status === "empty") {
+            await message.reply("Usage: `!info swap <pokemon>`");
+            return;
+          }
+
+          const lines = [result.summary, `Matched: ${result.queryLabel}`];
+          for (const note of result.notes) lines.push(`* ${note}`);
+          await message.reply(lines.join("\n"));
+        } catch (err) {
+          logger.error("rpginfo.swap.error", { error: logger.serializeError(err) });
+          console.error("[rpg] failed to load swap status info:", err);
+          await message.reply("❌ Unable to load swap status info right now.");
         }
         return;
       }
@@ -474,10 +518,10 @@ export function registerRpgInfo(register) {
       }
 
       await message.reply(
-        `Usage: \`${cmd} ssanne|tc|trainingchallenge|gym\` or \`${cmd} tc eligible <pokemon>\``
+        `Usage: \`${cmd} ssanne|tc|trainingchallenge|swap|gym\` or \`${cmd} tc eligible <pokemon>\``
       );
     },
-    `${cmd} <topic> — show SS Anne or Training Challenge info`,
+    `${cmd} <topic> — show SS Anne, Training Challenge, or Secret Swap info`,
     { aliases: ["!info"] }
   );
 }

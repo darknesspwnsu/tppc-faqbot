@@ -263,6 +263,7 @@ RPG informational helpers.
 - `!rpginfo ssanne` → battles needed for Golden Volcanion
 - `!rpginfo tc` → current Training Challenge ineligible list
 - `!rpginfo tc eligible <pokemon>` (or `iseligible`) → checks TC eligibility
+- `!info swap <pokemon>` (aliases: `swap`, `isswap`, `secretswap`, `issecretswap`, `isss`, `ss`) → checks Secret Swap status with swap/map/former-swap notes
 
 **Eligibility logic:**
 - If base evolution is banned → ineligible

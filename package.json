@@ -11,6 +11,7 @@
     "pause:dev": "pkill -f 'node bot.js' && docker pause tppc-mysql",
     "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js",
     "stop:dev:docker": "./scripts/stop-dev.sh",
+    "sync:swap-status": "node scripts/sync_swap_status_data.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest",

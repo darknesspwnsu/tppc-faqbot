@@ -51,6 +51,40 @@ function makeMessage() {
   };
 }
 
+const TEST_SWAP_DB = {
+  metadata: {
+    generatedAt: "2026-03-16T06:28:33.458Z",
+    sourceThreadUrl: "https://forums.tppc.info/showthread.php?t=642002",
+    sourceFirstPostUrl: "https://forums.tppc.info/showpost.php?p=11515898&postcount=1",
+    forumListSource: "test",
+    wikiSourcePath: "data/wiki.xml",
+    mapPokemonCount: 1,
+    secretSwapPokemonCount: 1,
+    wikiPokemonPagesParsed: 2,
+    entryCount: 2,
+  },
+  entries: {
+    pikachu: {
+      displayName: "Pikachu",
+      species: "Pikachu",
+      variant: "normal",
+      currentSecretSwap: true,
+      formerSecretSwap: false,
+      currentMap: true,
+      mapSources: ["Victory Path"],
+    },
+    absol: {
+      displayName: "Absol",
+      species: "Absol",
+      variant: "normal",
+      currentSecretSwap: false,
+      formerSecretSwap: true,
+      currentMap: false,
+      mapSources: [],
+    },
+  },
+};
+
 describe("rpginfo command", () => {
   const envSnapshot = { ...process.env };
 
@@ -102,6 +136,109 @@ describe("rpginfo command", () => {
     expect(call?.opts?.aliases || []).toContain("!info");
   });
 
+  it("returns swap status summary + footnotes", async () => {
+    fsMocks.readFile.mockImplementation((filePath) => {
+      if (String(filePath).includes("swap_status.json")) {
+        return Promise.resolve(JSON.stringify(TEST_SWAP_DB));
+      }
+      return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+    });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "swap pikachu" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      [
+        "Yes. This pokemon is currently obtainable via secret swap, and it is also obtainable via maps.",
+        "Matched: Pikachu",
+        "* this pokemon is obtainable via Victory Path map",
+      ].join("\n")
+    );
+  });
+
+  it("accepts swap aliases (swap/isswap/secretswap/issecretswap/isss/ss)", async () => {
+    fsMocks.readFile.mockImplementation((filePath) => {
+      if (String(filePath).includes("swap_status.json")) {
+        return Promise.resolve(JSON.stringify(TEST_SWAP_DB));
+      }
+      return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+    });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const variants = ["swap", "isswap", "secretswap", "issecretswap", "isss", "ss"];
+    for (const variant of variants) {
+      const message = makeMessage();
+      await handler({ message, rest: `${variant} pikachu` });
+      expect(message.reply).toHaveBeenCalledWith(
+        [
+          "Yes. This pokemon is currently obtainable via secret swap, and it is also obtainable via maps.",
+          "Matched: Pikachu",
+          "* this pokemon is obtainable via Victory Path map",
+        ].join("\n")
+      );
+    }
+  });
+
+  it("returns former-swap footnote when not currently swappable", async () => {
+    fsMocks.readFile.mockImplementation((filePath) => {
+      if (String(filePath).includes("swap_status.json")) {
+        return Promise.resolve(JSON.stringify(TEST_SWAP_DB));
+      }
+      return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+    });
+
+    const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+    const register = makeRegister();
+    registerRpgInfo(register);
+    const handler = getHandler(register, "!rpginfo");
+
+    const message = makeMessage();
+    await handler({ message, rest: "swap Absol" });
+
+    expect(message.reply).toHaveBeenCalledWith(
+      [
+        "No. This pokemon is not currently obtainable via secret swap.",
+        "Matched: Absol",
+        "* pokemon was formerly obtained via secret swap",
+      ].join("\n")
+    );
+  });
+
+  it("returns unavailable message when swap data is missing", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      fsMocks.readFile.mockImplementation((filePath) => {
+        if (String(filePath).includes("swap_status.json")) {
+          const err = new Error("no such file");
+          err.code = "ENOENT";
+          return Promise.reject(err);
+        }
+        return Promise.resolve(JSON.stringify({ base_by_name: {} }));
+      });
+
+      const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
+      const register = makeRegister();
+      registerRpgInfo(register);
+      const handler = getHandler(register, "!rpginfo");
+
+      const message = makeMessage();
+      await handler({ message, rest: "swap Pikachu" });
+
+      expect(message.reply).toHaveBeenCalledWith("❌ Swap status data is unavailable right now.");
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
   it("shows de-duplicated aliases in help", async () => {
     const { registerRpgInfo } = await import("../../rpg/rpginfo.js");
     const register = makeRegister();
@@ -114,6 +251,8 @@ describe("rpginfo command", () => {
     const reply = message.reply.mock.calls[0][0];
     expect(reply).toContain("`!rpginfo tc eligible <pokemon>`");
     expect(reply).not.toContain("`!rpginfo tc iseligible <pokemon>`");
+    expect(reply).toContain("`!info swap <pokemon>`");
+    expect(reply).not.toContain("`!rpginfo swap <pokemon>`");
     expect(reply).toContain("`!rpginfo gym [count]`");
     expect(reply).not.toContain("`!rpginfo traininggyms [count]`");
   });
