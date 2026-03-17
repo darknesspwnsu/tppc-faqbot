@@ -131,6 +131,10 @@ dist
 
 # local metrics export working tree
 .metrics_export/
+.spectreon-metrics-export/
+
+# local/generated analysis artifacts
+analysis/*.csv
 
 **/.DS_Store
 docs/user-manual-wiki.md
