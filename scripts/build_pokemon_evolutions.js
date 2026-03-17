@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { normalizeKey } from "../shared/pokename_utils.js";
 
-const EVOLUTION_URL = "https://coldsp33d.github.io/data/pokemon_evolution.json";
+const EVOLUTION_URL = "https://darknesspwnsu.github.io/tppc-tools/data/pokemon_evolution.json";
 const SPECIES_URL = "https://pokeapi.co/api/v2/pokemon-species/";
 const POKEDEX_PATH = path.resolve("data/pokedex_map.json");
 const OUT_PATH = path.resolve("data/pokemon_evolutions.json");

@@ -365,7 +365,7 @@ export function registerCalculator(register) {
     // perf: perfect exp trainer plan
     if (fn === "perf") {
       const usageMessage =
-        "Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]` or visit https://coldsp33d.github.io/perfect_exp";
+        "Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]` or visit https://darknesspwnsu.github.io/tppc-tools/tools/perfect-exp";
       if (args.length < 2 || args.length > 3) {
         await message.reply(usageMessage);
         return;

@@ -296,7 +296,7 @@ describe("calculator.js", () => {
     const msg = await runBang(handlers, "!calculate", "perf");
     const replyArg = msg.reply.mock.calls[0][0];
     expect(replyArg).toContain("Usage: `!calc perf <current_exp> <desired_exp> [highest_gym_id]`");
-    expect(replyArg).toContain("coldsp33d.github.io/perfect_exp");
+    expect(replyArg).toContain("darknesspwnsu.github.io/tppc-tools/tools/perfect-exp");
   });
 
   it("perf handles trainer data read failures", async () => {

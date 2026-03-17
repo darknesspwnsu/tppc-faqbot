@@ -7,7 +7,7 @@ export function registerLinks(register) {
     "!organizer",
     async ({ message }) => {
       await message.reply(
-        "https://coldsp33d.github.io/box_organizer\nTip: You can also use `/sortbox` for in-bot sorting."
+        "https://darknesspwnsu.github.io/tppc-tools/tools/box-organizer\nTip: You can also use `/sortbox` for in-bot sorting."
       );
     },
     "!organizer — returns the organizer page link (try /sortbox for in-bot sorting)",
