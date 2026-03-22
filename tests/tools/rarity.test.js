@@ -604,4 +604,50 @@ describe("rarity.js", () => {
     const runAt = __testables.nextRunInEastern("07:10");
     expect(runAt.toISOString()).toBe("2026-11-01T12:10:00.000Z");
   });
+
+  it("parseLastUpdatedTextEastern infers EDT when source text omits timezone", async () => {
+    const { __testables } = await loadRarityModule();
+
+    const parsed = __testables.parseLastUpdatedTextEastern("06-01-2026 06:33");
+    expect(parsed?.toISOString()).toBe("2026-06-01T10:33:00.000Z");
+  });
+
+  it("parseLastUpdatedTextEastern infers EST when source text omits timezone", async () => {
+    const { __testables } = await loadRarityModule();
+
+    const parsed = __testables.parseLastUpdatedTextEastern("01-11-2026 06:32");
+    expect(parsed?.toISOString()).toBe("2026-01-11T11:32:00.000Z");
+  });
+
+  it("normalizes canonical rarity Pages URLs to raw GitHub URLs", async () => {
+    const { __testables } = await loadRarityModule();
+
+    expect(
+      __testables.normalizeRaritySourceUrl(
+        "https://darknesspwnsu.github.io/tppc-data/data/rarity.json"
+      )
+    ).toBe("https://raw.githubusercontent.com/darknesspwnsu/tppc-data/main/data/rarity.json");
+  });
+
+  it("getRefreshWindowState reports active windows after the scheduled start", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-03-21T11:30:00Z")); // 07:30 ET
+
+    const state = __testables.getRefreshWindowState("07:10", 120);
+    expect(state.kind).toBe("active");
+    expect(state.start.toISOString()).toBe("2026-03-21T11:10:00.000Z");
+    expect(state.end.toISOString()).toBe("2026-03-21T13:10:00.000Z");
+  });
+
+  it("isMetaFreshForToday keys freshness off the Eastern rarity date", async () => {
+    const { __testables } = await loadRarityModule();
+    vi.setSystemTime(new Date("2026-03-21T12:00:00Z")); // 08:00 ET
+
+    expect(
+      __testables.isMetaFreshForToday({ lastUpdatedText: "03-21-2026 06:33 EDT" })
+    ).toBe(true);
+    expect(
+      __testables.isMetaFreshForToday({ lastUpdatedText: "03-20-2026 06:34 EDT" })
+    ).toBe(false);
+  });
 });

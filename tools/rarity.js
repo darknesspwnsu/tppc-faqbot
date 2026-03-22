@@ -37,20 +37,33 @@ let meta4 = null;
 
 /* --------------------------------- config -------------------------------- */
 
-// ✅ Default to our live, auto-refreshed GitHub Pages JSON:
-const DEFAULT_URL = "https://darknesspwnsu.github.io/tppc-data/data/rarity.json";
-const DEFAULT_L4_URL = "https://darknesspwnsu.github.io/tppc-data/data/l4_rarity.json";
+const EASTERN_TIME_ZONE = "America/New_York";
+const CANONICAL_PAGES_BASE = "https://darknesspwnsu.github.io/tppc-data/data/";
+const CANONICAL_RAW_BASE =
+  "https://raw.githubusercontent.com/darknesspwnsu/tppc-data/main/data/";
+
+// Default to the source-of-truth artifact and avoid waiting on Pages deployment.
+const DEFAULT_URL = `${CANONICAL_RAW_BASE}rarity.json`;
+const DEFAULT_L4_URL = `${CANONICAL_RAW_BASE}l4_rarity.json`;
+
+function normalizeRaritySourceUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return raw;
+  if (!raw.startsWith(CANONICAL_PAGES_BASE)) return raw;
+  return raw.replace(CANONICAL_PAGES_BASE, CANONICAL_RAW_BASE);
+}
 
 const FILE = "data/rarity.json";
-const URL = process.env.RARITY_JSON_URL || DEFAULT_URL;
+const URL = normalizeRaritySourceUrl(process.env.RARITY_JSON_URL || DEFAULT_URL);
 
 const L4_FILE = "data/l4_rarity.json";
-const L4_URL = process.env.RARITY4_JSON_URL || DEFAULT_L4_URL;
+const L4_URL = normalizeRaritySourceUrl(process.env.RARITY4_JSON_URL || DEFAULT_L4_URL);
 
 const DAILY_REFRESH_ET = process.env.RARITY_DAILY_REFRESH_ET || "07:10";
 
-// How often the bot checks for updates (keep modest; 5–10 min is perfect)
+// During the daily update window, retry every 5-10 minutes until the new rarity lands.
 const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
+const REFRESH_WINDOW_MINUTES = Number(process.env.RARITY_REFRESH_WINDOW_MINUTES ?? 120);
 const FETCH_TIMEOUT_MS = 5_000;
 const MAX_FETCH_BYTES = 2 * 1024 * 1024;
 
@@ -192,7 +205,13 @@ function parseLastUpdatedTextEastern(text) {
   const yyyy = Number(m[3]);
   const hh = Number(m[4]);
   const min = Number(m[5]);
-  const tz = (m[6] || "EST").toUpperCase(); // default to EST if missing
+  const tz = (m[6] || inferEasternTimeZoneName({
+    year: yyyy,
+    month: mm,
+    day: dd,
+    hour: hh,
+    minute: min,
+  }) || "EST").toUpperCase();
 
   if (
     !Number.isFinite(mm) || mm < 1 || mm > 12 ||
@@ -502,6 +521,13 @@ function getZonedDateParts(date, timeZone) {
   };
 }
 
+function formatDateKey(date, timeZone = EASTERN_TIME_ZONE) {
+  const parts = getZonedDateParts(date, timeZone);
+  const mm = String(parts.month).padStart(2, "0");
+  const dd = String(parts.day).padStart(2, "0");
+  return `${parts.year}-${mm}-${dd}`;
+}
+
 function getTimeZoneOffset(date, timeZone) {
   const parts = getZonedDateParts(date, timeZone);
   const asUtc = Date.UTC(
@@ -526,61 +552,181 @@ function zonedTimeToUtc({ year, month, day, hour, minute, second = 0 }, timeZone
   return new Date(utc);
 }
 
-function nextRunInEastern(hhmm) {
-  const { hour, minute } = parseHHMM(hhmm);
-  const tz = "America/New_York";
-
-  const now = new Date();
-  const parts = getZonedDateParts(now, tz);
-
-  let runUtc = zonedTimeToUtc(
-    { year: parts.year, month: parts.month, day: parts.day, hour, minute, second: 0 },
-    tz
+function inferEasternTimeZoneName({ year, month, day, hour, minute }) {
+  const date = zonedTimeToUtc(
+    { year, month, day, hour, minute, second: 0 },
+    EASTERN_TIME_ZONE
   );
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: EASTERN_TIME_ZONE,
+    timeZoneName: "short",
+  }).formatToParts(date);
+  const zone = String(parts.find((part) => part.type === "timeZoneName")?.value || "").toUpperCase();
+  return zone === "EDT" || zone === "EST" ? zone : null;
+}
+
+function todayRunInEastern(hhmm, now = new Date()) {
+  const { hour, minute } = parseHHMM(hhmm);
+  const parts = getZonedDateParts(now, EASTERN_TIME_ZONE);
+  return zonedTimeToUtc(
+    { year: parts.year, month: parts.month, day: parts.day, hour, minute, second: 0 },
+    EASTERN_TIME_ZONE
+  );
+}
+
+function nextRunInEastern(hhmm) {
+  const now = new Date();
+  let runUtc = todayRunInEastern(hhmm, now);
   if (runUtc.getTime() <= now.getTime()) {
+    const parts = getZonedDateParts(now, EASTERN_TIME_ZONE);
     runUtc = zonedTimeToUtc(
       {
         year: parts.year,
         month: parts.month,
         day: parts.day + 1,
-        hour,
-        minute,
+        hour: parseHHMM(hhmm).hour,
+        minute: parseHHMM(hhmm).minute,
         second: 0,
       },
-      tz
+      EASTERN_TIME_ZONE
     );
   }
   return runUtc;
 }
 
+function normalizeRefreshIntervalMs(value = REFRESH_MS) {
+  return Number.isFinite(value) && value > 0 ? value : 10 * 60_000;
+}
+
+function normalizeRefreshWindowMs(value = REFRESH_WINDOW_MINUTES) {
+  const minutes = Number.isFinite(value) && value > 0 ? value : 120;
+  return minutes * 60_000;
+}
+
+function getMetaTimestampMs(metaObj) {
+  const updatedDate = parseLastUpdatedTextEastern(metaObj?.lastUpdatedText);
+  if (updatedDate) return updatedDate.getTime();
+
+  const generatedAt = Number(metaObj?.generatedAt);
+  return Number.isFinite(generatedAt) && generatedAt > 0 ? generatedAt : null;
+}
+
+function getMetaDateKey(metaObj) {
+  const ts = getMetaTimestampMs(metaObj);
+  if (!Number.isFinite(ts)) return null;
+  return formatDateKey(new Date(ts), EASTERN_TIME_ZONE);
+}
+
+function isMetaFreshForToday(metaObj, now = new Date()) {
+  return getMetaDateKey(metaObj) === formatDateKey(now, EASTERN_TIME_ZONE);
+}
+
+function describeMeta(metaObj) {
+  if (metaObj?.lastUpdatedText) return String(metaObj.lastUpdatedText);
+  const ts = getMetaTimestampMs(metaObj);
+  return Number.isFinite(ts) ? new Date(ts).toISOString() : "unknown";
+}
+
+function getRefreshWindowState(hhmm, windowMinutes = REFRESH_WINDOW_MINUTES, now = new Date()) {
+  const start = todayRunInEastern(hhmm, now);
+  const windowMs = normalizeRefreshWindowMs(windowMinutes);
+  const end = new Date(start.getTime() + windowMs);
+
+  if (now.getTime() < start.getTime()) {
+    return { kind: "before", start, end };
+  }
+  if (now.getTime() < end.getTime()) {
+    return { kind: "active", start, end };
+  }
+
+  const nextStart = nextRunInEastern(hhmm);
+  return {
+    kind: "after",
+    start: nextStart,
+    end: new Date(nextStart.getTime() + windowMs),
+  };
+}
+
 function scheduleDailyRefresh(refreshFn, label = "RARITY") {
-  const runAt = nextRunInEastern(DAILY_REFRESH_ET);
-  let delay = runAt.getTime() - Date.now();
-  if (!Number.isFinite(delay) || delay < 0) delay = 60_000;
+  const retryMs = normalizeRefreshIntervalMs();
+  const windowMs = normalizeRefreshWindowMs();
 
-  console.log(
-    `[${label}] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(delay / 1000)}s)`
-  );
-
-  setTimeout(async function tick() {
-    try {
-      await refreshFn();
-      void metrics.incrementSchedulerRun(label, "ok");
-    } catch (err) {
-      logger.error("rarity.refresh.error", { error: logger.serializeError(err) });
-      console.error("[RARITY] Refresh failed:", err);
-      void metrics.incrementSchedulerRun(label, "error");
+  const scheduleNextWindow = () => {
+    const state = getRefreshWindowState(DAILY_REFRESH_ET, REFRESH_WINDOW_MINUTES, new Date());
+    if (state.kind === "active") {
+      console.log(
+        `[${label}] Active ET refresh window detected for ${DAILY_REFRESH_ET}; starting bounded retries now`
+      );
+      void runRefreshWindow(state);
+      return;
     }
 
-    const next = nextRunInEastern(DAILY_REFRESH_ET);
-    let nextDelay = next.getTime() - Date.now();
-    if (!Number.isFinite(nextDelay) || nextDelay < 0) nextDelay = 24 * 60 * 60_000;
-
+    let delay = state.start.getTime() - Date.now();
+    if (!Number.isFinite(delay) || delay < 0) delay = 60_000;
     console.log(
-      `[${label}] Next daily refresh scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(nextDelay / 1000)}s)`
+      `[${label}] Next daily refresh window scheduled for ET ${DAILY_REFRESH_ET} (in ${Math.round(delay / 1000)}s)`
     );
-    setTimeout(tick, nextDelay);
-  }, delay);
+
+    setTimeout(() => {
+      const latestState = getRefreshWindowState(DAILY_REFRESH_ET, REFRESH_WINDOW_MINUTES, new Date());
+      if (latestState.kind === "active") {
+        void runRefreshWindow(latestState);
+        return;
+      }
+      scheduleNextWindow();
+    }, delay);
+  };
+
+  const runRefreshWindow = async (state) => {
+    console.log(
+      `[${label}] Starting ET refresh window at ${DAILY_REFRESH_ET} with ${Math.round(windowMs / 60000)} minute window`
+    );
+
+    let attempts = 0;
+    const windowEndMs = state.end.getTime();
+
+    const attempt = async () => {
+      attempts += 1;
+      try {
+        const result = await refreshFn();
+        const currentMeta = result?.meta ?? meta;
+        if (isMetaFreshForToday(currentMeta)) {
+          console.log(
+            `[${label}] Fresh rarity confirmed after ${attempts} attempt(s): ${describeMeta(currentMeta)}`
+          );
+          void metrics.incrementSchedulerRun(label, "ok");
+          scheduleNextWindow();
+          return;
+        }
+
+        console.log(
+          `[${label}] Rarity still stale after attempt ${attempts}; latest payload is ${describeMeta(currentMeta)}`
+        );
+      } catch (err) {
+        logger.error("rarity.refresh.error", { error: logger.serializeError(err) });
+        console.error(`[${label}] Refresh attempt failed:`, err);
+      }
+
+      const remainingMs = windowEndMs - Date.now();
+      if (remainingMs <= retryMs) {
+        console.warn(
+          `[${label}] Refresh window closed without seeing fresh rarity data for today`
+        );
+        void metrics.incrementSchedulerRun(label, "error");
+        scheduleNextWindow();
+        return;
+      }
+
+      console.log(
+        `[${label}] Retrying rarity refresh in ${Math.round(retryMs / 60000)} minute(s); ${Math.round(remainingMs / 60000)} minute(s) left in window`
+      );
+      setTimeout(attempt, retryMs);
+    };
+
+    await attempt();
+  };
+
+  scheduleNextWindow();
 }
 
 function buildRarityRetryCustomId(command, name, extraArgs = "", userId) {
@@ -743,6 +889,8 @@ export function registerRarity(register) {
         await handleRarityHistory({ message, cmd, qRaw: historyPokemon, timeframe });
         return;
       }
+
+      if (!rarityNorm) await refresh();
 
       const qRaw = raw;
       const r = findEntry({ lowerIndex: rarity, normIndex: rarityNorm }, qRaw);
@@ -1096,6 +1244,13 @@ export async function handleRarityInteraction(interaction) {
 // Reusable name normalization + suggestions (shared with RPG lookups).
 
 export const __testables = {
+  parseLastUpdatedTextEastern,
+  inferEasternTimeZoneName,
+  formatDateKey,
+  getMetaDateKey,
+  isMetaFreshForToday,
+  getRefreshWindowState,
+  normalizeRaritySourceUrl,
   nextRunInEastern,
   getZonedDateParts,
   getTimeZoneOffset,

@@ -195,6 +195,8 @@ Common variables:
 | `SLASH_GUILD_ID`              | Guild-only slash registration (dev) |
 | `DB_HOST / DB_USER / DB_NAME` | MySQL connection                    |
 | `RARITY_JSON_URL`             | Live rarity JSON source             |
+| `RARITY_REFRESH_MS`           | Retry interval during refresh window |
+| `RARITY_REFRESH_WINDOW_MINUTES` | Morning retry window length       |
 | `RARITY_DAILY_REFRESH_ET`     | Daily refresh time (ET)             |
 
 ---
