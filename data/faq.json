@@ -378,7 +378,11 @@
       "how much money do i receive when a pokemon sells",
       "why do sold pokemon give half market value",
       "how much cash do i get when my pokemon is bought",
-      "why was the payout half when my pokemon sold"
+      "why was the payout half when my pokemon sold",
+      "did not receive money from buy page",
+      "why didnt i get money from buy page",
+      "buy page did not pay me",
+      "why didnt i receive cash from the buy page"
     ],
     "intentDescription": "sale payout, half value after a pokemon is bought, tax on completed sales, money received after a successful sale, buyer discount from power plant",
     "denyTerms": [
@@ -391,7 +395,7 @@
       "timer ends",
       "unsold"
     ],
-    "response": "Once your Pokémon is bought, you will receive **half of its market value** — you have to pay the tax man! Players on the team which is currently in control of the **Power Plant** receive **33% off** on the Buy Pokémon page. This discount only applies to the buyer; the seller still ends up making **half of the market value of the original, non-discounted price**.\n\nSee here for more info: https://wiki.tppc.info/Buying_and_Selling_Guide"
+    "response": "Once your Pokemon is bought, you receive half of its market value. The buyer may get a Power Plant discount, but the seller still receives half of the original non-discounted market value. If you did not receive any money and your Pokemon is no longer on the Buy page, that means it was never bought and has been deleted. Pokemon that do not get bought after the 24-hour sell window are not returned to you.\n\nSee here for more info: https://wiki.tppc.info/Buying_and_Selling_Guide"
   },
   {
     "id": "proto_macro_automation_clicking",
@@ -417,9 +421,12 @@
       "is gambling allowed",
       "can i bet pokemon",
       "can i gamble on tppc",
-      "is betting allowed"
+      "is betting allowed",
+      "where is betting",
+      "where is the betting channel",
+      "is there a betting channel"
     ],
-    "answer": "No. Gambling, wagers, and similar betting arrangements are not allowed. The only exception is staff-sanctioned gambling, such as gambling for a prize upgrade in a staff-run contest."
+    "answer": "No. Gambling, wagers, and similar betting arrangements are not allowed, so there is no regular betting channel. The only exception is staff-sanctioned gambling, such as gambling for a prize upgrade in a staff-run contest."
   },
   {
     "id": "proto_account_sharing_trade",
@@ -504,6 +511,12 @@
       "how do i get mega stones",
       "how do i mega evolve",
       "mega evolve help"
+    ],
+    "denyTerms": [
+      "trade mega stone",
+      "trade my mega stone",
+      "sell mega stone",
+      "can i trade mega stones"
     ],
     "answer": "Mega Evolution is possible, but not all Mega Stones are obtainable yet. For the currently available ones, see https://wiki.tppc.info/Category:Mega_Stones"
   },
@@ -794,7 +807,11 @@
       "what is tppc lotto",
       "what is the lottery",
       "tppc lottery help",
-      "lotto info"
+      "lotto info",
+      "can i partake in lotto",
+      "how do i enter lotto",
+      "how do i join the lottery",
+      "can i enter the tppc lottery"
     ],
     "answer": "The TPPC lottery is a weekly game where users can enter for a 1 in 120 chance at a prize. Enter here: https://forums.tppc.info/showthread.php?t=641631"
   },
@@ -842,13 +859,182 @@
       "can i trade items",
       "can i trade rpg cash",
       "is item trading allowed",
-      "can i sell rpg cash"
+      "can i sell rpg cash",
+      "can i trade my mega stone",
+      "can i trade mega stones",
+      "can i sell a mega stone",
+      "can i trade my megass stone"
     ],
     "denyTerms": [
       "another game",
       "other game"
     ],
     "answer": "Items cannot be traded. The only exception is staff, who can create or remove items on your account, usually for contests. RPG cash can be traded for pixels, but there is no fixed rate for the value of RPG money."
+  },
+  {
+    "id": "mega_stones_not_visible",
+    "question": "Why can't I see Mega Stones in my box?",
+    "examples": [
+      "cannot see mega stones in my box",
+      "why cant i see mega stones in my box",
+      "where are my mega stones",
+      "why are mega stones not in my box"
+    ],
+    "answer": "Mega Stones do not appear in the item deletion list because they cannot be deleted. You can, however, see them in the item dropdown when attaching items to your roster."
+  },
+  {
+    "id": "scrap_metal",
+    "question": "What is Scrap Metal, and why is it in my box?",
+    "examples": [
+      "what is scrap metal",
+      "why is there scrap metal in my box",
+      "scrap metal help",
+      "what do i do with scrap metal"
+    ],
+    "answer": "If you see Scrap Metal in your box, it is likely because you previously had a Lightning Rod or Training Bonus in your box, and those items are no longer usable, so they were converted into Scrap Metal."
+  },
+  {
+    "id": "trade_cap_hidden_pokemon",
+    "question": "Why can't I see a high-level Pokemon in trade?",
+    "examples": [
+      "cannot see high level in trade",
+      "why cant i see high level pokemon in trade",
+      "why is a high level hidden in trade",
+      "cant see pokemon in trade above a certain level"
+    ],
+    "answer": "You usually cannot see or trade Pokemon above your current trade cap. Increase your rank and points to unlock higher trade levels. More info: https://wiki.tppc.info/index.php?title=Trading_Caps&redirect=no"
+  },
+  {
+    "id": "account_limit",
+    "question": "How many accounts can I have?",
+    "examples": [
+      "how many accounts can i have",
+      "how many tppc accounts am i allowed",
+      "can i have multiple accounts",
+      "what is the account limit"
+    ],
+    "answer": "You may have as many accounts as you like as long as they serve some purpose. For promos and Golden Day, you are only allowed to claim or goldenize on up to 5 eligible active accounts. See the rules and exact eligibility criteria here: https://forums.tppc.info/showthread.php?t=354984"
+  },
+  {
+    "id": "best_offers",
+    "question": "What are best offers?",
+    "examples": [
+      "what are best offers",
+      "best offers meaning",
+      "what does best offers mean",
+      "why does it say best offers"
+    ],
+    "answer": "Best Offers are a type of auction thread where a Pokemon is traded for the highest offer submitted within the stated time window, usually 24 to 48 hours. It is generally considered poor form if either side backs out once the Best Offer period has ended. It is not against the rules, but it is frowned upon by the community, so avoid doing it unless you do not mind the bad look."
+  },
+  {
+    "id": "pokemon_transfer_request",
+    "question": "Can I get a transfer for my Pokemon?",
+    "examples": [
+      "can i get a transfer for my pokemon",
+      "can staff transfer my pokemon",
+      "pokemon transfer help",
+      "can i request a pokemon transfer"
+    ],
+    "answer": "Regular Pokemon transfers are not usually provided on request. Staff may transfer Pokemon only in specific administrative or contest-related situations."
+  },
+  {
+    "id": "spectreon_info",
+    "question": "What is Spectreon?",
+    "examples": [
+      "what is spectreon",
+      "who is spectreon",
+      "what does spectreon do",
+      "is spectreon a bot"
+    ],
+    "answer": "Spectreon is the bot or utility account used for TPPC Discord automation, utility features, and FAQ responses, built by the Staff and Community Engagement team in collaboration with the user Darkness. More information: https://wiki.tppc.info/Discord#Spectreon For a primer on available commands, check the pinned comments in #botspam."
+  },
+  {
+    "id": "mewtwos_lair",
+    "question": "What happened to Mewtwo's Lair?",
+    "examples": [
+      "what happened to mewtwos lair",
+      "where did mewtwos lair go",
+      "is mewtwos lair gone",
+      "mewtwos lair help"
+    ],
+    "answer": "Mewtwo's Lair was a map in v7 of the RPG. As its name suggests, it was home to the legendary Pokemon Mewtwo.\n\nIn later TPPC versions, Unown could also be found on this map and the rarity of Mewtwo was increased.\n\nThe map did not receive a successor in v8, and Mewtwo was rendered unobtainable as a result."
+  },
+  {
+    "id": "custom_forum_avatar",
+    "question": "Can I get a custom forum avatar?",
+    "examples": [
+      "can i get a custom forum avatar",
+      "custom forum avatar",
+      "can i have a custom avatar on the forums",
+      "forum avatar request"
+    ],
+    "answer": "Custom forum avatars are not available to regular forum users except through staff contests. One exception is Community Engagers, who are granted custom forum avatars in recognition of their service to the community."
+  },
+  {
+    "id": "forum_email_reset_access",
+    "question": "I can't access my email to reset my forums password. What do I do?",
+    "examples": [
+      "im unable to access my email to reset my password for my forums account",
+      "cannot access email for forums password reset",
+      "lost email for forums account reset",
+      "what do i do if i cant access my forums email"
+    ],
+    "answer": "If you cannot access the email tied to your forums account, contact a moderator or staff member and explain the situation. They can tell you the next recovery step. See https://wiki.tppc.info/TPPC_Staff for active staff."
+  },
+  {
+    "id": "disable_trades",
+    "question": "How do I disable trades?",
+    "examples": [
+      "how do i disable trades",
+      "can i turn off trades",
+      "stop people from trading me",
+      "disable trade requests"
+    ],
+    "answer": "Log into your RPG account, then visit My Settings: https://www.tppcrpg.net/edit_settings.php Set Trading Status to \"Disable Incoming Trades\" or \"Disable All Trades.\""
+  },
+  {
+    "id": "purple_egg",
+    "question": "I received a purple egg while breeding. What is it?",
+    "examples": [
+      "i received a purple egg while breeding what is it",
+      "what is a purple egg",
+      "purple egg breeding",
+      "why did i get a purple egg"
+    ],
+    "answer": "A Purple Egg is a special breeding result. There is a 0.4% chance to obtain one when hatching any regular egg. It hatches into Shiny Toxel or Dark Toxel with equal odds."
+  },
+  {
+    "id": "catch_shiny_pokemon",
+    "question": "Can I catch shiny Pokemon?",
+    "examples": [
+      "can i catch shiny pokemon",
+      "can i catch shinies",
+      "can i catch shinys",
+      "are shiny pokemon catchable"
+    ],
+    "answer": "Normally, no. Shiny Pokemon are not standard wild catches and are usually obtained through special methods, events, or trades instead. One exception is Shiny or Dark Torchic, Mudkip, and Treecko, which can be obtained through RegiQuest Phase #3 on the Empty Cliffs map. Reference: https://wiki.tppc.info/Regi_Quest#RegiQuest_Phase_.233"
+  },
+  {
+    "id": "empty_cliffs_people",
+    "question": "Who are the people on Empty Cliffs?",
+    "examples": [
+      "who are the people on empty cliffs",
+      "empty cliffs people",
+      "who are those people at empty cliffs",
+      "empty cliffs npcs"
+    ],
+    "answer": "They are tied to Origin Tower. Fight them with special rosters to obtain either Azure Flute with a 15% chance or Arceus (Normal). More info: https://wiki.tppc.info/Origin_Tower#Origin_Battle"
+  },
+  {
+    "id": "trade_pokemon_not_found",
+    "question": "What does 'All Pokemon selected in the trade could not be found. Please try again.' mean?",
+    "examples": [
+      "all pokemon selected in the trade could not be found",
+      "pokemon selected in the trade could not be found",
+      "trade could not be found error",
+      "please try again trade pokemon not found"
+    ],
+    "answer": "Check that you have the required rank, that none of the selected Pokemon are in your roster, and that the person you are trading with still owns the selected Pokemon."
   }
   ]
 }

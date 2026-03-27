@@ -184,6 +184,8 @@
     { "question": "are trading caps different for commanders", "expectedId": "trade_caps", "tags": ["hard"] },
     { "question": "what cap does commander rank get", "expectedId": "trade_caps", "tags": ["hard"] },
     { "question": "if my pokemon doesn't sell on the buy page do i get it back", "expectedId": "proto_unsold_pokemon_return", "tags": ["hard"] },
-    { "question": "when the buy page timer ends does my pokemon return", "expectedId": "proto_unsold_pokemon_return", "tags": ["hard"] }
+    { "question": "when the buy page timer ends does my pokemon return", "expectedId": "proto_unsold_pokemon_return", "tags": ["hard"] },
+    { "question": "can i trade my megass stone", "expectedId": "proto_trade_items_cash", "tags": ["typo", "hard"] },
+    { "question": "can i partake in lotto", "expectedId": "proto_lottery", "tags": ["hard"] }
   ]
 }

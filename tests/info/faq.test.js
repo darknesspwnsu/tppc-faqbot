@@ -179,6 +179,57 @@ describe("faq service", () => {
     expect(out).toBe("Returns.");
   });
 
+  it("prefers item trading over mega evolution for mega stone trade questions", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [
+          {
+            id: "proto_mega_evolution",
+            question: "How do I get mega pokemon, mega stones, or mega evolve?",
+            examples: ["how do i get mega stones"],
+            denyTerms: ["trade my mega stone", "can i trade mega stones"],
+            a: "Mega."
+          },
+          {
+            id: "proto_trade_items_cash",
+            question: "Can I trade items or RPG cash?",
+            examples: ["can i trade items", "can i trade my mega stone", "can i trade mega stones"],
+            a: "Items."
+          }
+        ],
+      }),
+    });
+
+    const faq = createFaqService();
+    const out = await faq.matchAndRender({
+      message: makeMessage(),
+      questionRaw: "can i trade my megass stone",
+    });
+    expect(out).toBe("Items.");
+  });
+
+  it("recognizes lottery participation phrasing", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [
+          {
+            id: "proto_lottery",
+            question: "What is the TPPC lotto or lottery?",
+            examples: ["lotto info", "can i partake in lotto", "how do i enter lotto"],
+            a: "Lottery."
+          }
+        ],
+      }),
+    });
+
+    const faq = createFaqService();
+    const out = await faq.matchAndRender({
+      message: makeMessage(),
+      questionRaw: "can i partake in lotto",
+    });
+    expect(out).toBe("Lottery.");
+  });
+
   it("registers FAQ commands that respond", async () => {
     setFileMap({
       "data/faq.json": JSON.stringify({
