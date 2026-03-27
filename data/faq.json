@@ -408,7 +408,7 @@
       "can i automate grinding if i am watching",
       "can i let battles run on their own"
     ],
-    "answer": "lorem ipsum proto_macro_automation_clicking"
+    "answer": "No. Macros, autoclickers, and other automation are not allowed. If you are unsure whether something counts as automation, assume it is not allowed and ask staff first."
   },
   {
     "id": "proto_gambling",
@@ -419,7 +419,7 @@
       "can i gamble on tppc",
       "is betting allowed"
     ],
-    "answer": "lorem ipsum proto_gambling"
+    "answer": "No. Gambling, wagers, and similar betting arrangements are not allowed. The only exception is staff-sanctioned gambling, such as gambling for a prize upgrade in a staff-run contest."
   },
   {
     "id": "proto_account_sharing_trade",
@@ -437,7 +437,7 @@
     "denyTerms": [
       "netflix"
     ],
-    "answer": "lorem ipsum proto_account_sharing_trade"
+    "answer": "No. Do not share, transfer, sell, trade, or give away accounts."
   },
   {
     "id": "proto_beat_tower_or_challenge",
@@ -448,7 +448,7 @@
       "how do i beat a tower challenge",
       "how do i beat this challenge"
     ],
-    "answer": "lorem ipsum proto_beat_tower_or_challenge"
+    "answer": "There is no single best answer for every tower or challenge. Check the moves section, available guides, or JJman, and ask for help with the specific tower or challenge you are stuck on."
   },
   {
     "id": "proto_training_challenge_fatigue",
@@ -464,7 +464,7 @@
       "does fatigue build up during tc",
       "why does tc slow down after a while"
     ],
-    "answer": "lorem ipsum proto_training_challenge_fatigue"
+    "answer": "Training Challenge fatigue kicks in after a 4-hour window of intermittent or continuous training and lasts for 2 hours. To reset the fatigue timer, wait 2 hours."
   },
   {
     "id": "proto_training_challenge_end",
@@ -474,7 +474,7 @@
       "training challenge end time",
       "when is training challenge over"
     ],
-    "answer": "lorem ipsum proto_training_challenge_end"
+    "answer": "Training Challenge ends at Sunday 5 AM TPPC time during maintenance. Results are announced at 7 AM TPPC time, and prizes are distributed at 10 AM TPPC time."
   },
   {
     "id": "proto_safari_zone_end",
@@ -484,7 +484,7 @@
       "safari zone end time",
       "when does safari end"
     ],
-    "answer": "lorem ipsum proto_safari_zone_end"
+    "answer": "Safari Zone is a weekly challenge that starts on Sunday at 10 AM TPPC time and ends on Saturday at 10 PM TPPC time. The Safari Zone itself is open daily from 10 AM to 10 PM TPPC time."
   },
   {
     "id": "proto_best_training_gym",
@@ -494,7 +494,7 @@
       "what gym should i train at",
       "best gym for training"
     ],
-    "answer": "lorem ipsum proto_best_training_gym"
+    "answer": "There is no universal best gym for every account. The best option depends on your team, goals, and what you can beat consistently. See https://wiki.tppc.info/Training_Accounts for a list of training accounts. Pro tip: the GratzMatt Gym lets you attack with any level Pokemon. If your Pokemon is too weak to KO with a Fighting move, you can attach X Accuracy and use Sheer Cold to OHKO the Blisseys."
   },
   {
     "id": "proto_mega_evolution",
@@ -505,7 +505,7 @@
       "how do i mega evolve",
       "mega evolve help"
     ],
-    "answer": "lorem ipsum proto_mega_evolution"
+    "answer": "Mega Evolution is possible, but not all Mega Stones are obtainable yet. For the currently available ones, see https://wiki.tppc.info/Category:Mega_Stones"
   },
   {
     "id": "proto_question_mark_pokemon",
@@ -524,7 +524,7 @@
       "what does the question mark symbol on a pokemon gender mean",
       "what does the ? symbol on a pokemon mean"
     ],
-    "answer": "lorem ipsum proto_question_mark_pokemon"
+    "answer": "These are ungendered (?) Pokemon, and they are only obtainable through trading. See https://wiki.tppc.info/Pokemon_Genders#Ungendered_Pok.C3.A9mon for more information."
   },
   {
     "id": "proto_secret_swap_gender",
@@ -534,7 +534,7 @@
       "secret swap gender",
       "does secret swap change gender"
     ],
-    "answer": "lorem ipsum proto_secret_swap_gender"
+    "answer": "Do not assume a Secret Swap Pokemon will keep the same gender. Check the specific Secret Swap rules or examples before relying on the result."
   },
   {
     "id": "proto_breed_shiny_dark",
@@ -545,7 +545,7 @@
       "shiny breeding",
       "dark breeding"
     ],
-    "answer": "lorem ipsum proto_breed_shiny_dark"
+    "answer": "No. Breeding only produces normal variants."
   },
   {
     "id": "proto_engagers",
@@ -555,7 +555,7 @@
       "engagers meaning",
       "what does engager mean"
     ],
-    "answer": "lorem ipsum proto_engagers"
+    "answer": "Engagers do not have any powers on the forum, Trainer's Corner. In Discord they have limited abilities such as applying roles, setting up contests, timing out members, and kicking members. They cannot ban or verify. Engagers do not have access to account 1000000 or other contest or mod storage accounts. They may recommend or organize prizes, but transfers are handled by staff. Reference: https://wiki.tppc.info/Community_Engagement"
   },
   {
     "id": "proto_abilities",
@@ -565,7 +565,7 @@
       "are there abilities on tppc",
       "do my pokemon have ability effects"
     ],
-    "answer": "lorem ipsum proto_abilities"
+    "answer": "No. Pokemon on TPPC do not use main-series-style abilities the same way the handheld games do."
   },
   {
     "id": "proto_unusual_levels",
@@ -576,7 +576,7 @@
       "pokemon under level 5",
       "pokemon over level 100"
     ],
-    "answer": "lorem ipsum proto_unusual_levels"
+    "answer": "Some Pokemon can exist above level 100 or below level 5 because of special sources, older mechanics, swaps, promotions, or event-history exceptions."
   },
   {
     "id": "proto_rates",
@@ -601,7 +601,7 @@
       "card",
       "pokemon card"
     ],
-    "answer": "lorem ipsum proto_rates"
+    "answer": "There is no official universal rate list, especially for unobtainables. Ask publicly for opinions, compare recent trades, and do not rely on any single fixed price guide."
   },
   {
     "id": "stat_bonuses",
@@ -612,7 +612,7 @@
       "gold dark shiny stats",
       "what stats do shiny dark and golden pokemon get"
     ],
-    "answer": "lorem ipsum stat_bonuses"
+    "answer": "Different variants receive stat boosts based on the variant, and some depend on time of day. Shiny gets +5 to all stats. Dark gets -4 during the day and +15 at night. Golden gets +15 at all times. Reference: https://wiki.tppc.info/Bonus"
   },
   {
     "id": "proto_team_faction_change",
@@ -622,7 +622,7 @@
       "why cant i change faction",
       "change team faction"
     ],
-    "answer": "lorem ipsum proto_team_faction_change"
+    "answer": "You generally cannot freely switch team faction whenever you want. If faction changes are limited or locked, that is expected."
   },
   {
     "id": "proto_disable_ads",
@@ -632,7 +632,7 @@
       "turn off rpg ads",
       "remove ads on tppc"
     ],
-    "answer": "lorem ipsum proto_disable_ads"
+    "answer": "There is no built-in option to disable ads unless you use an ad blocker."
   },
   {
     "id": "proto_dark_mode",
@@ -647,7 +647,7 @@
       "forum",
       "browser"
     ],
-    "answer": "lorem ipsum proto_dark_mode"
+    "answer": "There is no official built-in dark mode on the RPG. If you want one, you can use a Chrome extension or the dark mode userscript by Darkness: https://darknesspwnsu.github.io/tppc-tools/userscripts/"
   },
   {
     "id": "proto_legendary_tradability",
@@ -658,7 +658,7 @@
       "why cant i trade entei",
       "why cant i sell suicune"
     ],
-    "answer": "lorem ipsum proto_legendary_tradability"
+    "answer": "Suicune, Raikou, and Entei cannot be traded."
   },
   {
     "id": "proto_delete_account",
@@ -668,7 +668,7 @@
       "can i remove my account",
       "how do i delete my tppc account"
     ],
-    "answer": "lorem ipsum proto_delete_account"
+    "answer": "Account deletion is generally not available as a normal self-service option. If this is a serious issue, contact staff."
   },
   {
     "id": "proto_best_training_challenge_pokemon",
@@ -687,7 +687,7 @@
       "video game",
       "pokemon game"
     ],
-    "answer": "lorem ipsum proto_best_training_challenge_pokemon"
+    "answer": "There is no single best Pokemon for every Training Challenge setup. Prioritize Pokemon that evolve quickly and have a good Attack stat, usually over 100. Also check the eligibility list at https://www.tppcrpg.net/training_challenge.php because banned Pokemon cannot be used."
   },
   {
     "id": "proto_report_scam",
@@ -698,7 +698,7 @@
       "how do i report a scammer",
       "someone scammed me"
     ],
-    "answer": "lorem ipsum proto_report_scam"
+    "answer": "Report scams and suspicious behavior to staff, moderators, or community engagers, and include as much evidence as possible. Do not try to handle it privately if you think you were scammed."
   },
   {
     "id": "proto_v9_release",
@@ -708,7 +708,7 @@
       "v9 release date",
       "when is version 9 coming out"
     ],
-    "answer": "lorem ipsum proto_v9_release"
+    "answer": "There is no confirmed Version 9 release date unless TPPC staff announce one. Anything else is speculation."
   },
   {
     "id": "proto_fatigue_generic",
@@ -718,7 +718,7 @@
       "how does fatigue work",
       "what does fatigue do"
     ],
-    "answer": "lorem ipsum proto_fatigue_generic"
+    "answer": "Training Challenge fatigue kicks in after a 4-hour window of intermittent or continuous training and lasts for 2 hours. To reset the fatigue timer, wait 2 hours."
   },
   {
     "id": "proto_birthday_prize",
@@ -728,7 +728,7 @@
       "how do i get my birthday prize",
       "birthday prize help"
     ],
-    "answer": "lorem ipsum proto_birthday_prize"
+    "answer": "If you are celebrating or recently celebrated your birthday, you may be eligible to redeem a prize from 1 million. Check https://forums.tppc.info/showthread.php?t=602881 for eligibility details and enrollment."
   },
   {
     "id": "proto_intersite",
@@ -739,7 +739,7 @@
       "are intersite trades allowed",
       "can i trade for things outside tppc"
     ],
-    "answer": "lorem ipsum proto_intersite"
+    "answer": "No. Intersite trades and real-money purchases or sales are not allowed."
   },
   {
     "id": "proto_unsold_pokemon_return",
@@ -764,7 +764,7 @@
       "ebay",
       "laptop"
     ],
-    "answer": "lorem ipsum proto_unsold_pokemon_return"
+    "answer": "No. The Pokemon is lost to the sands of time."
   },
   {
     "id": "proto_advent_calendar",
@@ -774,7 +774,7 @@
       "what does advent calendar do",
       "advent calendar help"
     ],
-    "answer": "lorem ipsum proto_advent_calendar"
+    "answer": "The advent calendar is a seasonal feature with daily rewards or actions during the event period. It is typically hosted by L3, and the details are up to their discretion, so reach out to them directly with follow-up questions."
   },
   {
     "id": "new_starter_quests",
@@ -785,7 +785,7 @@
       "new player quests",
       "returning player quests"
     ],
-    "answer": "lorem ipsum new_starter_quests"
+    "answer": "New starter quests are beginner-focused quests meant to guide early progress. Check https://forums.tppc.info/showthread.php?t=621060 to see whether they are currently available and whether you are eligible to participate."
   },
   {
     "id": "proto_lottery",
@@ -796,7 +796,7 @@
       "tppc lottery help",
       "lotto info"
     ],
-    "answer": "lorem ipsum proto_lottery"
+    "answer": "The TPPC lottery is a weekly game where users can enter for a 1 in 120 chance at a prize. Enter here: https://forums.tppc.info/showthread.php?t=641631"
   },
   {
     "id": "proto_best_leveling",
@@ -807,7 +807,7 @@
       "fastest way to train levels",
       "best leveling method"
     ],
-    "answer": "lorem ipsum proto_best_leveling"
+    "answer": "The best leveling method depends on your training Pokemon, your level, and the gym you are using. See https://wiki.tppc.info/Training_Guide and https://wiki.tppc.info/Training_Accounts for more information."
   },
   {
     "id": "proto_reactivate_account",
@@ -823,7 +823,7 @@
       "google",
       "email"
     ],
-    "answer": "lorem ipsum proto_reactivate_account"
+    "answer": "Reactivation is currently not available."
   },
   {
     "id": "proto_contest_closed",
@@ -833,7 +833,7 @@
       "contest almost closed",
       "why cant i post in contest"
     ],
-    "answer": "lorem ipsum proto_contest_closed"
+    "answer": "Contest channels are usually only opened during specific windows or for specific uses, so seeing them closed most of the time is normal."
   },
   {
     "id": "proto_trade_items_cash",
@@ -848,7 +848,7 @@
       "another game",
       "other game"
     ],
-    "answer": "lorem ipsum proto_trade_items_cash"
+    "answer": "Items cannot be traded. The only exception is staff, who can create or remove items on your account, usually for contests. RPG cash can be traded for pixels, but there is no fixed rate for the value of RPG money."
   }
   ]
 }
