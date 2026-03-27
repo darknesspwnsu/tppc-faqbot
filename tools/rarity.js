@@ -64,7 +64,7 @@ const DAILY_REFRESH_ET = process.env.RARITY_DAILY_REFRESH_ET || "07:10";
 // During the daily update window, retry every 5-10 minutes until the new rarity lands.
 const REFRESH_MS = Number(process.env.RARITY_REFRESH_MS ?? 10 * 60_000);
 const REFRESH_WINDOW_MINUTES = Number(process.env.RARITY_REFRESH_WINDOW_MINUTES ?? 120);
-const FETCH_TIMEOUT_MS = 5_000;
+const FETCH_TIMEOUT_MS = 10_000;
 const MAX_FETCH_BYTES = 2 * 1024 * 1024;
 
 /* --------------------------------- fetch --------------------------------- */
