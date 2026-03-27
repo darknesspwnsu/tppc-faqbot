@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "defaultThreshold": 0.75,
   "entries": [
     {
       "id": "goldenize_keep_base",
@@ -157,7 +156,11 @@
       "training pokemon",
       "best trainer",
       "good training pokemon",
-      "what pokemon should i train with"
+      "what pokemon should i train with",
+      "what pokemon are best for normal training",
+      "best pokemon to level with outside training challenge",
+      "what are good trainers for regular exp grinding",
+      "best pokemon for everyday training"
     ],
     "response": "That’s debatable, but popular choices include **Breloom**, **Blaziken**, **Gallade**, and **Heracross**.\n\nThe best option can also depend on the **time of day** you train.\n\nFor more detailed breakdowns, see:\nhttps://wiki.tppc.info/Training_Guide"
   },
@@ -185,6 +188,9 @@
       "rpg forum link",
       "how to link rpg and forum"
     ],
+    "denyTerms": [
+      "signature"
+    ],
     "response": "It can be a bit tricky.\n\nFollow the instructions in this guide:\nhttps://forums.tppc.info/showthread.php?t=95"
   },
 
@@ -197,6 +203,10 @@
       "how to get discord verified",
       "verify discord",
       "discord verify"
+    ],
+    "denyTerms": [
+      "email",
+      "email address"
     ],
     "response": "To become **Discord verified**:\n\n• Send your **Discord ID** to a **forum moderator**\n• Examples include **Space Cowboy** or **Jigglypuff**\n\nA moderator will handle the verification from there."
   },
@@ -356,9 +366,459 @@
       "why didnt I receive the full price for the pokemon I sold",
       "pokemon sale price",
       "pokemon sold for less",
-      "half price pokemon sold"
+      "half price pokemon sold",
+      "why did my sold pokemon only pay half",
+      "how much money do i receive when a pokemon sells",
+      "why do sold pokemon give half market value"
     ],
     "response": "Once your Pokémon is bought, you will receive **half of its market value** — you have to pay the tax man! Players on the team which is currently in control of the **Power Plant** receive **33% off** on the Buy Pokémon page. This discount only applies to the buyer; the seller still ends up making **half of the market value of the original, non-discounted price**.\n\nSee here for more info: https://wiki.tppc.info/Buying_and_Selling_Guide"
-  }      
+  },
+  {
+    "id": "proto_macro_automation_clicking",
+    "question": "Can I macro or automate clicking?",
+    "examples": [
+      "can i macro clicking",
+      "can i automate clicking",
+      "can i use an autoclicker",
+      "can i automate battles",
+      "is macroing allowed",
+      "is hands free grinding allowed",
+      "can i leave something running while i am nearby",
+      "is unattended training okay",
+      "can i automate grinding if i am watching",
+      "can i let battles run on their own"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_gambling",
+    "question": "Can I gamble?",
+    "examples": [
+      "is gambling allowed",
+      "can i bet pokemon",
+      "can i gamble on tppc",
+      "is betting allowed"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_account_sharing_trade",
+    "question": "Can I share or trade accounts?",
+    "examples": [
+      "can i share accounts",
+      "can i trade accounts",
+      "is account sharing allowed",
+      "is account trading allowed",
+      "can i give my account to someone else",
+      "can i transfer ownership of my account",
+      "can i hand my account to a friend",
+      "can someone else take over my account permanently"
+    ],
+    "denyTerms": [
+      "netflix"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_beat_tower_or_challenge",
+    "question": "How do I beat a tower or challenge?",
+    "examples": [
+      "how do i beat x tower",
+      "how do i beat x challenge",
+      "how do i beat a tower challenge",
+      "how do i beat this challenge"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_training_challenge_fatigue",
+    "question": "How does fatigue work in training challenge?",
+    "examples": [
+      "how does fatigue work in tc",
+      "training challenge fatigue",
+      "what is fatigue in training challenge",
+      "tc fatigue",
+      "does tc get worse the longer i play",
+      "does training challenge become less efficient over time",
+      "does fatigue make tc rewards worse",
+      "does fatigue build up during tc",
+      "why does tc slow down after a while"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_training_challenge_end",
+    "question": "When does training challenge end?",
+    "examples": [
+      "when does tc end",
+      "training challenge end time",
+      "when is training challenge over"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_safari_zone_end",
+    "question": "When does safari zone end?",
+    "examples": [
+      "when is safari zone over",
+      "safari zone end time",
+      "when does safari end"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_best_training_gym",
+    "question": "What is the best training gym?",
+    "examples": [
+      "best training gym",
+      "what gym should i train at",
+      "best gym for training"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_mega_evolution",
+    "question": "How do I get mega pokemon, mega stones, or mega evolve?",
+    "examples": [
+      "how do i get mega pokemon",
+      "how do i get mega stones",
+      "how do i mega evolve",
+      "mega evolve help"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_question_mark_pokemon",
+    "question": "Can I catch question mark pokemon, and what are they?",
+    "examples": [
+      "can i catch question mark pokemon",
+      "can i catch ? pokemon",
+      "what are question mark pokemon",
+      "why do some pokemon have question mark gender",
+      "why do some pokemon have ? gender",
+      "what does question mark pokemon mean",
+      "what is a pokemon with question mark gender",
+      "what are the (?) pokemon on tppc",
+      "why does a pokemon show (?) instead of male or female",
+      "what does the ? symbol on a pokemon gender mean",
+      "what does the question mark symbol on a pokemon gender mean",
+      "what does the ? symbol on a pokemon mean"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_secret_swap_gender",
+    "question": "Do secret swap pokemon keep their gender?",
+    "examples": [
+      "do secret swap pokemon keep gender",
+      "secret swap gender",
+      "does secret swap change gender"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_breed_shiny_dark",
+    "question": "Can I breed shiny or dark pokemon?",
+    "examples": [
+      "can i breed shiny pokemon",
+      "can i breed dark pokemon",
+      "shiny breeding",
+      "dark breeding"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_engagers",
+    "question": "What are engagers?",
+    "examples": [
+      "what is an engager",
+      "engagers meaning",
+      "what does engager mean"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_abilities",
+    "question": "Do my pokemon have abilities like in the games?",
+    "examples": [
+      "do pokemon have abilities",
+      "are there abilities on tppc",
+      "do my pokemon have ability effects"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_unusual_levels",
+    "question": "Why are some pokemon over level 100 or below level 5?",
+    "examples": [
+      "why are some pokemon over level 100",
+      "why are some pokemon below level 5",
+      "pokemon under level 5",
+      "pokemon over level 100"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_rates",
+    "question": "What is my pokemon worth, and is there a rate list?",
+    "examples": [
+      "what is my pokemon worth",
+      "how much is my pokemon worth",
+      "is there a rate list",
+      "can someone rate my pokemon",
+      "is there any official price guide for pokemon values",
+      "is there an official value guide",
+      "is there a pricing guide for pokemon worth",
+      "do you have a list of pokemon values",
+      "is there a public rate guide",
+      "is there some official guide for valuing unobtainables",
+      "official guide for valuing unobtainables",
+      "how do people value unobtainables",
+      "is there a guide for pricing unobtainables"
+    ],
+    "denyTerms": [
+      "ebay",
+      "card",
+      "pokemon card"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "stat_bonuses",
+    "question": "What are the stat modifiers on TPPC?",
+    "examples": [
+      "what are stat bonuses",
+      "tppc stat modifiers",
+      "gold dark shiny stats",
+      "what stats do shiny dark and golden pokemon get"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_team_faction_change",
+    "question": "Why can't I change my team faction?",
+    "examples": [
+      "why cant i change my team",
+      "why cant i change faction",
+      "change team faction"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_disable_ads",
+    "question": "Can I turn off ads on the RPG?",
+    "examples": [
+      "can i disable ads",
+      "turn off rpg ads",
+      "remove ads on tppc"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_dark_mode",
+    "question": "Is there a dark mode on the RPG?",
+    "examples": [
+      "does tppc have dark mode",
+      "rpg dark mode",
+      "can i use dark mode on the rpg"
+    ],
+    "denyTerms": [
+      "forums",
+      "forum",
+      "browser"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_legendary_tradability",
+    "question": "Why can't I trade or sell my Suicune, Raikou, or Entei?",
+    "examples": [
+      "why cant i trade suicune",
+      "why cant i trade raikou",
+      "why cant i trade entei",
+      "why cant i sell suicune"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_delete_account",
+    "question": "Can I delete my account?",
+    "examples": [
+      "delete my account",
+      "can i remove my account",
+      "how do i delete my tppc account"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_best_training_challenge_pokemon",
+    "question": "What is the best pokemon for training challenge?",
+    "examples": [
+      "best pokemon for tc",
+      "best pokemon for training challenge",
+      "what should i use in training challenge",
+      "best pokemon specifically for training challenge",
+      "what should i use for tc runs",
+      "best tc pokemon",
+      "best pokemon in the training challenge event"
+    ],
+    "denyTerms": [
+      "challenge run",
+      "video game",
+      "pokemon game"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_report_scam",
+    "question": "How do I report somebody, or I have been scammed?",
+    "examples": [
+      "how do i report somebody",
+      "i have been scammed",
+      "how do i report a scammer",
+      "someone scammed me"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_v9_release",
+    "question": "When will version 9 be released?",
+    "examples": [
+      "when will v9 be released",
+      "v9 release date",
+      "when is version 9 coming out"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_fatigue_generic",
+    "question": "What is fatigue?",
+    "examples": [
+      "fatigue",
+      "how does fatigue work",
+      "what does fatigue do"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_birthday_prize",
+    "question": "How do I claim my birthday prize?",
+    "examples": [
+      "claim birthday prize",
+      "how do i get my birthday prize",
+      "birthday prize help"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_intersite",
+    "question": "Can I buy stuff with real life money, or do intersite trades?",
+    "examples": [
+      "can i buy stuff with irl money",
+      "can i buy pokemon with real life money",
+      "are intersite trades allowed",
+      "can i trade for things outside tppc"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_unsold_pokemon_return",
+    "question": "Do unsold pokemon return to me after the sale timer ends?",
+    "examples": [
+      "do unsold pokemon come back to me",
+      "what happens if my pokemon does not sell",
+      "return sold pokemon after time limit",
+      "do pokes return after time limit",
+      "if nobody buys my listing does the pokemon eventually come back",
+      "does my listing come back to me if it does not sell",
+      "do sale listings expire back into my box automatically",
+      "when a listing ends does the pokemon return"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_advent_calendar",
+    "question": "What is the advent calendar?",
+    "examples": [
+      "advent calendar",
+      "what does advent calendar do",
+      "advent calendar help"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "new_starter_quests",
+    "question": "What are the new starter quests?",
+    "examples": [
+      "new starter quests",
+      "starter quests",
+      "new player quests",
+      "returning player quests"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_lottery",
+    "question": "What is the TPPC lotto or lottery?",
+    "examples": [
+      "what is tppc lotto",
+      "what is the lottery",
+      "tppc lottery help",
+      "lotto info"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_best_leveling",
+    "question": "What is the best way to level up?",
+    "examples": [
+      "best way to level up",
+      "how do i level up fast",
+      "fastest way to train levels",
+      "best leveling method"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_reactivate_account",
+    "question": "How do I reactivate an account, or recover a lost account?",
+    "examples": [
+      "how do i reactivate an account",
+      "i have lost my account",
+      "recover lost account",
+      "how do i get my old account back"
+    ],
+    "denyTerms": [
+      "gmail",
+      "google",
+      "email"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_contest_closed",
+    "question": "Why is contest almost closed all the time in Discord?",
+    "examples": [
+      "why is contest closed all the time",
+      "contest almost closed",
+      "why cant i post in contest"
+    ],
+    "answer": "lorem ipsum"
+  },
+  {
+    "id": "proto_trade_items_cash",
+    "question": "Can I trade items or RPG cash?",
+    "examples": [
+      "can i trade items",
+      "can i trade rpg cash",
+      "is item trading allowed",
+      "can i sell rpg cash"
+    ],
+    "denyTerms": [
+      "another game",
+      "other game"
+    ],
+    "answer": "lorem ipsum"
+  }
   ]
 }

@@ -12,6 +12,7 @@
     "resume:dev": "docker unpause tppc-mysql && DOTENV_CONFIG_PATH=.env.development.local node bot.js",
     "stop:dev:docker": "./scripts/stop-dev.sh",
     "sync:swap-status": "node scripts/sync_swap_status_data.js",
+    "faq:eval": "node scripts/faq_eval.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest",
@@ -24,6 +25,7 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "fuse.js": "^7.1.0",
