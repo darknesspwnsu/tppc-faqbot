@@ -271,6 +271,27 @@ describe("faq service", () => {
     expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining("Unleveled"));
   });
 
+  it("falls back to wiki search when faq has no match", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [{ id: "q1", q: "How do I play", a: "Do this." }],
+      }),
+      "data/ngs.json": JSON.stringify(["Pikachu", "Eevee"]),
+      "data/glossary.json": JSON.stringify({ ul: "Unleveled" }),
+      "data/wiki_titles.json": JSON.stringify(["Origin Tower", "Trading", "Mega Stones"]),
+    });
+
+    const register = makeRegister();
+    registerInfoCommands(register);
+    const faqHandler = register.getHandler("!faq");
+
+    const msg = makeMessage();
+    await faqHandler({ message: msg, rest: "origin tower" });
+    expect(msg.reply).toHaveBeenCalledWith(
+      expect.stringContaining("[Origin Tower](https://wiki.tppc.info/Origin_Tower)")
+    );
+  });
+
   it("returns a best-match clarify response for borderline matches", async () => {
     process.env.FAQ_LOCAL_EMBEDDING_THRESHOLD = "0.90";
     process.env.FAQ_LOCAL_EMBEDDING_CLARIFY_THRESHOLD = "0.50";

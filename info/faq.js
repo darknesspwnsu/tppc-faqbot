@@ -1231,6 +1231,10 @@ async function replyOrSend(message, content) {
   }
 }
 
+function formatWikiResults(results) {
+  return results.map((r) => `• [${r.title}](${r.url})`).join("\n");
+}
+
 /**
  * Registers "info/knowledge" commands:
  * - !faq, !faqreload
@@ -1261,8 +1265,15 @@ export function registerInfoCommands(register) {
       }
 
       const out = await faq.matchAndRender({ message, questionRaw: qRaw });
-      if (!out) return;
-      await replyOrSend(message, out);
+      if (out) {
+        await replyOrSend(message, out);
+        return;
+      }
+
+      const wikiResults = wiki.search(qRaw);
+      if (!wikiResults || wikiResults.length === 0) return;
+
+      await replyOrSend(message, formatWikiResults(wikiResults));
     },
     "!faq <question> — asks the FAQ bot"
   );
@@ -1315,7 +1326,7 @@ export function registerInfoCommands(register) {
       const results = wiki.search(q);
       if (!results || results.length === 0) return;
 
-      await message.reply(results.map((r) => `• [${r.title}](${r.url})`).join("\n"));
+      await message.reply(formatWikiResults(results));
     },
     "!wiki <term> — links matching TPPC wiki pages",
     { aliases: ["!w"] }
