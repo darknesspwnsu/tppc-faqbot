@@ -129,6 +129,174 @@ function meaningfulOverlapCount(entry, query) {
   return intersectCount(meaningfulTokens(entry.aggregateTokens), meaningfulTokens(query.aggregateTokens));
 }
 
+const QUERY_SHORTHAND_MAP = new Map([
+  ["2", "to"],
+  ["4", "for"],
+  ["r", "are"],
+  ["u", "you"],
+  ["ur", "your"],
+  ["wht", "what"],
+  ["wat", "what"],
+  ["wen", "when"],
+  ["r8", "rate"],
+  ["acct", "account"],
+  ["accts", "accounts"],
+  ["accnt", "account"],
+  ["accnts", "accounts"],
+  ["bday", "birthday"],
+  ["hrs", "hours"],
+  ["hr", "hour"],
+  ["unobs", "unobtainables"],
+  ["unob", "unobtainables"],
+  ["ova", "over"],
+  ["bak", "back"]
+]);
+
+function collapseRepeats(token) {
+  return String(token ?? "").replace(/(.)\1{2,}/g, "$1$1");
+}
+
+function expandShorthandToken(token) {
+  const value = String(token ?? "").trim().toLowerCase();
+  if (!value) return [];
+
+  if (QUERY_SHORTHAND_MAP.has(value)) {
+    return QUERY_SHORTHAND_MAP.get(value).split(/\s+/).filter(Boolean);
+  }
+
+  const hoursMatch = value.match(/^(\d+)(hrs?|hr|h)$/);
+  if (hoursMatch) return [hoursMatch[1], "hours"];
+
+  return [value];
+}
+
+function levenshteinDistance(a, b, maxDistance = 2) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let rowMin = current[0];
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const value = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + cost
+      );
+      current[j] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+
+    if (rowMin > maxDistance) return maxDistance + 1;
+    previous = current;
+  }
+
+  return previous[b.length];
+}
+
+function addCorrectionForm(formMap, form, canonical) {
+  const key = String(form ?? "").trim().toLowerCase();
+  const value = String(canonical ?? "").trim().toLowerCase();
+  if (!key || !value || formMap.has(key)) return;
+  formMap.set(key, value);
+}
+
+function buildCorrectionLexicon(entries) {
+  const canonicalTokens = new Set();
+  const formMap = new Map();
+
+  for (const entry of entries) {
+    for (const token of entry.aggregateTokens || []) {
+      if (!token) continue;
+      canonicalTokens.add(token);
+      addCorrectionForm(formMap, token, token);
+
+      if (token.length >= 4) {
+        addCorrectionForm(formMap, `${token}s`, token);
+        addCorrectionForm(formMap, `${token}es`, token);
+        if (token.endsWith("e")) {
+          addCorrectionForm(formMap, `${token.slice(0, -1)}ing`, token);
+          addCorrectionForm(formMap, `${token}d`, token);
+        } else {
+          addCorrectionForm(formMap, `${token}ing`, token);
+          addCorrectionForm(formMap, `${token}ed`, token);
+        }
+      }
+    }
+  }
+
+  return {
+    canonicalTokens,
+    formMap,
+    forms: [...formMap.keys()]
+  };
+}
+
+function correctToken(token, correctionLexicon) {
+  const raw = collapseRepeats(String(token ?? "").trim().toLowerCase());
+  if (!raw) return [];
+
+  const expanded = expandShorthandToken(raw);
+  const corrected = [];
+
+  for (const expandedToken of expanded) {
+    const value = collapseRepeats(expandedToken);
+
+    if (!correctionLexicon) {
+      corrected.push(value);
+      continue;
+    }
+
+    if (correctionLexicon.canonicalTokens.has(value)) {
+      corrected.push(value);
+      continue;
+    }
+
+    if (correctionLexicon.formMap.has(value)) {
+      corrected.push(correctionLexicon.formMap.get(value));
+      continue;
+    }
+
+    let bestForm = null;
+    let bestDistance = Infinity;
+    const maxDistance = value.length >= 6 ? 2 : 1;
+
+    for (const form of correctionLexicon.forms) {
+      if (Math.abs(form.length - value.length) > maxDistance) continue;
+      if (value.length >= 4 && form[0] !== value[0]) continue;
+
+      const distance = levenshteinDistance(value, form, maxDistance);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestForm = form;
+        if (distance === 1) break;
+      }
+    }
+
+    if (bestForm && bestDistance <= maxDistance) {
+      corrected.push(correctionLexicon.formMap.get(bestForm) || bestForm);
+      continue;
+    }
+
+    corrected.push(value);
+  }
+
+  return corrected;
+}
+
+function correctVariantText(variant, correctionLexicon) {
+  const norm = normalize(variant);
+  if (!norm) return "";
+  const correctedTokens = tokenize(norm).flatMap((token) => correctToken(token, correctionLexicon));
+  return correctedTokens.join(" ").trim();
+}
+
 function preprocessQuestion(text) {
   const raw = String(text ?? "").trim();
   const norm = normalize(raw);
@@ -148,6 +316,35 @@ function preprocessQuestion(text) {
     searchVariants,
     tokenSets,
     aggregateTokens
+  };
+}
+
+function preprocessQuery(text, correctionLexicon) {
+  const base = preprocessQuestion(text);
+  if (!correctionLexicon) {
+    return {
+      ...base,
+      embeddingTexts: uniqueStrings([base.raw, base.alias]).filter(Boolean)
+    };
+  }
+
+  const correctedVariants = base.searchVariants
+    .map((variant) => correctVariantText(variant, correctionLexicon))
+    .filter(Boolean);
+  const searchVariants = uniqueStrings([...base.searchVariants, ...correctedVariants]);
+  const tokenSets = searchVariants.map((variant) => tokenize(variant));
+  const aggregateTokens = uniqueStrings(tokenSets.flat());
+  const correctedRaw = correctVariantText(base.raw, correctionLexicon);
+  const correctedAlias = correctVariantText(base.alias, correctionLexicon);
+
+  return {
+    ...base,
+    searchVariants,
+    tokenSets,
+    aggregateTokens,
+    correctedRaw,
+    correctedAlias,
+    embeddingTexts: uniqueStrings([base.raw, correctedRaw, correctedAlias]).filter(Boolean)
   };
 }
 
@@ -352,11 +549,14 @@ function buildLexicalIndex(entries) {
     });
   }
 
+  const correctionLexicon = buildCorrectionLexicon([...entryMap.values()]);
+
   return {
     entries: [...entryMap.values()],
     entryMap,
     idfMap,
-    fuse
+    fuse,
+    correctionLexicon
   };
 }
 
@@ -519,11 +719,15 @@ async function buildEmbeddingIndex(entries, model = DEFAULT_EMBEDDING_MODEL) {
   return { model, entryVectors };
 }
 
-function rankEmbeddingCandidates(entries, embeddingIndex, queryEmbedding) {
+function rankEmbeddingCandidates(entries, embeddingIndex, queryEmbeddings) {
   return entries
     .map((entry) => ({
       entry,
-      score: cosineVectorSimilarity(queryEmbedding, embeddingIndex.entryVectors.get(entry.id))
+      score: Math.max(
+        ...queryEmbeddings.map((queryEmbedding) =>
+          cosineVectorSimilarity(queryEmbedding, embeddingIndex.entryVectors.get(entry.id))
+        )
+      )
     }))
     .sort((a, b) => b.score - a.score);
 }
@@ -794,10 +998,23 @@ function applyDecisionPolicy(ranked, policy) {
     return { type: "answer", margin, top1 };
   }
 
+  const semanticClarifySupport =
+    highConfidence ||
+    ((top1?.scores?.embedding ?? 0) >= 0.69 &&
+      (
+        (top1?.scores?.lexical ?? 0) >= 0.22 ||
+        (top1?.scores?.tfidf ?? 0) >= 0.40 ||
+        (top1?.scores?.fuse ?? 0) >= 0.28 ||
+        (top1?.scores?.phrase ?? 0) >= 0.75
+      ));
+
   if (
     top1.score >= Math.min(policy.answerThreshold, policy.clarifyThreshold) &&
     margin >= policy.clarifyMinMargin &&
-    ((top1?.scores?.meaningfulOverlap ?? 0) >= policy.meaningfulOverlapMin || highConfidence)
+    (
+      (top1?.scores?.meaningfulOverlap ?? 0) >= policy.meaningfulOverlapMin ||
+      semanticClarifySupport
+    )
   ) {
     return { type: "clarify", margin, top1 };
   }
@@ -938,7 +1155,10 @@ async function main() {
   function getLexicalRows(question) {
     const key = `lex:${question}`;
     if (!queryCache.has(key)) {
-      queryCache.set(key, rankLexicalCandidates(lexicalIndex, preprocessQuestion(question)));
+      queryCache.set(
+        key,
+        rankLexicalCandidates(lexicalIndex, preprocessQuery(question, lexicalIndex.correctionLexicon))
+      );
     }
     return queryCache.get(key);
   }
@@ -959,24 +1179,30 @@ async function main() {
 
   console.log(`Building local embeddings with model ${DEFAULT_EMBEDDING_MODEL}...`);
   const embeddingIndex = await buildEmbeddingIndex(corpus, DEFAULT_EMBEDDING_MODEL);
-  const allQueryTexts = [
-    ...evalEntries.map((entry) => entry.question),
-    ...negativeEvalEntries.map((entry) => entry.question)
-  ];
-  const queryEmbeddings = await embedTexts(
-    allQueryTexts,
-    { model: DEFAULT_EMBEDDING_MODEL }
+  const allQueryEntries = [...evalEntries, ...negativeEvalEntries].map((entry) =>
+    preprocessQuery(entry.question, lexicalIndex.correctionLexicon)
   );
+  const flattenedEmbeddingTexts = allQueryEntries.flatMap((entry) => entry.embeddingTexts);
+  const flattenedEmbeddings = await embedTexts(flattenedEmbeddingTexts, {
+    model: DEFAULT_EMBEDDING_MODEL
+  });
+  const queryEmbeddingsByIndex = [];
+  let embeddingOffset = 0;
+  for (const entry of allQueryEntries) {
+    const count = entry.embeddingTexts.length;
+    queryEmbeddingsByIndex.push(flattenedEmbeddings.slice(embeddingOffset, embeddingOffset + count));
+    embeddingOffset += count;
+  }
 
   const embeddingRowsCache = new Map();
 
   function getEmbeddingRows(question, queryIndex) {
     const key = `emb:${question}`;
     if (!embeddingRowsCache.has(key)) {
-      const queryEmbedding = queryEmbeddings[queryIndex];
+      const queryEmbeddings = queryEmbeddingsByIndex[queryIndex];
       const lexicalRows = getLexicalRows(question);
       const lexicalById = new Map(lexicalRows.map((row) => [row.entry.id, row]));
-      const embeddingRows = rankEmbeddingCandidates(corpus, embeddingIndex, queryEmbedding).map((row) => {
+      const embeddingRows = rankEmbeddingCandidates(corpus, embeddingIndex, queryEmbeddings).map((row) => {
         const lexical = lexicalById.get(row.entry.id);
         const fuse = lexical?.scores?.fuse ?? 0;
         const tfidf = lexical?.scores?.tfidf ?? 0;

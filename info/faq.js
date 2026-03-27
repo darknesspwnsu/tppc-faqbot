@@ -144,6 +144,174 @@ function meaningfulOverlapCount(entry, query) {
   return intersectCount(meaningfulTokens(entry.aggregateTokens), meaningfulTokens(query.aggregateTokens));
 }
 
+const QUERY_SHORTHAND_MAP = new Map([
+  ["2", "to"],
+  ["4", "for"],
+  ["r", "are"],
+  ["u", "you"],
+  ["ur", "your"],
+  ["wht", "what"],
+  ["wat", "what"],
+  ["wen", "when"],
+  ["r8", "rate"],
+  ["acct", "account"],
+  ["accts", "accounts"],
+  ["accnt", "account"],
+  ["accnts", "accounts"],
+  ["bday", "birthday"],
+  ["hrs", "hours"],
+  ["hr", "hour"],
+  ["unobs", "unobtainables"],
+  ["unob", "unobtainables"],
+  ["ova", "over"],
+  ["bak", "back"]
+]);
+
+function collapseRepeats(token) {
+  return String(token ?? "").replace(/(.)\1{2,}/g, "$1$1");
+}
+
+function expandShorthandToken(token) {
+  const value = String(token ?? "").trim().toLowerCase();
+  if (!value) return [];
+
+  if (QUERY_SHORTHAND_MAP.has(value)) {
+    return QUERY_SHORTHAND_MAP.get(value).split(/\s+/).filter(Boolean);
+  }
+
+  const hoursMatch = value.match(/^(\d+)(hrs?|hr|h)$/);
+  if (hoursMatch) return [hoursMatch[1], "hours"];
+
+  return [value];
+}
+
+function levenshteinDistance(a, b, maxDistance = 2) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    let rowMin = current[0];
+
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const value = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + cost
+      );
+      current[j] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+
+    if (rowMin > maxDistance) return maxDistance + 1;
+    previous = current;
+  }
+
+  return previous[b.length];
+}
+
+function addCorrectionForm(formMap, form, canonical) {
+  const key = String(form ?? "").trim().toLowerCase();
+  const value = String(canonical ?? "").trim().toLowerCase();
+  if (!key || !value || formMap.has(key)) return;
+  formMap.set(key, value);
+}
+
+function buildCorrectionLexicon(entries) {
+  const canonicalTokens = new Set();
+  const formMap = new Map();
+
+  for (const entry of entries) {
+    for (const token of entry.aggregateTokens || []) {
+      if (!token) continue;
+      canonicalTokens.add(token);
+      addCorrectionForm(formMap, token, token);
+
+      if (token.length >= 4) {
+        addCorrectionForm(formMap, `${token}s`, token);
+        addCorrectionForm(formMap, `${token}es`, token);
+        if (token.endsWith("e")) {
+          addCorrectionForm(formMap, `${token.slice(0, -1)}ing`, token);
+          addCorrectionForm(formMap, `${token}d`, token);
+        } else {
+          addCorrectionForm(formMap, `${token}ing`, token);
+          addCorrectionForm(formMap, `${token}ed`, token);
+        }
+      }
+    }
+  }
+
+  return {
+    canonicalTokens,
+    formMap,
+    forms: [...formMap.keys()]
+  };
+}
+
+function correctToken(token, correctionLexicon) {
+  const raw = collapseRepeats(String(token ?? "").trim().toLowerCase());
+  if (!raw) return [];
+
+  const expanded = expandShorthandToken(raw);
+  const corrected = [];
+
+  for (const expandedToken of expanded) {
+    const value = collapseRepeats(expandedToken);
+
+    if (!correctionLexicon) {
+      corrected.push(value);
+      continue;
+    }
+
+    if (correctionLexicon.canonicalTokens.has(value)) {
+      corrected.push(value);
+      continue;
+    }
+
+    if (correctionLexicon.formMap.has(value)) {
+      corrected.push(correctionLexicon.formMap.get(value));
+      continue;
+    }
+
+    let bestForm = null;
+    let bestDistance = Infinity;
+    const maxDistance = value.length >= 6 ? 2 : 1;
+
+    for (const form of correctionLexicon.forms) {
+      if (Math.abs(form.length - value.length) > maxDistance) continue;
+      if (value.length >= 4 && form[0] !== value[0]) continue;
+
+      const distance = levenshteinDistance(value, form, maxDistance);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestForm = form;
+        if (distance === 1) break;
+      }
+    }
+
+    if (bestForm && bestDistance <= maxDistance) {
+      corrected.push(correctionLexicon.formMap.get(bestForm) || bestForm);
+      continue;
+    }
+
+    corrected.push(value);
+  }
+
+  return corrected;
+}
+
+function correctVariantText(variant, correctionLexicon) {
+  const norm = normalize(variant);
+  if (!norm) return "";
+  const correctedTokens = tokenize(norm).flatMap((token) => correctToken(token, correctionLexicon));
+  return correctedTokens.join(" ").trim();
+}
+
 function preprocessQuestion(text) {
   const raw = String(text ?? "").trim();
   const norm = normalize(raw);
@@ -163,6 +331,35 @@ function preprocessQuestion(text) {
     searchVariants,
     tokenSets,
     aggregateTokens
+  };
+}
+
+function preprocessQuery(text, correctionLexicon) {
+  const base = preprocessQuestion(text);
+  if (!correctionLexicon) {
+    return {
+      ...base,
+      embeddingTexts: uniqueStrings([base.raw, base.alias]).filter(Boolean)
+    };
+  }
+
+  const correctedVariants = base.searchVariants
+    .map((variant) => correctVariantText(variant, correctionLexicon))
+    .filter(Boolean);
+  const searchVariants = uniqueStrings([...base.searchVariants, ...correctedVariants]);
+  const tokenSets = searchVariants.map((variant) => tokenize(variant));
+  const aggregateTokens = uniqueStrings(tokenSets.flat());
+  const correctedRaw = correctVariantText(base.raw, correctionLexicon);
+  const correctedAlias = correctVariantText(base.alias, correctionLexicon);
+
+  return {
+    ...base,
+    searchVariants,
+    tokenSets,
+    aggregateTokens,
+    correctedRaw,
+    correctedAlias,
+    embeddingTexts: uniqueStrings([base.raw, correctedRaw, correctedAlias]).filter(Boolean)
   };
 }
 
@@ -382,11 +579,13 @@ function buildFaqIndex(faqData) {
     ...entry,
     vectorMagnitude: vectorMagnitude(entry.tokenFrequency, idfMap)
   }));
+  const correctionLexicon = buildCorrectionLexicon(entries);
 
   return {
     entries,
     idfMap,
-    fuse: buildFuseIndex(entries)
+    fuse: buildFuseIndex(entries),
+    correctionLexicon
   };
 }
 
@@ -573,13 +772,16 @@ function rankFaqCandidates(index, query, limit = 5) {
   };
 }
 
-function rankEmbeddingHybridCandidates({ index, lexicalCandidates, entryEmbeddings, queryEmbedding, limit = 5 }) {
+function rankEmbeddingHybridCandidates({ index, lexicalCandidates, entryEmbeddings, queryEmbeddings, limit = 5 }) {
   const lexicalById = new Map(lexicalCandidates.map((candidate) => [candidate.entry.id, candidate]));
 
   const ranked = index.entries
     .map((entry) => {
       const lexical = lexicalById.get(entry.id);
-      const embedding = cosineVectorSimilarity(queryEmbedding, entryEmbeddings.get(entry.id));
+      const entryEmbedding = entryEmbeddings.get(entry.id);
+      const embedding = Math.max(
+        ...queryEmbeddings.map((queryEmbedding) => cosineVectorSimilarity(queryEmbedding, entryEmbedding))
+      );
       const fuse = lexical?.components?.fuse ?? 0;
       const tfidf = lexical?.components?.semantic ?? 0;
       const overlap = lexical?.components?.overlap ?? 0;
@@ -723,14 +925,14 @@ export function createFaqService(options = {}) {
   let faqIndex = buildFaqIndex(faqData);
   let embeddingIndexPromise = null;
   let embeddingDisabledReason = null;
-  const queryEmbeddingPromiseByText = new Map();
+  const queryEmbeddingPromiseByKey = new Map();
 
   function reload() {
     faqData = readFaqFiles(faqFiles);
     faqIndex = buildFaqIndex(faqData);
     embeddingIndexPromise = null;
     embeddingDisabledReason = null;
-    queryEmbeddingPromiseByText.clear();
+    queryEmbeddingPromiseByKey.clear();
     return { count: faqData.entries.length, version: faqData.version ?? null };
   }
 
@@ -795,24 +997,26 @@ export function createFaqService(options = {}) {
   }
 
   async function getQueryEmbedding(questionRaw) {
-    const cacheKey = `${EMBEDDING_MODEL}:${questionRaw}`;
-    if (!queryEmbeddingPromiseByText.has(cacheKey)) {
-      const promise = embedTexts([questionRaw], {
+    const query = preprocessQuery(questionRaw, faqIndex.correctionLexicon);
+    const embeddingTexts = query.embeddingTexts.length ? query.embeddingTexts : [questionRaw];
+    const cacheKey = `${EMBEDDING_MODEL}:${embeddingTexts.join("||")}`;
+    if (!queryEmbeddingPromiseByKey.has(cacheKey)) {
+      const promise = embedTexts(embeddingTexts, {
         model: EMBEDDING_MODEL
       })
-        .then((rows) => rows[0] || null)
+        .then((rows) => rows.filter(Boolean))
         .catch((error) => {
           embeddingDisabledReason = error?.message || "unknown query embedding error";
           console.error("[FAQ][EMBEDDINGS] query failed:", error);
-          return null;
+          return [];
         });
-      queryEmbeddingPromiseByText.set(cacheKey, promise);
+      queryEmbeddingPromiseByKey.set(cacheKey, promise);
     }
-    return queryEmbeddingPromiseByText.get(cacheKey);
+    return queryEmbeddingPromiseByKey.get(cacheKey);
   }
 
   function debugMatchLexical({ questionRaw, limit = 5 }) {
-    const query = preprocessQuestion(questionRaw);
+    const query = preprocessQuery(questionRaw, faqIndex.correctionLexicon);
     if (!query.norm) {
       const result = {
         method: "hybrid_lexical",
@@ -844,22 +1048,23 @@ export function createFaqService(options = {}) {
     const lexical = debugMatchLexical({ questionRaw, limit });
     if (!lexical.questionNorm) return lexical;
 
-    const [entryEmbeddings, queryEmbedding] = await Promise.all([
+    const query = preprocessQuery(questionRaw, faqIndex.correctionLexicon);
+
+    const [entryEmbeddings, queryEmbeddings] = await Promise.all([
       ensureEmbeddingIndex(),
       getQueryEmbedding(questionRaw)
     ]);
 
-    if (!entryEmbeddings || !queryEmbedding || embeddingDisabledReason) {
+    if (!entryEmbeddings || !queryEmbeddings?.length || embeddingDisabledReason) {
       return lexical;
     }
 
-    const query = preprocessQuestion(questionRaw);
     const lexicalAll = rankFaqCandidates(faqIndex, query);
     const ranked = rankEmbeddingHybridCandidates({
       index: faqIndex,
       lexicalCandidates: lexicalAll.candidates,
       entryEmbeddings,
-      queryEmbedding,
+      queryEmbeddings,
       limit
     });
 
@@ -897,10 +1102,23 @@ export function createFaqService(options = {}) {
       };
     }
 
+    const semanticClarifySupport =
+      highConfidence ||
+      ((match.components?.embedding ?? 0) >= 0.69 &&
+        (
+          (match.components?.lexical ?? 0) >= 0.22 ||
+          (match.components?.tfidf ?? 0) >= 0.40 ||
+          (match.components?.fuse ?? 0) >= 0.28 ||
+          (match.components?.phrase ?? 0) >= 0.75
+        ));
+
     if (
       match.score01 >= clarifyThreshold &&
       match.margin01 >= FAQ_CLARIFY_MIN_MARGIN &&
-      ((match.components?.meaningfulOverlap ?? 0) >= FAQ_MEANINGFUL_OVERLAP_MIN || highConfidence)
+      (
+        (match.components?.meaningfulOverlap ?? 0) >= FAQ_MEANINGFUL_OVERLAP_MIN ||
+        semanticClarifySupport
+      )
     ) {
       return {
         type: "clarify",

@@ -97,6 +97,22 @@
     { "question": "can i export my account data", "tags": ["in-domain"] },
     { "question": "where do i read developer updates", "tags": ["in-domain"] },
     { "question": "how do i hide my online status", "tags": ["in-domain"] },
-    { "question": "can i create custom battle rules", "tags": ["in-domain"] }
+    { "question": "can i create custom battle rules", "tags": ["in-domain"] },
+
+    { "question": "is there dark modd for the forums", "tags": ["typo", "close"] },
+    { "question": "can i share my netflx account", "tags": ["typo", "close"] },
+    { "question": "how do i verify my email adress on discord", "tags": ["typo", "close"] },
+    { "question": "what are the best gym routienes for strength", "tags": ["typo", "close"] },
+    { "question": "how much is my pokemon cardd worth", "tags": ["typo", "close"] },
+    { "question": "can i use macros in exel", "tags": ["typo", "close"] },
+    { "question": "how do i report a bugg on the site", "tags": ["typo", "in-domain"] },
+    { "question": "what is the best tcg dek for ladder", "tags": ["typo", "close"] },
+    { "question": "how do i rename a poke on my acount", "tags": ["typo", "in-domain"] },
+    { "question": "is there a safarri event in pokemon go today", "tags": ["typo", "close"] },
+    { "question": "can i trade itens in pokemon go", "tags": ["typo", "close"] },
+    { "question": "how do i fix my toast oven timer", "tags": ["typo", "unrelated"] },
+    { "question": "my laptop fan is too loud like a rare pokemon", "tags": ["close", "unrelated"] },
+    { "question": "i sold my laptop on the ebay buy page so can i get it back", "tags": ["close", "unrelated"] },
+    { "question": "i sold my laptop on the buy page so can i get it back", "tags": ["close", "unrelated"] }
   ]
 }

@@ -157,6 +157,33 @@
     { "question": "what leveling method is considered fastest now", "expectedId": "proto_best_leveling", "tags": ["hard"] },
     { "question": "how can i reopen an old inactive account", "expectedId": "proto_reactivate_account", "tags": ["hard"] },
     { "question": "why is the contest room basically locked", "expectedId": "proto_contest_closed", "tags": ["hard"] },
-    { "question": "can i exchange rpg dollars directly", "expectedId": "proto_trade_items_cash", "tags": ["hard"] }
+    { "question": "can i exchange rpg dollars directly", "expectedId": "proto_trade_items_cash", "tags": ["hard"] },
+
+    { "question": "what are the trading caps availavble on tppc", "expectedId": "trade_caps", "tags": ["typo", "hard"] },
+    { "question": "any rate guide available??", "expectedId": "proto_rates", "tags": ["typo", "hard"] },
+    { "question": "how to get magass", "expectedId": "proto_mega_evolution", "tags": ["typo", "hard"] },
+    { "question": "is it okay if battles keep clicking by themselves while i'm there", "expectedId": "proto_macro_automation_clicking", "tags": ["typo", "hard"] },
+    { "question": "how do i get mega stonees", "expectedId": "proto_mega_evolution", "tags": ["typo", "hard"] },
+    { "question": "can i macroo while im there", "expectedId": "proto_macro_automation_clicking", "tags": ["typo", "hard"] },
+    { "question": "do unsold pokes come bak after 24 hrs", "expectedId": "proto_unsold_pokemon_return", "tags": ["typo", "hard"] },
+    { "question": "how do i reactvate an old account", "expectedId": "proto_reactivate_account", "tags": ["typo", "hard"] },
+    { "question": "what does the ? gnder marker mean", "expectedId": "proto_question_mark_pokemon", "tags": ["typo", "hard"] },
+    { "question": "can i trade accnts", "expectedId": "proto_account_sharing_trade", "tags": ["typo", "hard"] },
+    { "question": "is there dark modee on the rpg", "expectedId": "proto_dark_mode", "tags": ["typo", "hard"] },
+    { "question": "how to cliam birthday prize", "expectedId": "proto_birthday_prize", "tags": ["typo", "hard"] },
+
+    { "question": "wht r trade capz on tpcc", "expectedId": "trade_caps", "tags": ["typo", "hard"] },
+    { "question": "any r8 guide 4 unobs", "expectedId": "proto_rates", "tags": ["typo", "hard"] },
+    { "question": "how 2 get meggas", "expectedId": "proto_mega_evolution", "tags": ["typo", "hard"] },
+    { "question": "can batles klick by themselvs if im ther", "expectedId": "proto_macro_automation_clicking", "tags": ["typo", "hard"] },
+    { "question": "wen 24hrs ova can i get sold poke bak", "expectedId": "proto_unsold_pokemon_return", "tags": ["typo", "hard"] },
+    { "question": "how 2 reactvate acct", "expectedId": "proto_reactivate_account", "tags": ["typo", "hard"] },
+    { "question": "wat does ? gnder mean", "expectedId": "proto_question_mark_pokemon", "tags": ["typo", "hard"] },
+    { "question": "trding caps avalible", "expectedId": "trade_caps", "tags": ["typo", "hard"] },
+    { "question": "battles keep klikin by demselfs", "expectedId": "proto_macro_automation_clicking", "tags": ["typo", "hard"] },
+    { "question": "are trading caps different for commanders", "expectedId": "trade_caps", "tags": ["hard"] },
+    { "question": "what cap does commander rank get", "expectedId": "trade_caps", "tags": ["hard"] },
+    { "question": "if my pokemon doesn't sell on the buy page do i get it back", "expectedId": "proto_unsold_pokemon_return", "tags": ["hard"] },
+    { "question": "when the buy page timer ends does my pokemon return", "expectedId": "proto_unsold_pokemon_return", "tags": ["hard"] }
   ]
 }

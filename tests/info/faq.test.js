@@ -105,6 +105,80 @@ describe("faq service", () => {
     expect(out).toBe("Do this.");
   });
 
+  it("recovers noisy typo-heavy queries with normalization", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [{ id: "trade_caps", q: "What are trade caps?", a: "Caps." }],
+      }),
+    });
+
+    const faq = createFaqService();
+    const out = await faq.matchAndRender({
+      message: makeMessage(),
+      questionRaw: "wht r trade capz on tpcc",
+    });
+    expect(out).toBe("Caps.");
+  });
+
+  it("uses richer semantic metadata for rank-based trade cap phrasing", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [
+          {
+            id: "trade_caps",
+            question: "What are the trade caps by rank?",
+            examples: ["trade caps", "what cap does commander rank get"],
+            intentDescription:
+              "trade cap limits by rank, commander cap, max trade level allowed for each rank",
+            a: "Caps."
+          },
+        ],
+      }),
+    });
+
+    const faq = createFaqService();
+    const out = await faq.matchAndRender({
+      message: makeMessage(),
+      questionRaw: "are trading caps different for commanders",
+    });
+    expect(out).toBe("Caps.");
+  });
+
+  it("separates unsold return intent from completed-sale payout intent", async () => {
+    setFileMap({
+      "data/faq.json": JSON.stringify({
+        entries: [
+          {
+            id: "proto_unsold_pokemon_return",
+            question: "Do unsold pokemon return to me after the sale timer ends?",
+            examples: [
+              "if my pokemon doesn't sell on the buy page do i get it back",
+              "when the buy page timer ends does my pokemon return"
+            ],
+            intentDescription:
+              "unsold pokemon returns to your account after listing expires on the buy page",
+            a: "Returns."
+          },
+          {
+            id: "pokemon_sale_price",
+            question: "Why didn't I receive the full price for the pokemon I sold?",
+            examples: ["how much money do i receive when a pokemon sells"],
+            intentDescription: "completed sale payout and tax after a pokemon is bought",
+            denyTerms: ["get it back", "return to me", "unsold"],
+            a: "Price."
+          }
+        ],
+      }),
+    });
+
+    const faq = createFaqService();
+    const out = await faq.matchAndRender({
+      message: makeMessage(),
+      questionRaw: "i sold my pokemon on the buy page so can i get it back",
+    });
+    expect(out).toBe("Returns.");
+  });
+
   it("registers FAQ commands that respond", async () => {
     setFileMap({
       "data/faq.json": JSON.stringify({

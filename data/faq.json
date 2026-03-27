@@ -305,12 +305,19 @@
 
   {
     "id": "trade_caps",
-    "triggers": [
+    "question": "What are the trade caps by rank?",
+    "examples": [
       "what are trade caps",
       "trade caps",
       "max trade level",
-      "trading limits"
+      "trading limits",
+      "what cap does commander rank get",
+      "are trading caps different for commanders",
+      "trade cap by rank",
+      "max trade level for commander",
+      "what are the trade level caps by rank"
     ],
+    "intentDescription": "trade cap limits by rank, commander cap, captain cap, max trade level allowed, points required to unlock each rank",
     "response": "Here are the **trade caps** based on rank:\n\n```text\nRank        | Points Required To Unlock | Max Trade Level Allowed\n------------|--------------------------|------------------------\nGrunt       | 1                        | 2,500\nPrivate     | 10                       | 2,500\nSpecialist  | 100                      | 2,500\nCorporal    | 1,000                    | 2,500\nSergeant    | 10,000                   | 2,500\nLieutenant  | 100,000                  | 2,500\nCaptain     | 1,000,000                | 4,000\nMajor       | 10,000,000               | 5,500\nColonel     | 100,000,000              | 7,000\nGeneral     | 1,000,000,000            | 8,500\nCommander   | 10,000,000,000           | 10,000\n```"
   },
 
@@ -362,14 +369,27 @@
 
   {
     "id": "pokemon_sale_price",
-    "triggers": [
-      "why didnt I receive the full price for the pokemon I sold",
+    "question": "Why didn't I receive the full price for the pokemon I sold?",
+    "examples": [
       "pokemon sale price",
       "pokemon sold for less",
       "half price pokemon sold",
       "why did my sold pokemon only pay half",
       "how much money do i receive when a pokemon sells",
-      "why do sold pokemon give half market value"
+      "why do sold pokemon give half market value",
+      "how much cash do i get when my pokemon is bought",
+      "why was the payout half when my pokemon sold"
+    ],
+    "intentDescription": "sale payout, half value after a pokemon is bought, tax on completed sales, money received after a successful sale, buyer discount from power plant",
+    "denyTerms": [
+      "get it back",
+      "come back",
+      "return to me",
+      "return back",
+      "listing expires",
+      "sale expires",
+      "timer ends",
+      "unsold"
     ],
     "response": "Once your Pokémon is bought, you will receive **half of its market value** — you have to pay the tax man! Players on the team which is currently in control of the **Power Plant** receive **33% off** on the Buy Pokémon page. This discount only applies to the buyer; the seller still ends up making **half of the market value of the original, non-discounted price**.\n\nSee here for more info: https://wiki.tppc.info/Buying_and_Selling_Guide"
   },
@@ -388,7 +408,7 @@
       "can i automate grinding if i am watching",
       "can i let battles run on their own"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_macro_automation_clicking"
   },
   {
     "id": "proto_gambling",
@@ -399,7 +419,7 @@
       "can i gamble on tppc",
       "is betting allowed"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_gambling"
   },
   {
     "id": "proto_account_sharing_trade",
@@ -417,7 +437,7 @@
     "denyTerms": [
       "netflix"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_account_sharing_trade"
   },
   {
     "id": "proto_beat_tower_or_challenge",
@@ -428,7 +448,7 @@
       "how do i beat a tower challenge",
       "how do i beat this challenge"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_beat_tower_or_challenge"
   },
   {
     "id": "proto_training_challenge_fatigue",
@@ -444,7 +464,7 @@
       "does fatigue build up during tc",
       "why does tc slow down after a while"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_training_challenge_fatigue"
   },
   {
     "id": "proto_training_challenge_end",
@@ -454,7 +474,7 @@
       "training challenge end time",
       "when is training challenge over"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_training_challenge_end"
   },
   {
     "id": "proto_safari_zone_end",
@@ -464,7 +484,7 @@
       "safari zone end time",
       "when does safari end"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_safari_zone_end"
   },
   {
     "id": "proto_best_training_gym",
@@ -474,7 +494,7 @@
       "what gym should i train at",
       "best gym for training"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_best_training_gym"
   },
   {
     "id": "proto_mega_evolution",
@@ -485,7 +505,7 @@
       "how do i mega evolve",
       "mega evolve help"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_mega_evolution"
   },
   {
     "id": "proto_question_mark_pokemon",
@@ -504,7 +524,7 @@
       "what does the question mark symbol on a pokemon gender mean",
       "what does the ? symbol on a pokemon mean"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_question_mark_pokemon"
   },
   {
     "id": "proto_secret_swap_gender",
@@ -514,7 +534,7 @@
       "secret swap gender",
       "does secret swap change gender"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_secret_swap_gender"
   },
   {
     "id": "proto_breed_shiny_dark",
@@ -525,7 +545,7 @@
       "shiny breeding",
       "dark breeding"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_breed_shiny_dark"
   },
   {
     "id": "proto_engagers",
@@ -535,7 +555,7 @@
       "engagers meaning",
       "what does engager mean"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_engagers"
   },
   {
     "id": "proto_abilities",
@@ -545,7 +565,7 @@
       "are there abilities on tppc",
       "do my pokemon have ability effects"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_abilities"
   },
   {
     "id": "proto_unusual_levels",
@@ -556,7 +576,7 @@
       "pokemon under level 5",
       "pokemon over level 100"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_unusual_levels"
   },
   {
     "id": "proto_rates",
@@ -581,7 +601,7 @@
       "card",
       "pokemon card"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_rates"
   },
   {
     "id": "stat_bonuses",
@@ -592,7 +612,7 @@
       "gold dark shiny stats",
       "what stats do shiny dark and golden pokemon get"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum stat_bonuses"
   },
   {
     "id": "proto_team_faction_change",
@@ -602,7 +622,7 @@
       "why cant i change faction",
       "change team faction"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_team_faction_change"
   },
   {
     "id": "proto_disable_ads",
@@ -612,7 +632,7 @@
       "turn off rpg ads",
       "remove ads on tppc"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_disable_ads"
   },
   {
     "id": "proto_dark_mode",
@@ -627,7 +647,7 @@
       "forum",
       "browser"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_dark_mode"
   },
   {
     "id": "proto_legendary_tradability",
@@ -638,7 +658,7 @@
       "why cant i trade entei",
       "why cant i sell suicune"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_legendary_tradability"
   },
   {
     "id": "proto_delete_account",
@@ -648,7 +668,7 @@
       "can i remove my account",
       "how do i delete my tppc account"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_delete_account"
   },
   {
     "id": "proto_best_training_challenge_pokemon",
@@ -667,7 +687,7 @@
       "video game",
       "pokemon game"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_best_training_challenge_pokemon"
   },
   {
     "id": "proto_report_scam",
@@ -678,7 +698,7 @@
       "how do i report a scammer",
       "someone scammed me"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_report_scam"
   },
   {
     "id": "proto_v9_release",
@@ -688,7 +708,7 @@
       "v9 release date",
       "when is version 9 coming out"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_v9_release"
   },
   {
     "id": "proto_fatigue_generic",
@@ -698,7 +718,7 @@
       "how does fatigue work",
       "what does fatigue do"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_fatigue_generic"
   },
   {
     "id": "proto_birthday_prize",
@@ -708,7 +728,7 @@
       "how do i get my birthday prize",
       "birthday prize help"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_birthday_prize"
   },
   {
     "id": "proto_intersite",
@@ -719,7 +739,7 @@
       "are intersite trades allowed",
       "can i trade for things outside tppc"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_intersite"
   },
   {
     "id": "proto_unsold_pokemon_return",
@@ -732,9 +752,19 @@
       "if nobody buys my listing does the pokemon eventually come back",
       "does my listing come back to me if it does not sell",
       "do sale listings expire back into my box automatically",
-      "when a listing ends does the pokemon return"
+      "when a listing ends does the pokemon return",
+      "if my pokemon doesn't sell on the buy page do i get it back",
+      "when the buy page timer ends does my pokemon return",
+      "if my market sale expires do i get it back",
+      "when 24h sale ends do i get my poke back",
+      "do i get my pokemon back if nobody buys it on the buy page"
     ],
-    "answer": "lorem ipsum"
+    "intentDescription": "unsold pokemon returns to your account after listing expires, buy page sale timer ending without a buyer, market listing expiration, pokemon comes back if it does not sell",
+    "denyTerms": [
+      "ebay",
+      "laptop"
+    ],
+    "answer": "lorem ipsum proto_unsold_pokemon_return"
   },
   {
     "id": "proto_advent_calendar",
@@ -744,7 +774,7 @@
       "what does advent calendar do",
       "advent calendar help"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_advent_calendar"
   },
   {
     "id": "new_starter_quests",
@@ -755,7 +785,7 @@
       "new player quests",
       "returning player quests"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum new_starter_quests"
   },
   {
     "id": "proto_lottery",
@@ -766,7 +796,7 @@
       "tppc lottery help",
       "lotto info"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_lottery"
   },
   {
     "id": "proto_best_leveling",
@@ -777,7 +807,7 @@
       "fastest way to train levels",
       "best leveling method"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_best_leveling"
   },
   {
     "id": "proto_reactivate_account",
@@ -793,7 +823,7 @@
       "google",
       "email"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_reactivate_account"
   },
   {
     "id": "proto_contest_closed",
@@ -803,7 +833,7 @@
       "contest almost closed",
       "why cant i post in contest"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_contest_closed"
   },
   {
     "id": "proto_trade_items_cash",
@@ -818,7 +848,7 @@
       "another game",
       "other game"
     ],
-    "answer": "lorem ipsum"
+    "answer": "lorem ipsum proto_trade_items_cash"
   }
   ]
 }
