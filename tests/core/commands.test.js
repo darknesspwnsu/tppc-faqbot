@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../auth.js", () => ({
   isAdminOrPrivileged: vi.fn(() => false),
@@ -61,6 +61,10 @@ describe("commands registry", () => {
     vi.clearAllMocks();
     registerTrades.mockReset();
     isAdminOrPrivileged.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("ignores dev prefixes in prod mode", async () => {
@@ -393,6 +397,54 @@ describe("commands registry", () => {
 
     expect(handler).not.toHaveBeenCalled();
     expect(msg.reply).toHaveBeenCalledWith("This command isn’t allowed in this server.");
+  });
+
+  it("routes April Fools bypass prefixes to the exposed command", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-01T12:00:00Z"));
+
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+
+    await reg.dispatchMessage(makeMessage({ guildId: "g0", content: "?!ping" }));
+    await reg.dispatchMessage(makeMessage({ guildId: "g1", content: "!!!ping" }));
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler.mock.calls[0][0]).toMatchObject({ cmd: "!ping", aprilFoolsBypass: true });
+    expect(handler.mock.calls[1][0]).toMatchObject({ cmd: "?ping", aprilFoolsBypass: true });
+  });
+
+  it("ignores April Fools bypass prefixes outside April 1 ET", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-31T12:00:00Z"));
+
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation((register) => {
+      register.expose({
+        logicalId: "ping",
+        name: "ping",
+        handler,
+        help: "!ping - check",
+        opts: { category: "Info" },
+      });
+    });
+
+    const reg = buildCommandRegistry({});
+    const msg = makeMessage({ guildId: "g0", content: "!?ping" });
+
+    const result = await reg.dispatchMessage(msg);
+    expect(result).toMatchObject({ ok: false, reason: "unknown_command" });
+    expect(handler).not.toHaveBeenCalled();
   });
 
   it("dispatchInteraction logs errors from slash handlers without throwing", async () => {

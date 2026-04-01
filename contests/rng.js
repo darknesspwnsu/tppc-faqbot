@@ -7,6 +7,7 @@
 import { isAdminOrPrivileged } from "../auth.js";
 import { onAwesomeRoll } from "../games/closest_roll_wins.js";
 import { startTimeout, clearTimer } from "../shared/timer_utils.js";
+import { isAprilFoolsActive, isAprilFoolsBypassed } from "../shared/april_fools.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -186,7 +187,7 @@ export async function runElimFromItems({
 
 export function registerRng(register) {
   // ------------------------------ ?roll / !roll (exposed per guild) ------------------------------
-  const handleRoll = async ({ message, rest }) => {
+  const handleRoll = async ({ message, rest, aprilFoolsBypass }) => {
     const arg = rest.trim();
     const m = /^(\d+)d(\d+)(?:\s+(norepeat|nr))?$/i.exec(arg);
 
@@ -198,13 +199,14 @@ export function registerRng(register) {
     const noRepeat = !!m[3];
     const n = Number(m[1]);
     const sides = Number(m[2]);
+    const isGoofy = isAprilFoolsActive() && !isAprilFoolsBypassed({ message, aprilFoolsBypass });
 
     if (!Number.isInteger(n) || !Number.isInteger(sides) || n < 1 || sides < 1) {
       await message.channel.send("Invalid format. Please use a format like `1d100`");
       return;
     }
 
-    if (noRepeat && n > sides) {
+    if (!isGoofy && noRepeat && n > sides) {
       await message.channel.send(
         `Impossible with norepeat: you asked for ${n} unique rolls but range is only 1..${sides} (${sides} unique values).`
       );
@@ -214,7 +216,9 @@ export function registerRng(register) {
     const uid = targetUserId(message);
     let rolls;
 
-    if (!noRepeat) {
+    if (isGoofy) {
+      rolls = Array.from({ length: n }, () => 1);
+    } else if (!noRepeat) {
       rolls = Array.from({ length: n }, () => randIntInclusive(1, sides));
     } else {
       const rangeSize = sides;
@@ -256,7 +260,7 @@ export function registerRng(register) {
   });
 
   // ------------------------------ ?dexroll / !dexroll (exposed per guild) ------------------------------
-  const handleDexRoll = async ({ message, rest, cmd }) => {
+  const handleDexRoll = async ({ message, rest, cmd, aprilFoolsBypass }) => {
     const baseCmd = String(cmd || "!dexroll").trim() || "!dexroll";
     const usage =
       `Usage: \`${baseCmd}\` | \`${baseCmd} <upper>\` | ` +
@@ -327,6 +331,17 @@ export function registerRng(register) {
       return;
     }
 
+    const isGoofy = isAprilFoolsActive() && !isAprilFoolsBypassed({ message, aprilFoolsBypass });
+    if (isGoofy) {
+      const firstName = dexData.byId.get(1);
+      if (!firstName) {
+        await message.channel.send("Failed to resolve rolled Pokedex entry. Please try again.");
+        return;
+      }
+      await message.channel.send(`#1 - ${firstName}`);
+      return;
+    }
+
     const candidates = dexData.ids.filter((id) => id >= lower && id <= upper);
     if (!candidates.length) {
       await message.channel.send(`No Pokemon found in dex range ${lower}-${upper}.`);
@@ -351,11 +366,15 @@ export function registerRng(register) {
   });
 
   // ------------------------------ ?choose / !choose (exposed per guild) ------------------------------
-  const handleChoose = async ({ message, rest, cmd }) => {
+  const handleChoose = async ({ message, rest, cmd, aprilFoolsBypass }) => {
     const options = rest.trim().split(/\s+/).filter(Boolean);
     if (options.length < 1) {
       const baseCmd = String(cmd || "?choose").trim() || "?choose";
       await message.channel.send(`Usage: \`${baseCmd} option1 option2 ...\``);
+      return;
+    }
+    if (isAprilFoolsActive() && !isAprilFoolsBypassed({ message, aprilFoolsBypass })) {
+      await message.channel.send("cheese");
       return;
     }
     const pick = chooseOne(options);
@@ -429,13 +448,15 @@ export function registerRng(register) {
   );
 
   // ------------------------------ !awesome / ?awesome (exposed per guild) ------------------------------
-  const handleAwesome = async ({ message }) => {
+  const handleAwesome = async ({ message, aprilFoolsBypass }) => {
     const uid = targetUserId(message);
-    const x = randIntInclusive(0, 101);
-    await message.channel.send(`${mention(uid)} is ${x}% awesome!`);
+    const actualRoll = randIntInclusive(0, 101);
+    const displayRoll =
+      isAprilFoolsActive() && !isAprilFoolsBypassed({ message, aprilFoolsBypass }) ? 0 : actualRoll;
+    await message.channel.send(`${mention(uid)} is ${displayRoll}% awesome!`);
 
     // ClosestRollWins integration
-    try { await onAwesomeRoll(message, x); } catch {}
+    try { await onAwesomeRoll(message, actualRoll); } catch {}
   };
 
   register.expose({
@@ -449,8 +470,12 @@ export function registerRng(register) {
   // ------------------------------ !coinflip (unchanged) ------------------------------
   register(
     "!coinflip",
-    async ({ message }) => {
+    async ({ message, aprilFoolsBypass }) => {
       const uid = targetUserId(message);
+      if (isAprilFoolsActive() && !isAprilFoolsBypassed({ message, aprilFoolsBypass })) {
+        await message.channel.send(`${mention(uid)} 🪙 landed on its side!`);
+        return;
+      }
       const roll = Math.random();
 
       let result;

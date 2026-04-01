@@ -44,6 +44,7 @@ import { handleRpgInfoInteraction } from "./rpg/rpginfo.js";
 import { isAdminOrPrivileged } from "./auth.js";
 import { logger } from "./shared/logger.js";
 import { metrics } from "./shared/metrics.js";
+import { isAprilFoolsActive } from "./shared/april_fools.js";
 import {
   DEFAULT_EXPOSURE,
   DEFAULT_SLASH_EXPOSURE,
@@ -625,18 +626,69 @@ export function buildCommandRegistry({ client } = {}) {
     return { ok: true, logicalId, exposure: null };
   }
 
+  function parseAprilFoolsBypassContent(content, message) {
+    if (!isAprilFoolsActive()) return null;
+
+    let body = null;
+    if (content.startsWith("!?")) body = content.slice(2);
+    else if (content.startsWith("?!")) body = content.slice(2);
+    else if (content.startsWith("!!!")) body = content.slice(3);
+    if (body == null) return null;
+
+    const spaceIdx = body.indexOf(" ");
+    const bareCmd = (spaceIdx === -1 ? body : body.slice(0, spaceIdx)).toLowerCase();
+    const rest = spaceIdx === -1 ? "" : body.slice(spaceIdx + 1);
+    if (!bareCmd) return null;
+
+    const bangCmd = `!${bareCmd}`;
+    const qCmd = `?${bareCmd}`;
+    const candidates = [
+      { cmd: bangCmd, entry: bang.get(bangCmd) || null },
+      { cmd: qCmd, entry: bang.get(qCmd) || null },
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate.entry?.handler) continue;
+      const preflight = preflightBangCommand(message, candidate.cmd, candidate.entry);
+      if (preflight.ok) {
+        return {
+          isBypass: true,
+          cmd: candidate.cmd,
+          rest,
+          entry: candidate.entry,
+        };
+      }
+    }
+
+    const fallback = candidates.find((candidate) => candidate.entry?.handler) || null;
+    if (!fallback) return null;
+    return {
+      isBypass: true,
+      cmd: fallback.cmd,
+      rest,
+      entry: fallback.entry,
+    };
+  }
+
   async function dispatchMessage(message) {
     const dryRun = Boolean(message?.__dryRun || message?.__preflightOnly);
     const content = (message.content ?? "").trim();
     const isDevPrefix = content.startsWith("!!") || content.startsWith("??");
     const isDevEnv = String(process.env.ENV || "").toLowerCase() === "dev";
+    const aprilFoolsBypass = parseAprilFoolsBypassContent(content, message);
     let isBang = content.startsWith("!");
     let isQ = content.startsWith("?");
     let cmd = null;
     let rest = "";
     let entry = null;
 
-    if (isDevPrefix) {
+    if (aprilFoolsBypass) {
+      isBang = aprilFoolsBypass.cmd.startsWith("!");
+      isQ = aprilFoolsBypass.cmd.startsWith("?");
+      cmd = aprilFoolsBypass.cmd;
+      rest = aprilFoolsBypass.rest;
+      entry = aprilFoolsBypass.entry;
+    } else if (isDevPrefix) {
       if (isDevEnv) {
         const devContent = content.slice(1);
         isBang = devContent.startsWith("!");
@@ -717,7 +769,7 @@ export function buildCommandRegistry({ client } = {}) {
     const startedAt = Date.now();
 
     try {
-      await entry.handler({ message, cmd, rest });
+      await entry.handler({ message, cmd, rest, aprilFoolsBypass: Boolean(aprilFoolsBypass) });
       void metrics.increment("command.invoked", {
         type: "bang",
         cmd,
