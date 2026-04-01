@@ -9,7 +9,13 @@ vi.mock("node:fs/promises", () => ({
   readFile: fsMocks.readFile,
 }));
 
-import { ruleMatches, selectRuleForDate, resolveAvatarChoice, __testables } from "../../avatar_rotation.js";
+import {
+  ruleMatches,
+  selectRuleForDate,
+  resolveAvatarChoice,
+  resolveIdentityChoice,
+  __testables,
+} from "../../avatar_rotation.js";
 
 describe("avatar_rotation", () => {
   beforeEach(() => {
@@ -27,6 +33,15 @@ describe("avatar_rotation", () => {
 
     expect(ruleMatches(new Date(2024, 9, 20, 12), rule)).toBe(true);
     expect(ruleMatches(new Date(2024, 9, 14, 12), rule)).toBe(false);
+  });
+
+  it("matches rules against ET instead of the machine local timezone", () => {
+    const rule = {
+      ranges: [{ start: { month: 3, day: 1 }, end: { month: 3, day: 1 } }],
+    };
+
+    expect(ruleMatches(new Date("2026-04-01T04:43:00.000Z"), rule)).toBe(true);
+    expect(ruleMatches(new Date("2026-04-01T03:43:00.000Z"), rule)).toBe(false);
   });
 
   it("matches ranges that wrap across the year boundary", () => {
@@ -70,6 +85,70 @@ describe("avatar_rotation", () => {
     });
 
     expect(choice).toEqual({ file: "assets/avatars/dev_override.png", ruleId: "override" });
+  });
+
+  it("resolves nickname from the matched rule", () => {
+    const rules = [
+      {
+        id: "april_fools",
+        ranges: [{ start: { month: 3, day: 1 }, end: { month: 3, day: 1 } }],
+        file: "assets/avatars/april_fools.png",
+        nickname: "Glaceon",
+      },
+      {
+        id: "default",
+        ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
+        file: "assets/avatars/default.png",
+        nickname: "Spectreon",
+      },
+    ];
+
+    const choice = resolveIdentityChoice(new Date(2026, 3, 1, 12), { rules });
+    expect(choice).toEqual({
+      file: "assets/avatars/april_fools.png",
+      nickname: "Glaceon",
+      ruleId: "april_fools",
+    });
+  });
+
+  it("falls back to the deployment default nickname when the rule has no nickname", () => {
+    const rules = [
+      {
+        id: "default",
+        ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
+        file: "assets/avatars/default.png",
+      },
+    ];
+
+    const choice = resolveIdentityChoice(new Date(2026, 3, 2, 12), {
+      rules,
+      defaultNickname: "Spectreon (Dev)",
+    });
+    expect(choice).toEqual({
+      file: "assets/avatars/default.png",
+      nickname: "Spectreon (Dev)",
+      ruleId: "default",
+    });
+  });
+
+  it("defaults to Spectreon when no deployment nickname is set", () => {
+    const rules = [
+      {
+        id: "default",
+        ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
+        file: "assets/avatars/default.png",
+      },
+    ];
+
+    const choice = resolveIdentityChoice(new Date(2026, 3, 2, 12), {
+      rules,
+      defaultNickname: undefined,
+    });
+    expect(choice).toEqual({
+      file: "assets/avatars/default.png",
+      nickname: "Spectreon",
+      ruleId: "default",
+    });
   });
 
   it("schedules the next check for the upcoming ET midnight window", () => {
@@ -141,5 +220,55 @@ describe("avatar_rotation", () => {
     expect(setAvatar).toHaveBeenCalledTimes(1);
 
     process.env.AVATAR_OVERRIDE = prev;
+  });
+
+  it("updates guild nicknames for the matching rule", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-01T16:00:00Z"));
+
+    const setNicknameA = vi.fn(async () => {});
+    const setNicknameB = vi.fn(async () => {});
+    const client = {
+      user: { id: "user1" },
+      guilds: {
+        cache: new Map([
+          ["g1", { id: "g1", members: { me: { nickname: "Spectreon", setNickname: setNicknameA } } }],
+          ["g2", { id: "g2", members: { me: { nickname: null, setNickname: setNicknameB } } }],
+        ]),
+      },
+    };
+
+    await __testables.applyNickname(client, "startup");
+
+    expect(setNicknameA).toHaveBeenCalledWith("Glaceon");
+    expect(setNicknameB).toHaveBeenCalledWith("Glaceon");
+  });
+
+  it("skips guild nickname updates that are already current", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-02T16:00:00Z"));
+
+    const prevDefaultNickname = process.env.BOT_DEFAULT_NICKNAME;
+    process.env.BOT_DEFAULT_NICKNAME = "Spectreon (Dev)";
+
+    const setNickname = vi.fn(async () => {});
+    const client = {
+      user: { id: "user1" },
+      guilds: {
+        cache: new Map([
+          ["g1", { id: "g1", members: { me: { nickname: "Spectreon (Dev)", setNickname } } }],
+        ]),
+      },
+    };
+
+    await __testables.applyNickname(client, "scheduled");
+
+    expect(setNickname).not.toHaveBeenCalled();
+
+    if (prevDefaultNickname == null) {
+      delete process.env.BOT_DEFAULT_NICKNAME;
+    } else {
+      process.env.BOT_DEFAULT_NICKNAME = prevDefaultNickname;
+    }
   });
 });

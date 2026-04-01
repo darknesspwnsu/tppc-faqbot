@@ -27,8 +27,9 @@ function rangeMatches(key, startKey, endKey) {
 export function ruleMatches(date, rule) {
   if (!rule) return false;
 
-  const month = date.getMonth();
-  const day = date.getDate();
+  const parts = getZonedParts(date, CHECK_TIMEZONE);
+  const month = parts.month - 1;
+  const day = parts.day;
 
   if (Array.isArray(rule.ranges) && rule.ranges.length > 0) {
     const key = dateKey({ month, day });
@@ -62,6 +63,28 @@ export function resolveAvatarChoice(
   const rule = selectRuleForDate(date, rules);
   if (!rule?.file) return null;
   return { file: rule.file, ruleId: rule.id };
+}
+
+export function resolveIdentityChoice(
+  date,
+  {
+    overridePath = "",
+    rules = AVATAR_ROTATION_RULES,
+    defaultNickname = process.env.BOT_DEFAULT_NICKNAME || "Spectreon",
+  } = {}
+) {
+  const avatar = resolveAvatarChoice(date, { overridePath, rules });
+  const rule = selectRuleForDate(date, rules);
+  const nicknameSource =
+    typeof rule?.nickname === "string" && rule.nickname.trim()
+      ? rule.nickname
+      : defaultNickname;
+  const nickname = typeof nicknameSource === "string" ? nicknameSource.trim() : "";
+  return {
+    file: avatar?.file || "",
+    nickname,
+    ruleId: avatar?.ruleId || rule?.id || "",
+  };
 }
 
 function computeNextDelayMs() {
@@ -242,6 +265,68 @@ async function applyAvatar(client, reason) {
   }
 }
 
+async function fetchSelfMember(guild, clientUserId) {
+  if (guild?.members?.me) return guild.members.me;
+  if (typeof guild?.members?.fetchMe === "function") {
+    const me = await guild.members.fetchMe().catch(() => null);
+    if (me) return me;
+  }
+  if (typeof guild?.members?.fetch === "function" && clientUserId) {
+    return guild.members.fetch(clientUserId).catch(() => null);
+  }
+  return null;
+}
+
+async function applyNickname(client, reason) {
+  const now = new Date();
+  const choice = resolveIdentityChoice(now, { overridePath: process.env.AVATAR_OVERRIDE });
+  const nickname = String(choice?.nickname || "").trim();
+  if (!nickname) return;
+
+  const guilds = Array.from(client?.guilds?.cache?.values?.() || []);
+  if (guilds.length === 0) {
+    logger.warn("avatar_rotation.nickname.no_guilds", { rule: choice.ruleId, reason });
+    return;
+  }
+
+  for (const guild of guilds) {
+    const guildId = String(guild?.id || "");
+    try {
+      const me = await fetchSelfMember(guild, client?.user?.id);
+      if (!me) {
+        logger.warn("avatar_rotation.nickname.member_missing", {
+          guildId,
+          rule: choice.ruleId,
+          nickname,
+          reason,
+        });
+        continue;
+      }
+      if (me.nickname === nickname) continue;
+      await me.setNickname(nickname);
+      logger.info("avatar_rotation.nickname.updated", {
+        guildId,
+        rule: choice.ruleId,
+        nickname,
+        reason,
+      });
+    } catch (err) {
+      logger.warn("avatar_rotation.nickname.update_failed", {
+        guildId,
+        rule: choice.ruleId,
+        nickname,
+        reason,
+        error: logger.serializeError(err),
+      });
+    }
+  }
+}
+
+async function applyIdentity(client, reason) {
+  await applyAvatar(client, reason);
+  await applyNickname(client, reason);
+}
+
 function isSocketClosedError(err) {
   const name = String(err?.name || "");
   const message = String(err?.message || "");
@@ -268,7 +353,7 @@ function scheduleNext(client) {
     label: "avatar_rotation.daily",
     ms: delay,
     fn: () => {
-      void applyAvatar(client, "scheduled");
+      void applyIdentity(client, "scheduled");
       scheduleNext(client);
     },
   });
@@ -281,7 +366,7 @@ export function startAvatarRotation(context = {}) {
   }
 
   const { client } = context;
-  void applyAvatar(client, "startup");
+  void applyIdentity(client, "startup");
   scheduleNext(client);
 }
 
@@ -296,6 +381,9 @@ export const __testables = {
   addZonedDays,
   getZonedParts,
   applyAvatar,
+  applyNickname,
+  applyIdentity,
+  fetchSelfMember,
   isSocketClosedError,
   resetState: () => {
     lastAppliedKey = null;

@@ -193,6 +193,7 @@ Common variables:
 | `DISCORD_TOKEN`               | **Required** bot token              |
 | `ALLOWED_CHANNEL_IDS`         | Optional channel allowlist          |
 | `SLASH_GUILD_ID`              | Guild-only slash registration (dev) |
+| `BOT_DEFAULT_NICKNAME`        | Default guild nickname for this deployment |
 | `DB_HOST / DB_USER / DB_NAME` | MySQL connection                    |
 | `RARITY_JSON_URL`             | Live rarity JSON source             |
 | `RARITY_REFRESH_MS`           | Retry interval during refresh window |

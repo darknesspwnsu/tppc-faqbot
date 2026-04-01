@@ -26,6 +26,7 @@ export const AVATAR_ROTATION_RULES = [
     id: "april_fools_day",
     ranges: [{ start: { month: 3, day: 1 }, end: { month: 3, day: 1 } }],
     file: "assets/avatars/april_fools.png",
+    nickname: "Glaceon",
   },
   {
     id: "halloween_promo",
