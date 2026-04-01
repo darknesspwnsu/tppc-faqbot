@@ -226,6 +226,28 @@ describe("avatar_rotation", () => {
     process.env.AVATAR_OVERRIDE = prev;
   });
 
+  it("retries once on EPIPE errors when setting avatar", async () => {
+    vi.useFakeTimers();
+    fsMocks.readFile.mockResolvedValue(Buffer.from("avatar"));
+
+    const setAvatar = vi
+      .fn()
+      .mockRejectedValueOnce({ name: "Error", code: "EPIPE", message: "write EPIPE" })
+      .mockResolvedValueOnce(undefined);
+    const client = { user: { setAvatar } };
+
+    const prev = process.env.AVATAR_OVERRIDE;
+    process.env.AVATAR_OVERRIDE = "assets/avatars/default_flipped.png";
+
+    const promise = __testables.applyAvatar(client, "startup");
+    await vi.advanceTimersByTimeAsync(5_000);
+    await promise;
+
+    expect(setAvatar).toHaveBeenCalledTimes(2);
+
+    process.env.AVATAR_OVERRIDE = prev;
+  });
+
   it("does not retry on non-socket errors", async () => {
     fsMocks.readFile.mockResolvedValue(Buffer.from("avatar"));
 

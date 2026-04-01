@@ -331,10 +331,13 @@ async function applyIdentity(client, reason) {
 }
 
 function isSocketClosedError(err) {
+  const code = String(err?.code || "").toUpperCase();
   const name = String(err?.name || "");
   const message = String(err?.message || "");
+  if (code === "EPIPE") return true;
   if (name === "SocketError" && message.toLowerCase().includes("other side closed")) return true;
   if (message.toLowerCase().includes("socket") && message.toLowerCase().includes("closed")) return true;
+  if (message.toLowerCase().includes("epipe")) return true;
   return false;
 }
 
