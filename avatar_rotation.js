@@ -69,16 +69,19 @@ export function resolveIdentityChoice(
   date,
   {
     overridePath = "",
+    overrideNickname = process.env.BOT_NICKNAME_OVERRIDE,
     rules = AVATAR_ROTATION_RULES,
     defaultNickname = process.env.BOT_DEFAULT_NICKNAME || "Spectreon",
   } = {}
 ) {
   const avatar = resolveAvatarChoice(date, { overridePath, rules });
   const rule = selectRuleForDate(date, rules);
+  const forcedNickname = String(overrideNickname || "").trim();
   const nicknameSource =
-    typeof rule?.nickname === "string" && rule.nickname.trim()
+    forcedNickname ||
+    (typeof rule?.nickname === "string" && rule.nickname.trim()
       ? rule.nickname
-      : defaultNickname;
+      : defaultNickname);
   const nickname = typeof nicknameSource === "string" ? nicknameSource.trim() : "";
   return {
     file: avatar?.file || "",

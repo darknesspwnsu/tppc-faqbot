@@ -131,6 +131,28 @@ describe("avatar_rotation", () => {
     });
   });
 
+  it("prefers the nickname override over other nickname settings", () => {
+    const rules = [
+      {
+        id: "april_fools",
+        ranges: [{ start: { month: 3, day: 1 }, end: { month: 3, day: 1 } }],
+        file: "assets/avatars/april_fools.png",
+        nickname: "Glaceon",
+      },
+    ];
+
+    const choice = resolveIdentityChoice(new Date(2026, 3, 1, 12), {
+      rules,
+      overrideNickname: "Spectreon (Dev)",
+      defaultNickname: "Spectreon",
+    });
+    expect(choice).toEqual({
+      file: "assets/avatars/april_fools.png",
+      nickname: "Spectreon (Dev)",
+      ruleId: "april_fools",
+    });
+  });
+
   it("defaults to Spectreon when no deployment nickname is set", () => {
     const rules = [
       {
