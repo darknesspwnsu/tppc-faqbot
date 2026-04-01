@@ -27,9 +27,9 @@ export const RPG_EVENTS = [
   },
   {
     id: "cherubi",
-    name: "Cherubi on Treepath",
+    name: "Cherubi on Cold Cavern",
     kind: "monthly_first",
-    description: "Special Cherubi appears on Treepath on the first of each month.",
+    description: "Special Cherubi appears on Cold Cavern on the first of each month.",
   },
   {
     id: "deerling",
