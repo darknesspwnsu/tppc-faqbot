@@ -1,0 +1,103 @@
+[
+  {
+    "id": "tppc-name",
+    "category": "tppc",
+    "difficulty": "easy",
+    "question": "What does TPPC stand for?",
+    "choices": [
+      "The Pokemon PokeCenter Role Playing Game",
+      "The Pokemon Player Challenge",
+      "Trainer Pokemon Progress Center",
+      "The Pokemon Prize Club"
+    ],
+    "answerIndex": 0
+  },
+  {
+    "id": "goldenize-location",
+    "category": "tppc",
+    "difficulty": "easy",
+    "question": "Which gym do you visit to goldenize a Pokemon after preparing your roster?",
+    "choices": ["Evolution Gym", "Training Gym", "Secret Swap", "Battle Frontier"],
+    "answerIndex": 0
+  },
+  {
+    "id": "goldenize-opponent",
+    "category": "tppc",
+    "difficulty": "easy",
+    "question": "Which Pokemon must be defeated at the Evolution Gym when goldenizing?",
+    "choices": ["Eevee", "Pikachu", "Ditto", "Mew"],
+    "answerIndex": 0
+  },
+  {
+    "id": "golden-day-birthday",
+    "category": "tppc",
+    "difficulty": "easy",
+    "question": "On which date is Shrimpy's Birthday Golden Day?",
+    "choices": ["August 2", "July 4", "December 25", "January 1"],
+    "answerIndex": 0
+  },
+  {
+    "id": "goldenize-roster-count",
+    "category": "tppc",
+    "difficulty": "medium",
+    "question": "How many Pokemon and corresponding items are used in the Golden Day roster setup?",
+    "choices": ["3 Pokemon and 3 items", "1 Pokemon and 1 item", "2 Pokemon and 2 items", "6 Pokemon and 6 items"],
+    "answerIndex": 0
+  },
+  {
+    "id": "active-golden-limit",
+    "category": "tppc",
+    "difficulty": "medium",
+    "question": "What is the maximum total number of goldens an active user may make per Golden Day?",
+    "choices": ["5", "1", "2", "10"],
+    "answerIndex": 0
+  },
+  {
+    "id": "promo-account-limit",
+    "category": "tppc",
+    "difficulty": "medium",
+    "question": "How many promo or Power Plant prizes may an account receive?",
+    "choices": ["One", "Two", "Five", "Unlimited"],
+    "answerIndex": 0
+  },
+  {
+    "id": "christmas-new-year-separate",
+    "category": "tppc",
+    "difficulty": "medium",
+    "question": "Do Christmas and New Year's count as separate Golden Days?",
+    "choices": ["Yes", "No", "Only for active users", "Only in leap years"],
+    "answerIndex": 0
+  },
+  {
+    "id": "new-year-window",
+    "category": "tppc",
+    "difficulty": "hard",
+    "question": "How is the December 31 and January 1 goldenizing window counted?",
+    "choices": ["As one Golden Day", "As two Golden Days", "As half a Golden Day", "It is not a Golden Day"],
+    "answerIndex": 0
+  },
+  {
+    "id": "inactive-holiday-limit",
+    "category": "tppc",
+    "difficulty": "hard",
+    "question": "What is the total Christmas/New Year's golden limit for an inactive user?",
+    "choices": ["2", "1", "5", "10"],
+    "answerIndex": 0
+  },
+  {
+    "id": "goldenize-result-slot",
+    "category": "tppc",
+    "difficulty": "hard",
+    "question": "After a successful Golden Day battle, which roster Pokemon becomes golden?",
+    "choices": ["The first Pokemon", "The second Pokemon", "The third Pokemon", "A random Pokemon"],
+    "answerIndex": 0
+  },
+  {
+    "id": "active-accounts",
+    "category": "tppc",
+    "difficulty": "hard",
+    "question": "Across how many legitimate active accounts may the promo or Power Plant account limit apply?",
+    "choices": ["Up to 5", "Up to 2", "Exactly 1", "Unlimited"],
+    "answerIndex": 0
+  }
+]

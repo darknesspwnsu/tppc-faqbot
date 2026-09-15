@@ -490,6 +490,48 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS trivia_settings (
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32),
+      enabled TINYINT(1) NOT NULL DEFAULT 0,
+      cadence_minutes INT UNSIGNED NOT NULL DEFAULT 180,
+      duration_seconds INT UNSIGNED NOT NULL DEFAULT 30,
+      category VARCHAR(16) NOT NULL DEFAULT 'all',
+      difficulty VARCHAR(16) NOT NULL DEFAULT 'all',
+      next_run_at_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      updated_by VARCHAR(32),
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id),
+      KEY trivia_enabled_idx (enabled),
+      KEY trivia_due_idx (enabled, next_run_at_ms)
+    )
+  `,
+    [],
+    "init.trivia_settings"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS trivia_scores (
+      guild_id VARCHAR(32) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      display_name VARCHAR(128) NOT NULL,
+      score INT UNSIGNED NOT NULL DEFAULT 0,
+      last_win_at_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, user_id),
+      KEY trivia_scores_rank_idx (guild_id, score, last_win_at_ms)
+    )
+  `,
+    [],
+    "init.trivia_scores"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS giveaways (
       message_id VARCHAR(32) NOT NULL,
       guild_id VARCHAR(32) NOT NULL,
