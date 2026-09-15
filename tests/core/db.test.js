@@ -87,6 +87,8 @@ describe("db.js", () => {
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS pokemon_scramble_scores/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS trivia_settings/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS trivia_scores/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS loot_settings/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS loot_scores/),
         expect.stringMatching(/ALTER TABLE goldmarket_poll_runs[\s\S]*score_mode/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS notify_me/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS forum_thread_subscriptions/),

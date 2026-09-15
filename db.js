@@ -532,6 +532,47 @@ export async function initDb() {
   await execDb(
     db,
     `
+    CREATE TABLE IF NOT EXISTS loot_settings (
+      guild_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32),
+      enabled TINYINT(1) NOT NULL DEFAULT 0,
+      cadence_minutes INT UNSIGNED NOT NULL DEFAULT 180,
+      claim_seconds INT UNSIGNED NOT NULL DEFAULT 30,
+      mode VARCHAR(16) NOT NULL DEFAULT 'random',
+      next_run_at_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      updated_by VARCHAR(32),
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id),
+      KEY loot_enabled_idx (enabled),
+      KEY loot_due_idx (enabled, next_run_at_ms)
+    )
+  `,
+    [],
+    "init.loot_settings"
+  );
+
+  await execDb(
+    db,
+    `
+    CREATE TABLE IF NOT EXISTS loot_scores (
+      guild_id VARCHAR(32) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      display_name VARCHAR(128) NOT NULL,
+      score INT UNSIGNED NOT NULL DEFAULT 0,
+      last_win_at_ms BIGINT UNSIGNED NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, user_id),
+      KEY loot_scores_rank_idx (guild_id, score, last_win_at_ms)
+    )
+  `,
+    [],
+    "init.loot_scores"
+  );
+
+  await execDb(
+    db,
+    `
     CREATE TABLE IF NOT EXISTS giveaways (
       message_id VARCHAR(32) NOT NULL,
       guild_id VARCHAR(32) NOT NULL,
