@@ -13,6 +13,7 @@ import { registerMetricsExport, registerMetricsExportScheduler } from "./metrics
 import { registerSortbox } from "./sortbox.js";
 import { registerThreadWatch, registerThreadWatchScheduler } from "./thread_watch.js";
 import { registerMarketPoll, registerMarketPollScheduler } from "./marketpoll.js";
+import { registerPokemonScramble, registerPokemonScrambleScheduler } from "./pokemon_scramble.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { scheduleMetricsCleanup } from "../shared/metrics.js";
@@ -28,6 +29,7 @@ const TOOL_MODULES = [
   { id: "sortbox", register: registerSortbox },
   { id: "thread_watch", register: registerThreadWatch, registerScheduler: registerThreadWatchScheduler },
   { id: "marketpoll", register: registerMarketPoll, registerScheduler: registerMarketPollScheduler },
+  { id: "pokemon_scramble", register: registerPokemonScramble, registerScheduler: registerPokemonScrambleScheduler },
 ];
 
 export function registerTools(register) {
