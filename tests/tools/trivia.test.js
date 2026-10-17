@@ -95,6 +95,7 @@ describe("trivia helpers", () => {
       answerIndex: 1,
     };
     expect(renderQuestion(question, 30_000)).toContain("<t:30:R>");
+    expect(renderQuestion(question, 30_000)).toContain("Your first answer is final.");
     const result = renderResult({
       question,
       winners: [{ userId: "1" }, { userId: "2" }],

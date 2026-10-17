@@ -400,6 +400,7 @@ function renderQuestion(question, endsAtMs) {
     ...question.choices.map((choice, index) => `**${LETTERS[index]}.** ${choice}`),
     "",
     `Difficulty: **${question.difficulty}** | Reward: **${points} point${points === 1 ? "" : "s"}**`,
+    "Your first answer is final.",
     `⏱️ Ends: <t:${Math.floor(endsAtMs / 1000)}:R>`,
   ];
   return lines.join("\n");
@@ -592,6 +593,7 @@ function helpText(prefix) {
     "",
     "Easy questions award 1 point. Medium and hard questions award 2 points.",
     "Every correct participant within the answer window earns points.",
+    "Your first answer is final. The default answer window is 30 seconds.",
   ].join("\n");
 }
 
@@ -756,10 +758,18 @@ export function registerTrivia(register) {
     if (!Number.isInteger(choiceIndex) || choiceIndex < 0 || choiceIndex > 3) return;
 
     const userId = String(interaction.user?.id || "");
+    const existingAnswer = state.answers.get(userId);
+    if (existingAnswer) {
+      await interaction.reply({
+        content: `Your answer is locked: **${LETTERS[existingAnswer.choiceIndex]}**. You cannot change it.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
     const displayName = interaction.member?.displayName || interaction.user?.globalName || interaction.user?.username || userId;
     state.answers.set(userId, { choiceIndex, displayName: String(displayName) });
     await interaction.reply({
-      content: `Answer recorded: **${LETTERS[choiceIndex]}**. You may change it before time expires.`,
+      content: `Answer recorded: **${LETTERS[choiceIndex]}**. Your answer is final.`,
       flags: MessageFlags.Ephemeral,
     });
   });

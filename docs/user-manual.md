@@ -449,6 +449,16 @@ Tracks unique responders in the current channel (admin/privileged only).
 - `!startReading [phrase]` — optional phrase filter (case‑insensitive)
 - `!endReading` — ends and prints the participant list (no pings)
 
+### Trivia (`!trivia`)
+
+Pokémon and TPPC multiple-choice rounds default to **30 seconds**. Your first
+button selection is final; clicking again cannot change your answer. Every
+correct participant earns 1 point for easy questions or 2 for medium/hard.
+
+Use `!trivia status` to view settings and `!trivia leaderboard` to view scores.
+Staff can use `!trivia run now [category] [difficulty]` for a manual round and
+`!trivia config duration <seconds>` to adjust the answer window (10–120 seconds).
+
 ### Advent (`!claim`, `/claim`, `!advent`, `/advent`)
 
 Advent claims are open **December 1–24** each year in TPPC time
