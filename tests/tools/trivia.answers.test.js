@@ -35,6 +35,7 @@ describe("trivia answer locking", () => {
     await vi.runOnlyPendingTimersAsync();
     vi.clearAllTimers();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   async function startRound(guildId = "guild") {
@@ -102,5 +103,19 @@ describe("trivia answer locking", () => {
     expect(insert[1][3]).toBe(30);
     await command({ message: { guildId: "guild", reply }, rest: "help", cmd: "!trivia" });
     expect(reply.mock.lastCall[0]).toContain("Your first answer is final. The default answer window is 30 seconds.");
+  });
+
+  it("remembers twenty posted questions per guild independently", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const posted = [];
+    for (let round = 0; round < 21; round += 1) {
+      await startRound("variety-guild");
+      const question = channel.send.mock.lastCall[0].content.split("\n")[1];
+      expect(posted.slice(-20)).not.toContain(question);
+      posted.push(question);
+      await vi.advanceTimersByTimeAsync(30_000);
+    }
+    await startRound("independent-guild");
+    expect(channel.send.mock.lastCall[0].content.split("\n")[1]).toBe(posted[0]);
   });
 });

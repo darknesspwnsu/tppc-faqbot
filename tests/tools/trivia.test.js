@@ -1,11 +1,15 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { POKEMON_DEX_CHANCE, POKEMON_DEX_LANDMARKS } from "../../configs/trivia.js";
 import { __testables } from "../../tools/trivia.js";
 
 const {
   pointsForDifficulty,
   loadCuratedQuestions,
-  loadPokemonRows,
+  normalizeQuestion,
+  randomizeChoices,
+  availableQuestions,
   buildPokemonQuestion,
   resolveQuestionSelection,
   parseRunOverrides,
@@ -14,6 +18,7 @@ const {
 } = __testables;
 
 describe("trivia helpers", () => {
+  afterEach(() => vi.restoreAllMocks());
   it("awards one point for easy and two for medium or hard", () => {
     expect(pointsForDifficulty("easy")).toBe(1);
     expect(pointsForDifficulty("medium")).toBe(2);
@@ -21,7 +26,7 @@ describe("trivia helpers", () => {
   });
 
   it("loads valid TPPC questions at every difficulty", () => {
-    const questions = loadCuratedQuestions();
+    const questions = loadCuratedQuestions().filter((question) => question.category === "tppc");
     expect(questions.length).toBeGreaterThanOrEqual(12);
     for (const difficulty of ["easy", "medium", "hard"]) {
       expect(questions.some((question) => question.difficulty === difficulty)).toBe(true);
@@ -34,30 +39,101 @@ describe("trivia helpers", () => {
     }
   });
 
-  it("loads unique National Pokedex rows", () => {
-    const rows = loadPokemonRows();
-    expect(rows.length).toBeGreaterThan(800);
-    expect(new Set(rows.map((row) => row.number)).size).toBe(rows.length);
-    expect(rows).toContainEqual({ name: "Pikachu", number: 25 });
-  });
-
-  it("generates four-choice Pokemon questions in suitable number bands", () => {
-    for (const [difficulty, min, max] of [
-      ["easy", 1, 151],
-      ["medium", 152, 493],
-      ["hard", 494, Infinity],
-    ]) {
-      for (let i = 0; i < 10; i += 1) {
-        const question = buildPokemonQuestion(difficulty);
-        const number = Number(question.id.split(":").at(-1));
-        expect(number).toBeGreaterThanOrEqual(min);
-        expect(number).toBeLessThanOrEqual(max);
-        expect(question.choices).toHaveLength(4);
-        expect(new Set(question.choices).size).toBe(4);
-        expect(question.answerIndex).toBeGreaterThanOrEqual(0);
-        expect(question.answerIndex).toBeLessThan(4);
+  it("loads a varied Pokemon bank at every difficulty without silently dropping entries", () => {
+    const raw = ["pokemon_trivia_questions.json", "opentdb_pokemon_questions.json"]
+      .flatMap((file) => JSON.parse(fs.readFileSync(new URL(`../../data/${file}`, import.meta.url), "utf8")));
+    const questions = loadCuratedQuestions().filter((question) => question.category === "pokemon");
+    expect(questions.length).toBeGreaterThan(350);
+    expect(questions).toHaveLength(raw.length);
+    expect(new Set(questions.map((q) => q.id)).size).toBe(questions.length);
+    expect(new Set(questions.map((q) => q.question.toLowerCase())).size).toBe(questions.length);
+    for (const row of raw) {
+      expect(normalizeQuestion(row), row.id).not.toBeNull();
+      expect(new URL(row.source.url).protocol).toBe("https:");
+      expect(row.source.license).toBeTruthy();
+      // Reversing a dual type's order must not create a second correct option.
+      if (row.topic === "types") {
+        expect(new Set(row.choices.map((choice) => choice.split("/").sort().join("/"))).size).toBe(4);
       }
     }
+    for (const difficulty of ["easy", "medium", "hard"]) {
+      const general = questions.filter((q) => q.difficulty === difficulty && q.topic !== "pokedex");
+      expect(general.length).toBeGreaterThan(50);
+      expect(new Set(general.map((q) => q.topic)).size).toBeGreaterThanOrEqual(8);
+    }
+    for (const topic of ["characters", "trainers", "places", "games", "evolution", "items", "moves", "abilities", "anime"]) {
+      expect(questions.some((q) => q.topic === topic)).toBe(true);
+    }
+  });
+
+  it("restricts every dex question to its configured landmark and direction", () => {
+    const dex = loadCuratedQuestions().filter((q) => q.topic === "pokedex");
+    const expectedCount = Object.values(POKEMON_DEX_LANDMARKS)
+      .flatMap((levels) => Object.values(levels)).reduce((total, ids) => total + ids.length, 0);
+    expect(dex).toHaveLength(expectedCount);
+    for (const q of dex) {
+      expect(POKEMON_DEX_LANDMARKS[q.dexDirection][q.difficulty]).toContain(q.dexNumber);
+    }
+    for (const number of [67, 69, 100, 200, 300, 420, 666, 777]) {
+      expect(dex.some((q) => q.dexDirection === "name" && q.dexNumber === number)).toBe(true);
+    }
+    for (const [number, name] of [[666, "Vivillon"], [777, "Togedemaru"], [1000, "Gholdengo"]]) {
+      const q = dex.find((q) => q.dexDirection === "name" && q.dexNumber === number);
+      expect(q.choices[q.answerIndex]).toBe(name);
+    }
+  });
+
+  it("reserves only 15 percent of the Pokemon draw for dex landmarks", () => {
+    expect(POKEMON_DEX_CHANCE).toBe(0.15);
+    const random = vi.spyOn(Math, "random");
+    for (const difficulty of ["easy", "medium", "hard"]) {
+      random.mockReturnValue(0.149);
+      expect(buildPokemonQuestion(difficulty).topic).toBe("pokedex");
+      random.mockReturnValue(0.15);
+      expect(buildPokemonQuestion(difficulty).topic).not.toBe("pokedex");
+      expect(buildPokemonQuestion(difficulty)).toMatchObject({ category: "pokemon", difficulty });
+    }
+  });
+
+  it("keeps every non-dex topic reachable without weighting by bank size", () => {
+    const random = vi.spyOn(Math, "random");
+    for (const difficulty of ["easy", "medium", "hard"]) {
+      const topics = [...new Set(loadCuratedQuestions()
+        .filter((q) => q.category === "pokemon" && q.difficulty === difficulty && q.topic !== "pokedex")
+        .map((q) => q.topic))];
+      for (const [index, topic] of topics.entries()) {
+        random.mockReturnValue(0.5).mockReturnValueOnce(0.9).mockReturnValueOnce((index + 0.5) / topics.length);
+        expect(buildPokemonQuestion(difficulty).topic).toBe(topic);
+      }
+    }
+  });
+
+  it("avoids recent questions and gracefully cycles an exhausted filtered pool", () => {
+    const candidates = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(availableQuestions(candidates, ["a", "b"])).toEqual([{ id: "c" }]);
+    expect(availableQuestions(candidates, ["a", "b", "c"])).toEqual([{ id: "a" }, { id: "b" }]);
+    expect(availableQuestions([{ id: "a" }], ["a"])).toEqual([{ id: "a" }]);
+    expect(availableQuestions([], ["a"])).toEqual([]);
+    for (const category of ["pokemon", "tppc"]) {
+      const first = resolveQuestionSelection({ category, difficulty: "easy" });
+      for (let i = 0; i < 20; i += 1) {
+        expect(resolveQuestionSelection({ category, difficulty: "easy", recentIds: [first.id] }).id).not.toBe(first.id);
+      }
+    }
+  });
+
+  it("preserves correct answers when shuffling and rejects malformed choices or unrestricted dex entries", () => {
+    for (const question of loadCuratedQuestions()) {
+      const shuffled = randomizeChoices(question);
+      expect(shuffled.choices[shuffled.answerIndex]).toBe(question.choices[question.answerIndex]);
+    }
+    const valid = loadCuratedQuestions()[0];
+    expect(normalizeQuestion({ ...valid, choices: ["a", "A", "b", "c"] })).toBeNull();
+    expect(normalizeQuestion({ ...valid, choices: ["a", " ", "b", "c"] })).toBeNull();
+    expect(normalizeQuestion({ ...valid, category: "pokemon", topic: "pokedex", dexDirection: "name", dexNumber: 123 })).toBeNull();
+    const ditto = loadCuratedQuestions().find((q) => q.id === "pokemon:hidden-ability-132");
+    expect(ditto.choices[ditto.answerIndex]).toBe("Imposter");
+    expect(ditto.choices).not.toContain("Impostor");
   });
 
   it("resolves both Pokemon and TPPC selections", () => {
@@ -104,5 +180,13 @@ describe("trivia helpers", () => {
     expect(result).toContain("B. Two");
     expect(result).toContain("<@1>, <@2>");
     expect(result).toContain("2 points");
+  });
+
+  it("credits adapted Open Trivia DB questions after the round", () => {
+    const question = loadCuratedQuestions().find((q) => q.source?.name === "Open Trivia DB");
+    expect(renderQuestion(question, 30_000)).not.toContain("Source:");
+    const result = renderResult({ question, winners: [], responseCount: 0 });
+    expect(result).toContain("[Open Trivia DB](https://opentdb.com/)");
+    expect(result).toContain("adapted; [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)");
   });
 });

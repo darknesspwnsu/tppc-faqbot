@@ -1,0 +1,582 @@
+[
+  {
+    "id": "opentdb:pokemon:c14711cbf64f",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "In Pokémon Diamond, Pearl, and Platinum, where can a wild Munchlax be found?",
+    "choices": [
+      "Honey Trees",
+      "Trading with an NPC",
+      "Grass on Route 209",
+      "Wayward Cave"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:d0533cfa9347",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokemon-names",
+    "question": "Which Pokémon introduced in Generation III is the only one whose English name begins with I?",
+    "choices": [
+      "Illumise",
+      "Infernape",
+      "Ivysaur",
+      "Igglybuff"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:3aac0ed7fdf0",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "anime",
+    "question": "Which Pokémon was the first one Ash caught himself in the original anime?",
+    "choices": [
+      "Caterpie",
+      "Charmander",
+      "Pikachu",
+      "Pidgey"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:953c022c8abe",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What are Charizard's types in its standard, non-Mega form?",
+    "choices": [
+      "Fire/Flying",
+      "Fire",
+      "Dragon",
+      "Fire/Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:2c348a1ff9e6",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "anime",
+    "question": "Which Pokémon is called the Prince of the Sea in the ninth Pokémon movie?",
+    "choices": [
+      "Manaphy",
+      "Phione",
+      "Kyogre",
+      "Lugia"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:1fe4362522e1",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "The walls of the Goldenrod City Gym in \"Pokémon Gold and Silver\" are arranged in the shape of which Pokémon?",
+    "choices": [
+      "Clefairy",
+      "Bulbasaur",
+      "Pikachu",
+      "Pidgey"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:2c8ed33e17ba",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "Which Pokémon became famous for helping Se Jun Park win the 2014 Pokémon VGC World Championship?",
+    "choices": [
+      "Pachirisu",
+      "Garchomp",
+      "Lapras",
+      "Primal Groudon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:20715d175bf1",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "Which Kalos Elite Four member also belongs to Team Flare?",
+    "choices": [
+      "Malva",
+      "Siebold",
+      "Wikstrom",
+      "Drasna"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:9cd7d485d318",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "Which trio are the first partner Pokémon in Pokémon Black and White?",
+    "choices": [
+      "Snivy, Tepig, Oshawott",
+      "Snivy, Fennekin, Froakie",
+      "Chespin, Tepig, Froakie",
+      "Chespin, Fennekin, Oshawott"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:af1dade4039d",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In the Pokémon series, what is Palkia's hidden ability?",
+    "choices": [
+      "Telepathy",
+      "Pressure",
+      "Water Bubble",
+      "Hydration"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:ee5f427ee1e2",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "Which of the following Pokemon Types was present in the original games, Red and Blue?",
+    "choices": [
+      "Ice",
+      "Steel",
+      "Dark",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:49d4ba237493",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokemon-go",
+    "question": "Who is the leader of Team Instinct in Pokémon Go?",
+    "choices": [
+      "Spark",
+      "Candela",
+      "Blanche",
+      "Willow"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:155ee296bf57",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "In Pokemon Red & Blue, what is the name of HM05?",
+    "choices": [
+      "Flash",
+      "Strength",
+      "Cut",
+      "Fly"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:4a719397472b",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "In which generation of the core Pokémon games was the Fairy type introduced?",
+    "choices": [
+      "6th",
+      "2nd",
+      "7th",
+      "4th"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:caea25eeef5c",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokemon-go",
+    "question": "Who is the leader of Team Mystic in Pokémon Go?",
+    "choices": [
+      "Blanche",
+      "Candela",
+      "Spark",
+      "Willow"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:079185770e80",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "In the Pokémon series, which type is Sudowoodo, the Imitation Pokémon?",
+    "choices": [
+      "Rock",
+      "Grass",
+      "Bug",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:37ef75b8f3cb",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In \"Pokémon Sun and Moon\", Team Skull took over which town?",
+    "choices": [
+      "Po Town",
+      "Heahea City",
+      "Tapu Village",
+      "Iki Town"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:85f9682ba57c",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which of these Generation 1 Pokemon did NOT have an evolution in Generation 4?",
+    "choices": [
+      "Jynx",
+      "Electabuzz",
+      "Magmar",
+      "Rhydon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:f2d31a63ba47",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "Which Pokémon naturally has the Ability Wonder Guard?",
+    "choices": [
+      "Shedinja",
+      "Sableye",
+      "Spiritomb",
+      "Silvally"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:dc79012fad0d",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "Which water-type Pokémon starter was introduced in the 4th generation of the series?",
+    "choices": [
+      "Piplup",
+      "Totodile",
+      "Oshawott",
+      "Mudkip"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:9907148826ca",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In the game Pokémon Conquest, how many kingdoms make up the region of Ransei?",
+    "choices": [
+      "17",
+      "18",
+      "15",
+      "16"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:57fbfd1b1bc7",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "anime",
+    "question": "How old is Ash when he begins his journey in the original Pokémon anime?",
+    "choices": [
+      "10",
+      "11",
+      "12",
+      "9"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:49ab516b9cb1",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "In Pokémon Conquest, which warlord can form a perfect link with Zekrom and Shiny Rayquaza?",
+    "choices": [
+      "Nobunaga",
+      "The Player",
+      "Oichi",
+      "Hideyoshi"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:57f349bb4ea0",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In what year was Pokémon Diamond & Pearl released in Japan?",
+    "choices": [
+      "2006",
+      "2009",
+      "2007",
+      "2008"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:08742f7bea25",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which Elite Four member from the first generation of Pokémon became the champion in the next generation?",
+    "choices": [
+      "Lance",
+      "Agatha",
+      "Bruno",
+      "Lorelei"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:9802ff88f8b5",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokemon-go",
+    "question": "Who is the leader of Team Valor in Pokémon Go?",
+    "choices": [
+      "Candela",
+      "Willow",
+      "Blanche",
+      "Spark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:bd085f02dd9b",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which of these Pokémon keeps the same base stat total when it evolves into Scizor?",
+    "choices": [
+      "Scyther",
+      "Pikachu",
+      "Sneasel",
+      "Larvesta"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:735468a28375",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "In which pair of games did the Masuda Method for breeding Shiny Pokémon first appear?",
+    "choices": [
+      "Diamond/Pearl",
+      "Ruby/Sapphire",
+      "Black/White",
+      "X/Y"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  },
+  {
+    "id": "opentdb:pokemon:691d12728407",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "Which of the following Pokémon games released first?",
+    "choices": [
+      "Pokémon Crystal",
+      "Pokémon Platinum",
+      "Pokémon FireRed",
+      "Pokémon Black"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Open Trivia DB",
+      "url": "https://opentdb.com/",
+      "license": "CC BY-SA 4.0",
+      "modified": true
+    }
+  }
+]

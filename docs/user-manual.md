@@ -455,6 +455,14 @@ Pokémon and TPPC multiple-choice rounds default to **30 seconds**. Your first
 button selection is final; clicking again cannot change your answer. Every
 correct participant earns 1 point for easy questions or 2 for medium/hard.
 
+Pokémon questions cover trainers, places, evolution, items, abilities, moves,
+type matchups, games, and anime. About 15% of Pokémon rounds ask about National
+Pokédex landmarks: recognizable Pokémon or memorable numbers. Other topics
+are selected evenly so larger sections do not dominate. Each server avoids its
+last 20 questions where the selected pool allows; this memory resets on restart.
+Question banks are bundled locally, with source credits shown after each round.
+See [trivia sources](trivia-sources.md) for provenance and editing guidance.
+
 Use `!trivia status` to view settings and `!trivia leaderboard` to view scores.
 Staff can use `!trivia run now [category] [difficulty]` for a manual round and
 `!trivia config duration <seconds>` to adjust the answer window (10–120 seconds).

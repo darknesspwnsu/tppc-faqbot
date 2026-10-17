@@ -18,9 +18,9 @@ import { logger } from "../shared/logger.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { clearTimer, startInterval, startTimeout } from "../shared/timer_utils.js";
 import { parseDurationSeconds } from "../shared/time_utils.js";
+import { POKEMON_DEX_CHANCE, POKEMON_DEX_LANDMARKS, TRIVIA_RECENT_QUESTION_LIMIT } from "../configs/trivia.js";
 
-const POKEDEX_FILE = path.resolve("data/pokedex_map.json");
-const CURATED_FILE = path.resolve("data/trivia_questions.json");
+const CURATED_FILES = ["data/trivia_questions.json", "data/pokemon_trivia_questions.json", "data/opentdb_pokemon_questions.json"].map((file) => path.resolve(file));
 
 const DEFAULT_CADENCE_MINUTES = 180;
 const DEFAULT_DURATION_SECONDS = 30;
@@ -40,13 +40,13 @@ const LETTERS = ["A", "B", "C", "D"];
 const POINTS_BY_DIFFICULTY = { easy: 1, medium: 2, hard: 2 };
 
 const activeByGuild = new Map();
+const recentQuestionsByGuild = new Map();
 
 let clientRef = null;
 let schedulerBooted = false;
 let schedulerTimer = null;
 let startupTimer = null;
 let tickInFlight = false;
-let pokemonCache = null;
 let curatedCache = null;
 
 function chooseOne(items) {
@@ -61,10 +61,6 @@ function shuffle(items) {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
-}
-
-function sampleDistinct(items, count) {
-  return shuffle(items).slice(0, Math.max(0, count));
 }
 
 function parseMinutes(raw) {
@@ -119,14 +115,22 @@ function normalizeQuestion(raw) {
   if (!DIFFICULTIES.has(difficulty) || difficulty === "all") return null;
   if (!CATEGORIES.has(category) || category === "all") return null;
   if (!String(raw.question || "").trim()) return null;
+  const choices = raw.choices.map((choice) => String(choice).trim());
+  if (choices.some((choice) => !choice) || new Set(choices.map((choice) => choice.toLowerCase())).size !== 4) return null;
+  const topic = String(raw.topic || "general");
+  if (topic === "pokedex" && (category !== "pokemon" ||
+      !POKEMON_DEX_LANDMARKS[raw.dexDirection]?.[difficulty]?.includes(raw.dexNumber))) return null;
 
   return {
     id: String(raw.id || `${category}:${difficulty}:${raw.question}`),
     category,
     difficulty,
     question: String(raw.question).trim(),
-    choices: raw.choices.map((choice) => String(choice).trim()),
+    choices,
     answerIndex,
+    topic,
+    ...(topic === "pokedex" ? { dexNumber: raw.dexNumber, dexDirection: raw.dexDirection } : {}),
+    ...(raw.source ? { source: raw.source } : {}),
   };
 }
 
@@ -145,89 +149,38 @@ function randomizeChoices(question) {
 
 function loadCuratedQuestions() {
   if (curatedCache) return curatedCache;
-  const parsed = JSON.parse(fs.readFileSync(CURATED_FILE, "utf8"));
-  curatedCache = (Array.isArray(parsed) ? parsed : []).map(normalizeQuestion).filter(Boolean);
+  curatedCache = CURATED_FILES.flatMap((file) => {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    return (Array.isArray(parsed) ? parsed : []).map(normalizeQuestion).filter(Boolean);
+  });
   return curatedCache;
 }
 
-function loadPokemonRows() {
-  if (pokemonCache) return pokemonCache;
-  const parsed = JSON.parse(fs.readFileSync(POKEDEX_FILE, "utf8"));
-  const byNumber = new Map();
+function availableQuestions(candidates, recentIds = []) {
+  const recent = new Set(recentIds);
+  const fresh = candidates.filter((question) => !recent.has(question.id));
+  if (fresh.length) return fresh;
+  // Small filtered pools can run out; still avoid the immediately previous round.
+  const withoutLast = candidates.filter((question) => question.id !== recentIds.at(-1));
+  return withoutLast.length ? withoutLast : candidates;
+}
 
-  for (const [name, rawId] of Object.entries(parsed)) {
-    const match = /^(\d+)-0$/.exec(String(rawId || ""));
-    if (!match || name.includes("(")) continue;
-    const number = Number(match[1]);
-    if (!Number.isInteger(number) || number <= 0 || byNumber.has(number)) continue;
-    byNumber.set(number, { name, number });
+function buildPokemonQuestion(difficulty, recentIds = []) {
+  const candidates = availableQuestions(loadCuratedQuestions().filter(
+    (question) => question.category === "pokemon" && question.difficulty === difficulty
+  ), recentIds);
+  const dex = candidates.filter((question) => question.topic === "pokedex");
+  const general = candidates.filter((question) => question.topic !== "pokedex");
+  if (dex.length && (!general.length || Math.random() < POKEMON_DEX_CHANCE)) {
+    return randomizeChoices(chooseOne(dex));
   }
-
-  pokemonCache = [...byNumber.values()].sort((a, b) => a.number - b.number);
-  return pokemonCache;
+  if (!general.length) return null;
+  // A large trainer or type sub-pool must not drown out the other topics.
+  const topic = chooseOne([...new Set(general.map((question) => question.topic))]);
+  return randomizeChoices(chooseOne(general.filter((question) => question.topic === topic)));
 }
 
-function generationRange(number) {
-  if (number <= 151) return [1, 151];
-  if (number <= 251) return [152, 251];
-  if (number <= 386) return [252, 386];
-  if (number <= 493) return [387, 493];
-  if (number <= 649) return [494, 649];
-  if (number <= 721) return [650, 721];
-  if (number <= 809) return [722, 809];
-  return [810, 9999];
-}
-
-function distractorRows(rows, target, difficulty) {
-  const others = rows.filter((row) => row.number !== target.number);
-  if (difficulty === "easy") return others;
-
-  const [min, max] = generationRange(target.number);
-  if (difficulty === "medium") {
-    const sameGeneration = others.filter((row) => row.number >= min && row.number <= max);
-    return sameGeneration.length >= 3 ? sameGeneration : others;
-  }
-
-  const nearby = others.filter((row) => Math.abs(row.number - target.number) <= 25);
-  return nearby.length >= 3 ? nearby : others;
-}
-
-function buildPokemonQuestion(difficulty) {
-  const rows = loadPokemonRows();
-  const targetPool = difficulty === "easy"
-    ? rows.filter((row) => row.number <= 151)
-    : difficulty === "medium"
-      ? rows.filter((row) => row.number >= 152 && row.number <= 493)
-      : rows.filter((row) => row.number >= 494);
-  const target = chooseOne(targetPool.length ? targetPool : rows);
-  if (!target) return null;
-  const distractors = sampleDistinct(distractorRows(rows, target, difficulty), 3);
-  if (distractors.length < 3) return null;
-
-  if (difficulty === "medium") {
-    const options = shuffle([target, ...distractors]);
-    return {
-      id: `pokemon:number:${target.number}`,
-      category: "pokemon",
-      difficulty,
-      question: `What is the National Pokedex number of ${target.name}?`,
-      choices: options.map((row) => `#${row.number}`),
-      answerIndex: options.findIndex((row) => row.number === target.number),
-    };
-  }
-
-  const options = shuffle([target, ...distractors]);
-  return {
-    id: `pokemon:name:${target.number}`,
-    category: "pokemon",
-    difficulty,
-    question: `Which Pokemon is National Pokedex #${target.number}?`,
-    choices: options.map((row) => row.name),
-    answerIndex: options.findIndex((row) => row.number === target.number),
-  };
-}
-
-function resolveQuestionSelection({ category = "all", difficulty = "all" } = {}) {
+function resolveQuestionSelection({ category = "all", difficulty = "all", recentIds = [] } = {}) {
   const selectedDifficulty = difficulty === "all"
     ? chooseOne(["easy", "medium", "hard"])
     : difficulty;
@@ -236,13 +189,13 @@ function resolveQuestionSelection({ category = "all", difficulty = "all" } = {})
     : category;
 
   if (selectedCategory === "pokemon") {
-    return buildPokemonQuestion(selectedDifficulty);
+    return buildPokemonQuestion(selectedDifficulty, recentIds);
   }
 
   const candidates = loadCuratedQuestions().filter(
     (question) => question.category === "tppc" && question.difficulty === selectedDifficulty
   );
-  const picked = chooseOne(candidates);
+  const picked = chooseOne(availableQuestions(candidates, recentIds));
   return picked ? randomizeChoices(picked) : null;
 }
 
@@ -421,6 +374,10 @@ function renderResult({ question, winners, responseCount }) {
     lines.push("❌ Nobody answered correctly in time.");
   }
   lines.push(`Responses: **${responseCount}**`);
+  if (question.source) {
+    const { name, url, license } = question.source;
+    lines.push(`Source: [${name}](${url})${license === "CC BY-SA 4.0" ? " (adapted; [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/))." : "."}`);
+  }
   return lines.join("\n");
 }
 
@@ -470,7 +427,7 @@ async function postTrivia(setting, overrides = {}) {
 
   const category = CATEGORIES.has(overrides.category) ? overrides.category : setting.category;
   const difficulty = DIFFICULTIES.has(overrides.difficulty) ? overrides.difficulty : setting.difficulty;
-  const question = resolveQuestionSelection({ category, difficulty });
+  const question = resolveQuestionSelection({ category, difficulty, recentIds: recentQuestionsByGuild.get(guildId) });
   if (!question) return { ok: false, reason: "no_question" };
 
   const channel = await clientRef.channels.fetch(setting.channelId).catch(() => null);
@@ -494,6 +451,8 @@ async function postTrivia(setting, overrides = {}) {
     logger.warn("trivia.send.failed", { guildId, error: logger.serializeError(err) });
     return { ok: false, reason: "send_failed" };
   }
+
+  recentQuestionsByGuild.set(guildId, [...(recentQuestionsByGuild.get(guildId) || []), question.id].slice(-TRIVIA_RECENT_QUESTION_LIMIT));
 
   const state = {
     guildId,
@@ -819,9 +778,7 @@ export const __testables = {
   normalizeQuestion,
   randomizeChoices,
   loadCuratedQuestions,
-  loadPokemonRows,
-  generationRange,
-  distractorRows,
+  availableQuestions,
   buildPokemonQuestion,
   resolveQuestionSelection,
   parseRunOverrides,

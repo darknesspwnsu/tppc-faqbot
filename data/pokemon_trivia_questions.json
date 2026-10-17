@@ -1,0 +1,7119 @@
+[
+  {
+    "id": "pokemon:professor-kanto",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Kanto region?",
+    "choices": [
+      "Professor Oak",
+      "Professor Rowan",
+      "Professor Elm",
+      "Professor Juniper"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-johto",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Johto region?",
+    "choices": [
+      "Professor Elm",
+      "Professor Birch",
+      "Professor Oak",
+      "Professor Juniper"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-hoenn",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Hoenn region?",
+    "choices": [
+      "Professor Birch",
+      "Professor Sycamore",
+      "Professor Kukui",
+      "Professor Rowan"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-sinnoh",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Sinnoh region?",
+    "choices": [
+      "Professor Rowan",
+      "Professor Sycamore",
+      "Professor Elm",
+      "Professor Juniper"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-unova",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Unova region?",
+    "choices": [
+      "Professor Juniper",
+      "Professor Sycamore",
+      "Professor Rowan",
+      "Professor Oak"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-kalos",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Kalos region?",
+    "choices": [
+      "Professor Sycamore",
+      "Professor Elm",
+      "Professor Kukui",
+      "Professor Juniper"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:professor-alola",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which professor introduces new Trainers to the Alola region?",
+    "choices": [
+      "Professor Kukui",
+      "Professor Birch",
+      "Professor Sycamore",
+      "Professor Rowan"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-rocket",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Who leads Team Rocket in the original games set in Kanto?",
+    "choices": [
+      "Giovanni",
+      "Lusamine",
+      "Lysandre",
+      "Archie"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-magma",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Who leads Team Magma in the original games set in Hoenn?",
+    "choices": [
+      "Maxie",
+      "Guzma",
+      "Giovanni",
+      "Cyrus"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-aqua",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "characters",
+    "question": "Who leads Team Aqua in the original games set in Hoenn?",
+    "choices": [
+      "Archie",
+      "Maxie",
+      "Giovanni",
+      "Lysandre"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-galactic",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who leads Team Galactic in the original games set in Sinnoh?",
+    "choices": [
+      "Cyrus",
+      "Giovanni",
+      "Archie",
+      "Guzma"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-flare",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who leads Team Flare in the original games set in Kalos?",
+    "choices": [
+      "Lysandre",
+      "Cyrus",
+      "N",
+      "Archie"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-team-skull",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who leads Team Skull in the original games set in Alola?",
+    "choices": [
+      "Guzma",
+      "Cyrus",
+      "Lusamine",
+      "Maxie"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:team-aether-foundation",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is president of the Aether Foundation in Pokémon Sun and Moon?",
+    "choices": [
+      "Lusamine",
+      "Maxie",
+      "Archie",
+      "Lysandre"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-brock",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Pewter City Gym, which type does Brock specialize in?",
+    "choices": [
+      "Rock",
+      "Electric",
+      "Psychic",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-misty",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Cerulean City Gym, which type does Misty specialize in?",
+    "choices": [
+      "Water",
+      "Grass",
+      "Ice",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-lt.-surge",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Vermilion City Gym, which type does Lt. Surge specialize in?",
+    "choices": [
+      "Electric",
+      "Grass",
+      "Flying",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-erika",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Celadon City Gym, which type does Erika specialize in?",
+    "choices": [
+      "Grass",
+      "Rock",
+      "Electric",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-koga",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Fuchsia City Gym, which type does Koga specialize in?",
+    "choices": [
+      "Poison",
+      "Psychic",
+      "Fighting",
+      "Rock"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-sabrina",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Saffron City Gym, which type does Sabrina specialize in?",
+    "choices": [
+      "Psychic",
+      "Fire",
+      "Fairy",
+      "Flying"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-blaine",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Cinnabar Island Gym, which type does Blaine specialize in?",
+    "choices": [
+      "Fire",
+      "Water",
+      "Ice",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-janine",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Fuchsia City Gym, which type does Janine specialize in?",
+    "choices": [
+      "Poison",
+      "Dragon",
+      "Flying",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-falkner",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Violet City Gym, which type does Falkner specialize in?",
+    "choices": [
+      "Flying",
+      "Ice",
+      "Normal",
+      "Rock"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-bugsy",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Azalea Town Gym, which type does Bugsy specialize in?",
+    "choices": [
+      "Bug",
+      "Dark",
+      "Fairy",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-whitney",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Goldenrod City Gym, which type does Whitney specialize in?",
+    "choices": [
+      "Normal",
+      "Electric",
+      "Rock",
+      "Flying"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-morty",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Ecruteak City Gym, which type does Morty specialize in?",
+    "choices": [
+      "Ghost",
+      "Poison",
+      "Psychic",
+      "Flying"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-jasmine",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Olivine City Gym, which type does Jasmine specialize in?",
+    "choices": [
+      "Steel",
+      "Grass",
+      "Flying",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-chuck",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Cianwood City Gym, which type does Chuck specialize in?",
+    "choices": [
+      "Fighting",
+      "Dark",
+      "Rock",
+      "Normal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-pryce",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Mahogany Town Gym, which type does Pryce specialize in?",
+    "choices": [
+      "Ice",
+      "Bug",
+      "Dark",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-clair",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "trainers",
+    "question": "At the Blackthorn City Gym, which type does Clair specialize in?",
+    "choices": [
+      "Dragon",
+      "Ground",
+      "Fighting",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-roxanne",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Rustboro City Gym, which type does Roxanne specialize in?",
+    "choices": [
+      "Rock",
+      "Flying",
+      "Fairy",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-brawly",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Dewford Town Gym, which type does Brawly specialize in?",
+    "choices": [
+      "Fighting",
+      "Bug",
+      "Dragon",
+      "Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-wattson",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Mauville City Gym, which type does Wattson specialize in?",
+    "choices": [
+      "Electric",
+      "Psychic",
+      "Flying",
+      "Fighting"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-flannery",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Lavaridge Town Gym, which type does Flannery specialize in?",
+    "choices": [
+      "Fire",
+      "Ghost",
+      "Water",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-norman",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Petalburg City Gym, which type does Norman specialize in?",
+    "choices": [
+      "Normal",
+      "Fairy",
+      "Fighting",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-winona",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Fortree City Gym, which type does Winona specialize in?",
+    "choices": [
+      "Flying",
+      "Normal",
+      "Ground",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-tate-and-liza",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Mossdeep City Gym, which type does Tate and Liza specialize in?",
+    "choices": [
+      "Psychic",
+      "Poison",
+      "Normal",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-wallace",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Sootopolis City Gym, which type does Wallace specialize in?",
+    "choices": [
+      "Water",
+      "Poison",
+      "Dragon",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-juan",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Sootopolis City Gym, which type does Juan specialize in?",
+    "choices": [
+      "Water",
+      "Fire",
+      "Ghost",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-roark",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Oreburgh City Gym, which type does Roark specialize in?",
+    "choices": [
+      "Rock",
+      "Electric",
+      "Dark",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-gardenia",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Eterna City Gym, which type does Gardenia specialize in?",
+    "choices": [
+      "Grass",
+      "Psychic",
+      "Normal",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-maylene",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Veilstone City Gym, which type does Maylene specialize in?",
+    "choices": [
+      "Fighting",
+      "Dark",
+      "Electric",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-crasher-wake",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Pastoria City Gym, which type does Crasher Wake specialize in?",
+    "choices": [
+      "Water",
+      "Fire",
+      "Poison",
+      "Normal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-fantina",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Hearthome City Gym, which type does Fantina specialize in?",
+    "choices": [
+      "Ghost",
+      "Dark",
+      "Steel",
+      "Flying"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-byron",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Canalave City Gym, which type does Byron specialize in?",
+    "choices": [
+      "Steel",
+      "Ground",
+      "Bug",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-candice",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Snowpoint City Gym, which type does Candice specialize in?",
+    "choices": [
+      "Ice",
+      "Fire",
+      "Normal",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-volkner",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "At the Sunyshore City Gym, which type does Volkner specialize in?",
+    "choices": [
+      "Electric",
+      "Fighting",
+      "Fairy",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-cilan",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Striaton City Gym, which type does Cilan specialize in?",
+    "choices": [
+      "Grass",
+      "Dragon",
+      "Normal",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-chili",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Striaton City Gym, which type does Chili specialize in?",
+    "choices": [
+      "Fire",
+      "Dragon",
+      "Psychic",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-cress",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Striaton City Gym, which type does Cress specialize in?",
+    "choices": [
+      "Water",
+      "Normal",
+      "Ground",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-lenora",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Nacrene City Gym, which type does Lenora specialize in?",
+    "choices": [
+      "Normal",
+      "Psychic",
+      "Electric",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-burgh",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Castelia City Gym, which type does Burgh specialize in?",
+    "choices": [
+      "Bug",
+      "Steel",
+      "Ghost",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-elesa",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Nimbasa City Gym, which type does Elesa specialize in?",
+    "choices": [
+      "Electric",
+      "Fairy",
+      "Poison",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-clay",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Driftveil City Gym, which type does Clay specialize in?",
+    "choices": [
+      "Ground",
+      "Electric",
+      "Fairy",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-skyla",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Mistralton City Gym, which type does Skyla specialize in?",
+    "choices": [
+      "Flying",
+      "Dragon",
+      "Ice",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-brycen",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Icirrus City Gym, which type does Brycen specialize in?",
+    "choices": [
+      "Ice",
+      "Dark",
+      "Fairy",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-drayden",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Opelucid City Gym, which type does Drayden specialize in?",
+    "choices": [
+      "Dragon",
+      "Dark",
+      "Fairy",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-iris",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Opelucid City Gym, which type does Iris specialize in?",
+    "choices": [
+      "Dragon",
+      "Ground",
+      "Grass",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-cheren",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Aspertia City Gym, which type does Cheren specialize in?",
+    "choices": [
+      "Normal",
+      "Dragon",
+      "Fighting",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-roxie",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Virbank City Gym, which type does Roxie specialize in?",
+    "choices": [
+      "Poison",
+      "Fairy",
+      "Water",
+      "Grass"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-marlon",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Humilau City Gym, which type does Marlon specialize in?",
+    "choices": [
+      "Water",
+      "Flying",
+      "Normal",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-viola",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Santalune City Gym, which type does Viola specialize in?",
+    "choices": [
+      "Bug",
+      "Fairy",
+      "Dark",
+      "Rock"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-grant",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Cyllage City Gym, which type does Grant specialize in?",
+    "choices": [
+      "Rock",
+      "Water",
+      "Electric",
+      "Dark"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-korrina",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Shalour City Gym, which type does Korrina specialize in?",
+    "choices": [
+      "Fighting",
+      "Electric",
+      "Dragon",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-ramos",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Coumarine City Gym, which type does Ramos specialize in?",
+    "choices": [
+      "Grass",
+      "Psychic",
+      "Fairy",
+      "Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-clemont",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Lumiose City Gym, which type does Clemont specialize in?",
+    "choices": [
+      "Electric",
+      "Dark",
+      "Grass",
+      "Ice"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-valerie",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Laverre City Gym, which type does Valerie specialize in?",
+    "choices": [
+      "Fairy",
+      "Poison",
+      "Ground",
+      "Ice"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-olympia",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Anistar City Gym, which type does Olympia specialize in?",
+    "choices": [
+      "Psychic",
+      "Bug",
+      "Fire",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:gym-type-wulfric",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "At the Snowbelle City Gym, which type does Wulfric specialize in?",
+    "choices": [
+      "Ice",
+      "Poison",
+      "Fairy",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-brock",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Brock award for defeating the Pewter City Gym?",
+    "choices": [
+      "Boulder Badge",
+      "Relic Badge",
+      "Mind Badge",
+      "Storm Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-misty",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Misty award for defeating the Cerulean City Gym?",
+    "choices": [
+      "Cascade Badge",
+      "Icicle Badge",
+      "Knuckle Badge",
+      "Marsh Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-lt.-surge",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Lt. Surge award for defeating the Vermilion City Gym?",
+    "choices": [
+      "Thunder Badge",
+      "Icicle Badge",
+      "Jet Badge",
+      "Bolt Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-erika",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Erika award for defeating the Celadon City Gym?",
+    "choices": [
+      "Rainbow Badge",
+      "Freeze Badge",
+      "Bolt Badge",
+      "Icicle Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-koga",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Koga award for defeating the Fuchsia City Gym?",
+    "choices": [
+      "Soul Badge",
+      "Psychic Badge",
+      "Plant Badge",
+      "Relic Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-sabrina",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Sabrina award for defeating the Saffron City Gym?",
+    "choices": [
+      "Marsh Badge",
+      "Cobble Badge",
+      "Legend Badge",
+      "Beacon Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-blaine",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Blaine award for defeating the Cinnabar Island Gym?",
+    "choices": [
+      "Volcano Badge",
+      "Dynamo Badge",
+      "Relic Badge",
+      "Mineral Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-whitney",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Whitney award for defeating the Goldenrod City Gym?",
+    "choices": [
+      "Plain Badge",
+      "Relic Badge",
+      "Rising Badge",
+      "Earth Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-morty",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Morty award for defeating the Ecruteak City Gym?",
+    "choices": [
+      "Fog Badge",
+      "Mind Badge",
+      "Stone Badge",
+      "Legend Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-jasmine",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Jasmine award for defeating the Olivine City Gym?",
+    "choices": [
+      "Mineral Badge",
+      "Iceberg Badge",
+      "Quake Badge",
+      "Icicle Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-clair",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Clair award for defeating the Blackthorn City Gym?",
+    "choices": [
+      "Rising Badge",
+      "Bug Badge",
+      "Quake Badge",
+      "Glacier Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-flannery",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Flannery award for defeating the Lavaridge Town Gym?",
+    "choices": [
+      "Heat Badge",
+      "Glacier Badge",
+      "Iceberg Badge",
+      "Fen Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-norman",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Norman award for defeating the Petalburg City Gym?",
+    "choices": [
+      "Balance Badge",
+      "Voltage Badge",
+      "Cliff Badge",
+      "Iceberg Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-tate-and-liza",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "trainers",
+    "question": "Which badge does Tate and Liza award for defeating the Mossdeep City Gym?",
+    "choices": [
+      "Mind Badge",
+      "Fairy Badge",
+      "Heat Badge",
+      "Fog Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-roark",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Roark award for defeating the Oreburgh City Gym?",
+    "choices": [
+      "Coal Badge",
+      "Cobble Badge",
+      "Fen Badge",
+      "Fairy Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-fantina",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Fantina award for defeating the Hearthome City Gym?",
+    "choices": [
+      "Relic Badge",
+      "Rumble Badge",
+      "Rising Badge",
+      "Fen Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-volkner",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Volkner award for defeating the Sunyshore City Gym?",
+    "choices": [
+      "Beacon Badge",
+      "Rain Badge",
+      "Bolt Badge",
+      "Balance Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-elesa",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Elesa award for defeating the Nimbasa City Gym?",
+    "choices": [
+      "Bolt Badge",
+      "Fen Badge",
+      "Mind Badge",
+      "Toxic Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-skyla",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Skyla award for defeating the Mistralton City Gym?",
+    "choices": [
+      "Jet Badge",
+      "Soul Badge",
+      "Mine Badge",
+      "Dynamo Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-korrina",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Korrina award for defeating the Shalour City Gym?",
+    "choices": [
+      "Rumble Badge",
+      "Quake Badge",
+      "Coal Badge",
+      "Mine Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-clemont",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Clemont award for defeating the Lumiose City Gym?",
+    "choices": [
+      "Voltage Badge",
+      "Marsh Badge",
+      "Glacier Badge",
+      "Icicle Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:badge-valerie",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "trainers",
+    "question": "Which badge does Valerie award for defeating the Laverre City Gym?",
+    "choices": [
+      "Fairy Badge",
+      "Toxic Badge",
+      "Cliff Badge",
+      "Trio Badge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-pallet-town",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Pallet Town?",
+    "choices": [
+      "Kanto",
+      "Johto",
+      "Unova",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-lavender-town",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Lavender Town?",
+    "choices": [
+      "Kanto",
+      "Unova",
+      "Johto",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-saffron-city",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Saffron City?",
+    "choices": [
+      "Kanto",
+      "Unova",
+      "Sinnoh",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-new-bark-town",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit New Bark Town?",
+    "choices": [
+      "Johto",
+      "Alola",
+      "Kanto",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-goldenrod-city",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Goldenrod City?",
+    "choices": [
+      "Johto",
+      "Kalos",
+      "Unova",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-ecruteak-city",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Ecruteak City?",
+    "choices": [
+      "Johto",
+      "Kanto",
+      "Unova",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-blackthorn-city",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "In which region would you visit Blackthorn City?",
+    "choices": [
+      "Johto",
+      "Hoenn",
+      "Alola",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-littleroot-town",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Littleroot Town?",
+    "choices": [
+      "Hoenn",
+      "Alola",
+      "Sinnoh",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-slateport-city",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Slateport City?",
+    "choices": [
+      "Hoenn",
+      "Kanto",
+      "Johto",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-sootopolis-city",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Sootopolis City?",
+    "choices": [
+      "Hoenn",
+      "Alola",
+      "Sinnoh",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-twinleaf-town",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Twinleaf Town?",
+    "choices": [
+      "Sinnoh",
+      "Kanto",
+      "Hoenn",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-hearthome-city",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Hearthome City?",
+    "choices": [
+      "Sinnoh",
+      "Johto",
+      "Unova",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-sunyshore-city",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "In which region would you visit Sunyshore City?",
+    "choices": [
+      "Sinnoh",
+      "Unova",
+      "Kalos",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-nuvema-town",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Nuvema Town?",
+    "choices": [
+      "Unova",
+      "Kalos",
+      "Kanto",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-castelia-city",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Castelia City?",
+    "choices": [
+      "Unova",
+      "Hoenn",
+      "Sinnoh",
+      "Johto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-opelucid-city",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Opelucid City?",
+    "choices": [
+      "Unova",
+      "Kalos",
+      "Alola",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-vaniville-town",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Vaniville Town?",
+    "choices": [
+      "Kalos",
+      "Alola",
+      "Johto",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-lumiose-city",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Lumiose City?",
+    "choices": [
+      "Kalos",
+      "Alola",
+      "Hoenn",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-anistar-city",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Anistar City?",
+    "choices": [
+      "Kalos",
+      "Kanto",
+      "Johto",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-iki-town",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Iki Town?",
+    "choices": [
+      "Alola",
+      "Hoenn",
+      "Kalos",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:town-po-town",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In which region would you visit Po Town?",
+    "choices": [
+      "Alola",
+      "Kalos",
+      "Unova",
+      "Johto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-cerulean-cave",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Cerulean Cave?",
+    "choices": [
+      "Kanto",
+      "Sinnoh",
+      "Alola",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-mt.-moon",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Mt. Moon?",
+    "choices": [
+      "Kanto",
+      "Alola",
+      "Kalos",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-seafoam-islands",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Seafoam Islands?",
+    "choices": [
+      "Kanto",
+      "Johto",
+      "Kalos",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-viridian-forest",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Viridian Forest?",
+    "choices": [
+      "Kanto",
+      "Johto",
+      "Unova",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-ruins-of-alph",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Ruins of Alph?",
+    "choices": [
+      "Johto",
+      "Hoenn",
+      "Alola",
+      "Kalos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-ilex-forest",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Ilex Forest?",
+    "choices": [
+      "Johto",
+      "Unova",
+      "Alola",
+      "Kalos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-burned-tower",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Burned Tower?",
+    "choices": [
+      "Johto",
+      "Alola",
+      "Sinnoh",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-whirl-islands",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Whirl Islands?",
+    "choices": [
+      "Johto",
+      "Alola",
+      "Unova",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-lake-of-rage",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "places",
+    "question": "Which region is home to Lake of Rage?",
+    "choices": [
+      "Johto",
+      "Kanto",
+      "Hoenn",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-mt.-chimney",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Mt. Chimney?",
+    "choices": [
+      "Hoenn",
+      "Kanto",
+      "Alola",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-meteor-falls",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Meteor Falls?",
+    "choices": [
+      "Hoenn",
+      "Unova",
+      "Sinnoh",
+      "Kalos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-mt.-pyre",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Mt. Pyre?",
+    "choices": [
+      "Hoenn",
+      "Unova",
+      "Johto",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-cave-of-origin",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Cave of Origin?",
+    "choices": [
+      "Hoenn",
+      "Kalos",
+      "Johto",
+      "Sinnoh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-sky-pillar",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Sky Pillar?",
+    "choices": [
+      "Hoenn",
+      "Unova",
+      "Sinnoh",
+      "Kalos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-lake-verity",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Lake Verity?",
+    "choices": [
+      "Sinnoh",
+      "Johto",
+      "Alola",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-old-chateau",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Old Chateau?",
+    "choices": [
+      "Sinnoh",
+      "Unova",
+      "Kanto",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-mt.-coronet",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Mt. Coronet?",
+    "choices": [
+      "Sinnoh",
+      "Hoenn",
+      "Alola",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-lake-valor",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Lake Valor?",
+    "choices": [
+      "Sinnoh",
+      "Kalos",
+      "Johto",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-spear-pillar",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "places",
+    "question": "Which region is home to Spear Pillar?",
+    "choices": [
+      "Sinnoh",
+      "Kanto",
+      "Alola",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-chargestone-cave",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Chargestone Cave?",
+    "choices": [
+      "Unova",
+      "Alola",
+      "Sinnoh",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-celestial-tower",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Celestial Tower?",
+    "choices": [
+      "Unova",
+      "Johto",
+      "Alola",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-dragonspiral-tower",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Dragonspiral Tower?",
+    "choices": [
+      "Unova",
+      "Kalos",
+      "Johto",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-frost-cavern",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Frost Cavern?",
+    "choices": [
+      "Kalos",
+      "Alola",
+      "Hoenn",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-brooklet-hill",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Brooklet Hill?",
+    "choices": [
+      "Alola",
+      "Kalos",
+      "Johto",
+      "Kanto"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-vast-poni-canyon",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Vast Poni Canyon?",
+    "choices": [
+      "Alola",
+      "Sinnoh",
+      "Unova",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:landmark-mount-lanakila",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "Which region is home to Mount Lanakila?",
+    "choices": [
+      "Alola",
+      "Unova",
+      "Kanto",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-kanto",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Red and Blue?",
+    "choices": [
+      "Kanto",
+      "Sinnoh",
+      "Alola",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-johto",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Gold and Silver?",
+    "choices": [
+      "Johto",
+      "Hoenn",
+      "Sinnoh",
+      "Unova"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-hoenn",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Ruby and Sapphire?",
+    "choices": [
+      "Hoenn",
+      "Unova",
+      "Kalos",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-sinnoh",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Diamond and Pearl?",
+    "choices": [
+      "Sinnoh",
+      "Johto",
+      "Kalos",
+      "Alola"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-unova",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Black and White?",
+    "choices": [
+      "Unova",
+      "Alola",
+      "Kanto",
+      "Kalos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-kalos",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon X and Y?",
+    "choices": [
+      "Kalos",
+      "Johto",
+      "Unova",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:game-region-alola",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "games",
+    "question": "What is the main region explored in Pokémon Sun and Moon?",
+    "choices": [
+      "Alola",
+      "Kanto",
+      "Unova",
+      "Hoenn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-red-&-blue",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Red and Blue's League challenge?",
+    "choices": [
+      "Blue",
+      "Diantha",
+      "Iris",
+      "Lance"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-gold-&-silver",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Gold and Silver's League challenge?",
+    "choices": [
+      "Lance",
+      "Alder",
+      "Iris",
+      "Blue"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-ruby-&-sapphire",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Ruby and Sapphire's League challenge?",
+    "choices": [
+      "Steven",
+      "Blue",
+      "Lance",
+      "Diantha"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-emerald",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Emerald's League challenge?",
+    "choices": [
+      "Wallace",
+      "Blue",
+      "Lance",
+      "Diantha"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-diamond-&-pearl",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Diamond and Pearl's League challenge?",
+    "choices": [
+      "Cynthia",
+      "Alder",
+      "Iris",
+      "Steven"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-black-2-&-white-2",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon Black 2 and White 2's League challenge?",
+    "choices": [
+      "Iris",
+      "Diantha",
+      "Blue",
+      "Alder"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:champion-x-&-y",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "Who is the Pokémon League Champion faced at the end of Pokémon X and Y's League challenge?",
+    "choices": [
+      "Diantha",
+      "Alder",
+      "Cynthia",
+      "Lance"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:rival-barry",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which of these Trainers is a rival in Pokémon Diamond and Pearl?",
+    "choices": [
+      "Barry",
+      "Gladion",
+      "Wally",
+      "Shauna"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:rival-hugh",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which of these Trainers is a rival in Pokémon Black 2 and White 2?",
+    "choices": [
+      "Hugh",
+      "Silver",
+      "Wally",
+      "Shauna"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:rival-silver",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "characters",
+    "question": "Which of these Trainers is a rival in Pokémon Gold and Silver?",
+    "choices": [
+      "Silver",
+      "Wally",
+      "Shauna",
+      "Hugh"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokeQuiz",
+      "url": "https://github.com/Dechrissen/PokeQuiz/blob/23389d617ebc176a7caaa13760160888d039b3fd/pokequiz/pokequiz.sqlite",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:type-25",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What is the type combination of Pikachu?",
+    "choices": [
+      "Electric",
+      "Fairy/Poison",
+      "Flying/Grass",
+      "Ghost/Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/25/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-94",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What is the type combination of Gengar?",
+    "choices": [
+      "Ghost/Poison",
+      "Fire/Grass",
+      "Normal/Poison",
+      "Dragon/Poison"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/94/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-130",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What is the type combination of Gyarados?",
+    "choices": [
+      "Flying/Water",
+      "Ghost/Steel",
+      "Grass/Steel",
+      "Dragon/Rock"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/130/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-249",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What is the type combination of Lugia?",
+    "choices": [
+      "Flying/Psychic",
+      "Grass/Steel",
+      "Bug/Poison",
+      "Bug/Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/249/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-302",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "types",
+    "question": "What is the type combination of Sableye?",
+    "choices": [
+      "Dark/Ghost",
+      "Fairy/Water",
+      "Dragon/Ground",
+      "Grass/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/302/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-330",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Flygon?",
+    "choices": [
+      "Dragon/Ground",
+      "Fighting/Normal",
+      "Dragon/Grass",
+      "Electric/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/330/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-334",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Altaria?",
+    "choices": [
+      "Dragon/Flying",
+      "Fire/Water",
+      "Fire/Flying",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/334/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-448",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Lucario?",
+    "choices": [
+      "Fighting/Steel",
+      "Dark/Fairy",
+      "Fire/Normal",
+      "Dark/Ice"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/448/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-303",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Mawile?",
+    "choices": [
+      "Fairy/Steel",
+      "Fighting/Ground",
+      "Flying",
+      "Grass/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/303/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-298",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Azurill?",
+    "choices": [
+      "Fairy/Normal",
+      "Poison/Steel",
+      "Bug/Flying",
+      "Ground/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/298/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-452",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Drapion?",
+    "choices": [
+      "Dark/Poison",
+      "Fire",
+      "Bug/Water",
+      "Dark/Ice"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/452/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-479",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Rotom in its base form?",
+    "choices": [
+      "Electric/Ghost",
+      "Psychic/Rock",
+      "Fighting/Psychic",
+      "Fighting/Normal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/479/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-487",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Giratina in either of its regular formes?",
+    "choices": [
+      "Dragon/Ghost",
+      "Ice/Rock",
+      "Fire/Ground",
+      "Fighting/Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/487/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-635",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "types",
+    "question": "What is the type combination of Hydreigon?",
+    "choices": [
+      "Dark/Dragon",
+      "Dragon/Water",
+      "Dark/Rock",
+      "Poison/Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/635/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-781",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Dhelmise?",
+    "choices": [
+      "Ghost/Grass",
+      "Grass/Rock",
+      "Fairy/Rock",
+      "Bug/Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/781/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-887",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Dragapult?",
+    "choices": [
+      "Dragon/Ghost",
+      "Water",
+      "Poison",
+      "Dark/Fighting"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/887/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-858",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Hatterene?",
+    "choices": [
+      "Fairy/Psychic",
+      "Dark/Ice",
+      "Rock/Steel",
+      "Fighting/Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/858/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-849",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Toxtricity?",
+    "choices": [
+      "Electric/Poison",
+      "Dark/Electric",
+      "Poison",
+      "Steel/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/849/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-823",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Corviknight?",
+    "choices": [
+      "Flying/Steel",
+      "Electric/Flying",
+      "Dragon/Rock",
+      "Poison/Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/823/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:type-867",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What is the type combination of Runerigus?",
+    "choices": [
+      "Ghost/Ground",
+      "Ground/Water",
+      "Grass/Rock",
+      "Dark/Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/867/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:regional-type-raichu-alola",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What are Alolan Raichu's types?",
+    "choices": [
+      "Electric/Psychic",
+      "Ground/Water",
+      "Grass/Rock",
+      "Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/10100/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:regional-type-weezing-galar",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What are Galarian Weezing's types?",
+    "choices": [
+      "Fairy/Poison",
+      "Flying/Grass",
+      "Grass/Steel",
+      "Electric/Ice"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/10167/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:regional-type-slowbro-galar",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What are Galarian Slowbro's types?",
+    "choices": [
+      "Poison/Psychic",
+      "Fighting/Rock",
+      "Grass/Psychic",
+      "Ghost/Grass"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/10165/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:regional-type-zoroark-hisui",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "types",
+    "question": "What are Hisuian Zoroark's types?",
+    "choices": [
+      "Ghost/Normal",
+      "Dragon/Rock",
+      "Dark/Ground",
+      "Grass/Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/10239/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-26",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Raichu?",
+    "choices": [
+      "Pikachu",
+      "Magmar",
+      "Tinkatuff",
+      "Poliwag"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/26/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-59",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Arcanine?",
+    "choices": [
+      "Growlithe",
+      "Primeape",
+      "Inkay",
+      "Houndour"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/59/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-130",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Gyarados?",
+    "choices": [
+      "Magikarp",
+      "Klink",
+      "Duosion",
+      "Swablu"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/130/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-134",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Vaporeon?",
+    "choices": [
+      "Eevee",
+      "Drowzee",
+      "Scyther",
+      "Togepi"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/134/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-149",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Dragonite?",
+    "choices": [
+      "Dragonair",
+      "Chimchar",
+      "Pawniard",
+      "Pancham"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/149/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-169",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Crobat?",
+    "choices": [
+      "Golbat",
+      "Anorith",
+      "Swirlix",
+      "Taillow"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/169/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-196",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Espeon?",
+    "choices": [
+      "Eevee",
+      "Tangela",
+      "Popplio",
+      "Lampent"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/196/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-208",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Steelix?",
+    "choices": [
+      "Onix",
+      "Swadloon",
+      "Tympole",
+      "Chansey"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/208/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-212",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Scizor?",
+    "choices": [
+      "Scyther",
+      "Morelull",
+      "Vanillish",
+      "Goldeen"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/212/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-242",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Blissey?",
+    "choices": [
+      "Chansey",
+      "Mienfoo",
+      "Togetic",
+      "Quaxwell"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/242/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-282",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Gardevoir?",
+    "choices": [
+      "Kirlia",
+      "Corphish",
+      "Whismur",
+      "Dragonair"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/282/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-330",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Flygon?",
+    "choices": [
+      "Vibrava",
+      "Venonat",
+      "Primeape",
+      "Steenee"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/330/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-350",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Milotic?",
+    "choices": [
+      "Feebas",
+      "Baltoy",
+      "Timburr",
+      "Arctibax"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/350/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-373",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Salamence?",
+    "choices": [
+      "Shelgon",
+      "Beldum",
+      "Lombre",
+      "Electabuzz"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/373/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-445",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Garchomp?",
+    "choices": [
+      "Gabite",
+      "Scorbunny",
+      "Kricketot",
+      "Fletchling"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/445/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-448",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Lucario?",
+    "choices": [
+      "Riolu",
+      "Foongus",
+      "Remoraid",
+      "Machop"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/448/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-461",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Weavile?",
+    "choices": [
+      "Sneasel",
+      "Fomantis",
+      "Oddish",
+      "Rookidee"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/461/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-472",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Gliscor?",
+    "choices": [
+      "Gligar",
+      "Voltorb",
+      "Nickit",
+      "Spewpa"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/472/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-478",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Froslass?",
+    "choices": [
+      "Snorunt",
+      "Tinkatuff",
+      "Gurdurr",
+      "Fidough"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/478/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-609",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Chandelure?",
+    "choices": [
+      "Lampent",
+      "Caterpie",
+      "Sizzlipede",
+      "Clamperl"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/609/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-637",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Volcarona?",
+    "choices": [
+      "Larvesta",
+      "Naclstack",
+      "Grimer",
+      "Duskull"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/637/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-681",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Aegislash?",
+    "choices": [
+      "Doublade",
+      "Impidimp",
+      "Swadloon",
+      "Clamperl"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/681/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-887",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Dragapult?",
+    "choices": [
+      "Drakloak",
+      "Servine",
+      "Abra",
+      "Lotad"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/887/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-979",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Annihilape?",
+    "choices": [
+      "Primeape",
+      "Wingull",
+      "Skorupi",
+      "Hatenna"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/979/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:preevolution-983",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "Which Pokémon evolves directly into Kingambit?",
+    "choices": [
+      "Bisharp",
+      "Pancham",
+      "Snorunt",
+      "Chespin"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/983/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-26",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Pikachu into Raichu?",
+    "choices": [
+      "Thunder Stone",
+      "Fire Stone",
+      "Water Stone",
+      "Moon Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/10/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-59",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Growlithe into Arcanine?",
+    "choices": [
+      "Fire Stone",
+      "Sun Stone",
+      "Moon Stone",
+      "Shiny Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/25/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-134",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Eevee into Vaporeon?",
+    "choices": [
+      "Water Stone",
+      "Shiny Stone",
+      "Fire Stone",
+      "Sun Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/67/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-135",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Eevee into Jolteon?",
+    "choices": [
+      "Thunder Stone",
+      "Moon Stone",
+      "Fire Stone",
+      "Shiny Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/67/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-136",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Eevee into Flareon?",
+    "choices": [
+      "Fire Stone",
+      "Leaf Stone",
+      "Moon Stone",
+      "Dawn Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/67/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-38",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Vulpix into Ninetales?",
+    "choices": [
+      "Fire Stone",
+      "Water Stone",
+      "Shiny Stone",
+      "Sun Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/15/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-31",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Nidorina into Nidoqueen?",
+    "choices": [
+      "Moon Stone",
+      "Dusk Stone",
+      "Ice Stone",
+      "Thunder Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/12/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-36",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Clefairy into Clefable?",
+    "choices": [
+      "Moon Stone",
+      "Thunder Stone",
+      "Dusk Stone",
+      "Fire Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/14/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-182",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "Which stone can evolve Gloom into Bellossom?",
+    "choices": [
+      "Sun Stone",
+      "Leaf Stone",
+      "Moon Stone",
+      "Dusk Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/18/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-407",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Roselia into Roserade?",
+    "choices": [
+      "Shiny Stone",
+      "Water Stone",
+      "Thunder Stone",
+      "Sun Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/158/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-468",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Togetic into Togekiss?",
+    "choices": [
+      "Shiny Stone",
+      "Dusk Stone",
+      "Ice Stone",
+      "Leaf Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/87/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-475",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve male Kirlia into Gallade?",
+    "choices": [
+      "Dawn Stone",
+      "Water Stone",
+      "Moon Stone",
+      "Dusk Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/140/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-478",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve female Snorunt into Froslass?",
+    "choices": [
+      "Dawn Stone",
+      "Ice Stone",
+      "Water Stone",
+      "Leaf Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/186/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-681",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Doublade into Aegislash?",
+    "choices": [
+      "Dusk Stone",
+      "Fire Stone",
+      "Water Stone",
+      "Ice Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/349/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-429",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Misdreavus into Mismagius?",
+    "choices": [
+      "Dusk Stone",
+      "Water Stone",
+      "Fire Stone",
+      "Thunder Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/98/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-430",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Murkrow into Honchkrow?",
+    "choices": [
+      "Dusk Stone",
+      "Sun Stone",
+      "Ice Stone",
+      "Water Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/97/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-stone-609",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stone can evolve Lampent into Chandelure?",
+    "choices": [
+      "Dusk Stone",
+      "Water Stone",
+      "Leaf Stone",
+      "Dawn Stone"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/308/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-208",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Onix into Steelix by trading, which item must it hold?",
+    "choices": [
+      "Metal Coat",
+      "Deep Sea Scale",
+      "King’s Rock",
+      "Magmarizer"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/41/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-212",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Scyther into Scizor by trading, which item must it hold?",
+    "choices": [
+      "Metal Coat",
+      "Prism Scale",
+      "Reaper Cloth",
+      "Electirizer"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/58/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-230",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Seadra into Kingdra by trading, which item must it hold?",
+    "choices": [
+      "Dragon Scale",
+      "Deep Sea Scale",
+      "Dubious Disc",
+      "Deep Sea Tooth"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/54/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-186",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Poliwhirl into Politoed by trading, which item must it hold?",
+    "choices": [
+      "King’s Rock",
+      "Electirizer",
+      "Dubious Disc",
+      "Magmarizer"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/26/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-199",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Slowpoke into Slowking by trading, which item must it hold?",
+    "choices": [
+      "King’s Rock",
+      "Whipped Dream",
+      "Protector",
+      "Deep Sea Scale"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/33/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-233",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "items",
+    "question": "When evolving Porygon into Porygon2 by trading, which item must it hold?",
+    "choices": [
+      "Upgrade",
+      "Dubious Disc",
+      "Protector",
+      "Dragon Scale"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/68/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-474",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "When evolving Porygon2 into Porygon-Z by trading, which item must it hold?",
+    "choices": [
+      "Dubious Disc",
+      "Prism Scale",
+      "King’s Rock",
+      "Dragon Scale"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/68/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-477",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "When evolving Dusclops into Dusknoir by trading, which item must it hold?",
+    "choices": [
+      "Reaper Cloth",
+      "Dragon Scale",
+      "Prism Scale",
+      "Protector"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/182/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-367",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "When evolving Clamperl into Huntail by trading, which item must it hold?",
+    "choices": [
+      "Deep Sea Tooth",
+      "Metal Coat",
+      "Electirizer",
+      "Prism Scale"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/188/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:evolution-trade-368",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "When evolving Clamperl into Gorebyss by trading, which item must it hold?",
+    "choices": [
+      "Deep Sea Scale",
+      "Upgrade",
+      "Whipped Dream",
+      "Electirizer"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/evolution-chain/188/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-658",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Greninja's Hidden Ability?",
+    "choices": [
+      "Protean",
+      "Drought",
+      "Imposter",
+      "Poison Heal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/658/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-132",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "What is Ditto's Hidden Ability?",
+    "choices": [
+      "Imposter",
+      "Protean",
+      "Intimidate",
+      "Poison Heal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/132/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-149",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "What is Dragonite's Hidden Ability?",
+    "choices": [
+      "Multiscale",
+      "Protean",
+      "Speed Boost",
+      "Imposter"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/149/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-257",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "What is Blaziken's Hidden Ability?",
+    "choices": [
+      "Speed Boost",
+      "Moxie",
+      "Magic Bounce",
+      "Drought"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/257/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-286",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Breloom's Hidden Ability?",
+    "choices": [
+      "Technician",
+      "Drought",
+      "Gale Wings",
+      "Poison Heal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/286/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-472",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Gliscor's Hidden Ability?",
+    "choices": [
+      "Poison Heal",
+      "Multiscale",
+      "Gale Wings",
+      "Protean"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/472/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-130",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "What is Gyarados's Hidden Ability?",
+    "choices": [
+      "Moxie",
+      "Protean",
+      "Drizzle",
+      "Drought"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/130/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-663",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Talonflame's Hidden Ability?",
+    "choices": [
+      "Gale Wings",
+      "Magic Guard",
+      "Moxie",
+      "Protean"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/663/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-302",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Sableye's Hidden Ability?",
+    "choices": [
+      "Prankster",
+      "Drizzle",
+      "Intimidate",
+      "Speed Boost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/302/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-196",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Espeon's Hidden Ability?",
+    "choices": [
+      "Magic Bounce",
+      "Imposter",
+      "Technician",
+      "Intimidate"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/196/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-38",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Ninetales's Hidden Ability?",
+    "choices": [
+      "Drought",
+      "Protean",
+      "Imposter",
+      "Poison Heal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/38/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-186",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Politoed's Hidden Ability?",
+    "choices": [
+      "Drizzle",
+      "Intimidate",
+      "Prankster",
+      "Drought"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/186/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-497",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Serperior's Hidden Ability?",
+    "choices": [
+      "Contrary",
+      "Intimidate",
+      "Gale Wings",
+      "Magic Bounce"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/497/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-727",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Incineroar's Hidden Ability?",
+    "choices": [
+      "Intimidate",
+      "Contrary",
+      "Magic Guard",
+      "Speed Boost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/727/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:hidden-ability-65",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "What is Alakazam's Hidden Ability?",
+    "choices": [
+      "Magic Guard",
+      "Contrary",
+      "Magic Bounce",
+      "Poison Heal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/65/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-383",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "Which Ability does Groudon in its standard form normally have?",
+    "choices": [
+      "Drought",
+      "Air Lock",
+      "Disguise",
+      "Slow Start"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/383/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-382",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "Which Ability does Kyogre in its standard form normally have?",
+    "choices": [
+      "Drizzle",
+      "Bad Dreams",
+      "Disguise",
+      "Air Lock"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/382/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-384",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "Which Ability does Rayquaza in its standard form normally have?",
+    "choices": [
+      "Air Lock",
+      "Pressure",
+      "Drizzle",
+      "Disguise"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/384/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-491",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "Which Ability does Darkrai normally have?",
+    "choices": [
+      "Bad Dreams",
+      "Illusion",
+      "Disguise",
+      "Levitate"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/491/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-289",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "abilities",
+    "question": "Which Ability does Slaking normally have?",
+    "choices": [
+      "Truant",
+      "Drizzle",
+      "Disguise",
+      "Pressure"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/289/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-486",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "Which Ability does Regigigas normally have?",
+    "choices": [
+      "Slow Start",
+      "Drought",
+      "Drizzle",
+      "Truant"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/486/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-571",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "Which Ability does Zoroark normally have?",
+    "choices": [
+      "Illusion",
+      "Air Lock",
+      "Truant",
+      "Drizzle"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/571/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:ability-778",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "Which Ability does Mimikyu normally have?",
+    "choices": [
+      "Disguise",
+      "Bad Dreams",
+      "Drought",
+      "Pressure"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon/778/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-thunderbolt",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "moves",
+    "question": "What type is the move Thunderbolt?",
+    "choices": [
+      "Electric",
+      "Water",
+      "Fighting",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/85/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-flamethrower",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "moves",
+    "question": "What type is the move Flamethrower?",
+    "choices": [
+      "Fire",
+      "Water",
+      "Ground",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/53/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-ice-beam",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "moves",
+    "question": "What type is the move Ice Beam?",
+    "choices": [
+      "Ice",
+      "Fairy",
+      "Water",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/58/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-earthquake",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "moves",
+    "question": "What type is the move Earthquake?",
+    "choices": [
+      "Ground",
+      "Rock",
+      "Dark",
+      "Fire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/89/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-shadow-ball",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "moves",
+    "question": "What type is the move Shadow Ball?",
+    "choices": [
+      "Ghost",
+      "Normal",
+      "Flying",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/247/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-dragon-pulse",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Dragon Pulse?",
+    "choices": [
+      "Dragon",
+      "Ghost",
+      "Normal",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/406/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-stone-edge",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Stone Edge?",
+    "choices": [
+      "Rock",
+      "Poison",
+      "Ground",
+      "Fighting"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/444/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-iron-head",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Iron Head?",
+    "choices": [
+      "Steel",
+      "Ground",
+      "Electric",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/442/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-dark-pulse",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Dark Pulse?",
+    "choices": [
+      "Dark",
+      "Poison",
+      "Bug",
+      "Ghost"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/399/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-moonblast",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Moonblast?",
+    "choices": [
+      "Fairy",
+      "Psychic",
+      "Grass",
+      "Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/585/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-scald",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Scald?",
+    "choices": [
+      "Water",
+      "Flying",
+      "Steel",
+      "Bug"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/503/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-psyshock",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Psyshock?",
+    "choices": [
+      "Psychic",
+      "Fire",
+      "Fighting",
+      "Fairy"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/473/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-aura-sphere",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Aura Sphere?",
+    "choices": [
+      "Fighting",
+      "Bug",
+      "Poison",
+      "Steel"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/396/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-sludge-bomb",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Sludge Bomb?",
+    "choices": [
+      "Poison",
+      "Fire",
+      "Psychic",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/188/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-tri-attack",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "moves",
+    "question": "What type is the move Tri Attack?",
+    "choices": [
+      "Normal",
+      "Bug",
+      "Ice",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/161/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-counter",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "What type is the move Counter?",
+    "choices": [
+      "Fighting",
+      "Psychic",
+      "Rock",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/68/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:move-type-mirror-coat",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "What type is the move Mirror Coat?",
+    "choices": [
+      "Psychic",
+      "Dragon",
+      "Fighting",
+      "Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/move/243/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-electric-130",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Electric-type damage against Gyarados?",
+    "choices": [
+      "Quadruple damage (4×)",
+      "Double damage (2×)",
+      "Normal damage (1×)",
+      "No effect (0×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/13/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-ground-6",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Ground-type damage against Charizard?",
+    "choices": [
+      "No effect (0×)",
+      "Half damage (½×)",
+      "Quadruple damage (4×)",
+      "Normal damage (1×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/5/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-ice-149",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Ice-type damage against Dragonite?",
+    "choices": [
+      "Quadruple damage (4×)",
+      "No effect (0×)",
+      "Double damage (2×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/15/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-fighting-143",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Fighting-type damage against Snorlax?",
+    "choices": [
+      "Double damage (2×)",
+      "Quadruple damage (4×)",
+      "Normal damage (1×)",
+      "No effect (0×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/2/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-water-484",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Water-type damage against Palkia?",
+    "choices": [
+      "Quarter damage (¼×)",
+      "Quadruple damage (4×)",
+      "No effect (0×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/11/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-fighting-442",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Fighting-type damage against Spiritomb?",
+    "choices": [
+      "No effect (0×)",
+      "Quadruple damage (4×)",
+      "Quarter damage (¼×)",
+      "Normal damage (1×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/2/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-poison-303",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Poison-type damage against Mawile?",
+    "choices": [
+      "No effect (0×)",
+      "Quarter damage (¼×)",
+      "Normal damage (1×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/4/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-grass-260",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Grass-type damage against Swampert?",
+    "choices": [
+      "Quadruple damage (4×)",
+      "Quarter damage (¼×)",
+      "No effect (0×)",
+      "Normal damage (1×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/12/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-fire-212",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Fire-type damage against Scizor?",
+    "choices": [
+      "Quadruple damage (4×)",
+      "Half damage (½×)",
+      "Normal damage (1×)",
+      "No effect (0×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/10/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-fairy-302",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Fairy-type damage against Sableye?",
+    "choices": [
+      "Double damage (2×)",
+      "Quarter damage (¼×)",
+      "Quadruple damage (4×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/18/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-ice-130",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Ice-type damage against Gyarados?",
+    "choices": [
+      "Normal damage (1×)",
+      "Half damage (½×)",
+      "Quarter damage (¼×)",
+      "Quadruple damage (4×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/15/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-electric-260",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Electric-type damage against Swampert?",
+    "choices": [
+      "No effect (0×)",
+      "Double damage (2×)",
+      "Quarter damage (¼×)",
+      "Normal damage (1×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/13/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-rock-6",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Rock-type damage against Charizard?",
+    "choices": [
+      "Quadruple damage (4×)",
+      "Half damage (½×)",
+      "No effect (0×)",
+      "Quarter damage (¼×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/6/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-fire-3",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Fire-type damage against Venusaur?",
+    "choices": [
+      "Double damage (2×)",
+      "Quarter damage (¼×)",
+      "Quadruple damage (4×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/10/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-psychic-452",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Psychic-type damage against Drapion?",
+    "choices": [
+      "No effect (0×)",
+      "Quarter damage (¼×)",
+      "Double damage (2×)",
+      "Half damage (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/14/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-ghost-143",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Ghost-type damage against Snorlax?",
+    "choices": [
+      "No effect (0×)",
+      "Quadruple damage (4×)",
+      "Half damage (½×)",
+      "Quarter damage (¼×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/8/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:matchup-dragon-700",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "Using only the standard type chart, how effective is Dragon-type damage against Sylveon?",
+    "choices": [
+      "No effect (0×)",
+      "Quadruple damage (4×)",
+      "Half damage (½×)",
+      "Normal damage (1×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/16/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-electric",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Electric-type attacks?",
+    "choices": [
+      "Ground",
+      "Fighting",
+      "Water",
+      "Psychic"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/13/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-dragon",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Dragon-type attacks?",
+    "choices": [
+      "Fairy",
+      "Psychic",
+      "Dark",
+      "Grass"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/16/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-poison",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Poison-type attacks?",
+    "choices": [
+      "Steel",
+      "Fairy",
+      "Ice",
+      "Normal"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/4/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-ghost",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Ghost-type attacks?",
+    "choices": [
+      "Normal",
+      "Fighting",
+      "Electric",
+      "Dragon"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/8/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-normal",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Normal-type attacks?",
+    "choices": [
+      "Ghost",
+      "Fighting",
+      "Rock",
+      "Ground"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/1/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-ground",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Ground-type attacks?",
+    "choices": [
+      "Flying",
+      "Dragon",
+      "Electric",
+      "Fighting"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/5/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:immunity-psychic",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "type-matchups",
+    "question": "On the standard type chart, which of these types is immune to Psychic-type attacks?",
+    "choices": [
+      "Dark",
+      "Dragon",
+      "Steel",
+      "Flying"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/type/14/",
+      "license": "BSD-3-Clause"
+    }
+  },
+  {
+    "id": "pokemon:dex-name-1",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #1?",
+    "choices": [
+      "Bulbasaur",
+      "Beldum",
+      "Panpour",
+      "Diggersby"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 1,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-25",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #25?",
+    "choices": [
+      "Pikachu",
+      "Quilladin",
+      "Magby",
+      "Rillaboom"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/25/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 25,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-69",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #69?",
+    "choices": [
+      "Bellsprout",
+      "Centiskorch",
+      "Venipede",
+      "Torterra"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/69/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 69,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-100",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #100?",
+    "choices": [
+      "Voltorb",
+      "Golett",
+      "Wailmer",
+      "Oinkologne"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/100/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 100,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-150",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #150?",
+    "choices": [
+      "Mewtwo",
+      "Blitzle",
+      "Ninetales",
+      "Machoke"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/150/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 150,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-151",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #151?",
+    "choices": [
+      "Mew",
+      "Fomantis",
+      "Grafaiai",
+      "Vanilluxe"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/151/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 151,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-67",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #67?",
+    "choices": [
+      "Machoke",
+      "Victreebel",
+      "Dragonite",
+      "Geodude"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/67/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 67,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-200",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #200?",
+    "choices": [
+      "Misdreavus",
+      "Kingdra",
+      "Lugia",
+      "Porygon2"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/200/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 200,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-300",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #300?",
+    "choices": [
+      "Skitty",
+      "Vigoroth",
+      "Vibrava",
+      "Cradily"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/300/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 300,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-420",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #420?",
+    "choices": [
+      "Cherubi",
+      "Magmortar",
+      "Piplup",
+      "Skuntank"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/420/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 420,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-666",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #666?",
+    "choices": [
+      "Vivillon",
+      "Aromatisse",
+      "Sylveon",
+      "Carbink"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/666/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 666,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-700",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #700?",
+    "choices": [
+      "Sylveon",
+      "Chespin",
+      "Spritzee",
+      "Tyrunt"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/700/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 700,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-400",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #400?",
+    "choices": [
+      "Bibarel",
+      "Shieldon",
+      "Combee",
+      "Piplup"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/400/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 400,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-500",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #500?",
+    "choices": [
+      "Emboar",
+      "Lillipup",
+      "Liepard",
+      "Servine"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/500/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 500,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-600",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #600?",
+    "choices": [
+      "Klang",
+      "Ferrothorn",
+      "Gothitelle",
+      "Stunfisk"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/600/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 600,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-777",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #777?",
+    "choices": [
+      "Togedemaru",
+      "Pheromosa",
+      "Pyukumuku",
+      "Araquanid"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/777/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 777,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-800",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #800?",
+    "choices": [
+      "Necrozma",
+      "Drampa",
+      "Greedent",
+      "Nihilego"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/800/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 800,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-900",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #900?",
+    "choices": [
+      "Kleavor",
+      "Arctozolt",
+      "Nymble",
+      "Calyrex"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/900/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 900,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-name-1000",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "Which Pokémon is National Pokédex #1000?",
+    "choices": [
+      "Gholdengo",
+      "Frigibax",
+      "Pecharunt",
+      "Gimmighoul"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1000/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 1000,
+    "dexDirection": "name"
+  },
+  {
+    "id": "pokemon:dex-number-1",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Bulbasaur's National Pokédex number?",
+    "choices": [
+      "#1",
+      "#450",
+      "#698",
+      "#244"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 1,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-4",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Charmander's National Pokédex number?",
+    "choices": [
+      "#4",
+      "#1012",
+      "#89",
+      "#320"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/4/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 4,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-6",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Charizard's National Pokédex number?",
+    "choices": [
+      "#6",
+      "#991",
+      "#788",
+      "#160"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/6/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 6,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-7",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Squirtle's National Pokédex number?",
+    "choices": [
+      "#7",
+      "#371",
+      "#154",
+      "#575"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/7/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 7,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-9",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Blastoise's National Pokédex number?",
+    "choices": [
+      "#9",
+      "#366",
+      "#191",
+      "#674"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/9/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 9,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-25",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Pikachu's National Pokédex number?",
+    "choices": [
+      "#25",
+      "#146",
+      "#174",
+      "#947"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/25/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 25,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-133",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Eevee's National Pokédex number?",
+    "choices": [
+      "#133",
+      "#218",
+      "#961",
+      "#975"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/133/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 133,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-143",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Snorlax's National Pokédex number?",
+    "choices": [
+      "#143",
+      "#790",
+      "#658",
+      "#667"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/143/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 143,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-150",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Mewtwo's National Pokédex number?",
+    "choices": [
+      "#150",
+      "#222",
+      "#20",
+      "#430"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/150/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 150,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-151",
+    "category": "pokemon",
+    "difficulty": "easy",
+    "topic": "pokedex",
+    "question": "What is Mew's National Pokédex number?",
+    "choices": [
+      "#151",
+      "#410",
+      "#966",
+      "#514"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/151/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 151,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-94",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Gengar's National Pokédex number?",
+    "choices": [
+      "#94",
+      "#14",
+      "#134",
+      "#107"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/94/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 94,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-130",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Gyarados's National Pokédex number?",
+    "choices": [
+      "#130",
+      "#141",
+      "#125",
+      "#138"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/130/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 130,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-144",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Articuno's National Pokédex number?",
+    "choices": [
+      "#144",
+      "#22",
+      "#85",
+      "#28"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/144/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 144,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-145",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Zapdos's National Pokédex number?",
+    "choices": [
+      "#145",
+      "#24",
+      "#98",
+      "#130"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/145/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 145,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-146",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Moltres's National Pokédex number?",
+    "choices": [
+      "#146",
+      "#148",
+      "#127",
+      "#117"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/146/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 146,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-149",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Dragonite's National Pokédex number?",
+    "choices": [
+      "#149",
+      "#77",
+      "#81",
+      "#36"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/149/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 149,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-196",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Espeon's National Pokédex number?",
+    "choices": [
+      "#196",
+      "#212",
+      "#228",
+      "#155"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/196/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 196,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-197",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Umbreon's National Pokédex number?",
+    "choices": [
+      "#197",
+      "#221",
+      "#242",
+      "#248"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/197/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 197,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-249",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Lugia's National Pokédex number?",
+    "choices": [
+      "#249",
+      "#233",
+      "#200",
+      "#203"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/249/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 249,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-250",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Ho-Oh's National Pokédex number?",
+    "choices": [
+      "#250",
+      "#159",
+      "#168",
+      "#157"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/250/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 250,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-251",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Celebi's National Pokédex number?",
+    "choices": [
+      "#251",
+      "#163",
+      "#154",
+      "#194"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/251/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 251,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-252",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Treecko's National Pokédex number?",
+    "choices": [
+      "#252",
+      "#367",
+      "#262",
+      "#312"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/252/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 252,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-255",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Torchic's National Pokédex number?",
+    "choices": [
+      "#255",
+      "#311",
+      "#367",
+      "#319"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/255/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 255,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-258",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Mudkip's National Pokédex number?",
+    "choices": [
+      "#258",
+      "#353",
+      "#304",
+      "#288"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/258/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 258,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-282",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Gardevoir's National Pokédex number?",
+    "choices": [
+      "#282",
+      "#295",
+      "#308",
+      "#366"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/282/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 282,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-382",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Kyogre's National Pokédex number?",
+    "choices": [
+      "#382",
+      "#253",
+      "#347",
+      "#320"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/382/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 382,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-383",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Groudon's National Pokédex number?",
+    "choices": [
+      "#383",
+      "#265",
+      "#276",
+      "#379"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/383/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 383,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-384",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Rayquaza's National Pokédex number?",
+    "choices": [
+      "#384",
+      "#298",
+      "#322",
+      "#291"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/384/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 384,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-385",
+    "category": "pokemon",
+    "difficulty": "medium",
+    "topic": "pokedex",
+    "question": "What is Jirachi's National Pokédex number?",
+    "choices": [
+      "#385",
+      "#370",
+      "#295",
+      "#367"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/385/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 385,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-386",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Deoxys's National Pokédex number?",
+    "choices": [
+      "#386",
+      "#395",
+      "#409",
+      "#385"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/386/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 386,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-445",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Garchomp's National Pokédex number?",
+    "choices": [
+      "#445",
+      "#441",
+      "#460",
+      "#456"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/445/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 445,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-448",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Lucario's National Pokédex number?",
+    "choices": [
+      "#448",
+      "#436",
+      "#463",
+      "#455"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/448/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 448,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-483",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Dialga's National Pokédex number?",
+    "choices": [
+      "#483",
+      "#472",
+      "#499",
+      "#501"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/483/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 483,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-484",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Palkia's National Pokédex number?",
+    "choices": [
+      "#484",
+      "#475",
+      "#461",
+      "#492"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/484/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 484,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-487",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Giratina's National Pokédex number?",
+    "choices": [
+      "#487",
+      "#475",
+      "#501",
+      "#462"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/487/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 487,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-491",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Darkrai's National Pokédex number?",
+    "choices": [
+      "#491",
+      "#480",
+      "#503",
+      "#476"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/491/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 491,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-493",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Arceus's National Pokédex number?",
+    "choices": [
+      "#493",
+      "#487",
+      "#495",
+      "#486"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/493/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 493,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-643",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Reshiram's National Pokédex number?",
+    "choices": [
+      "#643",
+      "#667",
+      "#658",
+      "#632"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/643/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 643,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-644",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Zekrom's National Pokédex number?",
+    "choices": [
+      "#644",
+      "#635",
+      "#633",
+      "#625"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/644/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 644,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-646",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Kyurem's National Pokédex number?",
+    "choices": [
+      "#646",
+      "#621",
+      "#634",
+      "#670"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/646/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 646,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-658",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Greninja's National Pokédex number?",
+    "choices": [
+      "#658",
+      "#644",
+      "#681",
+      "#661"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/658/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 658,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-716",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Xerneas's National Pokédex number?",
+    "choices": [
+      "#716",
+      "#719",
+      "#697",
+      "#714"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/716/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 716,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-717",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Yveltal's National Pokédex number?",
+    "choices": [
+      "#717",
+      "#738",
+      "#742",
+      "#716"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/717/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 717,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-718",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Zygarde's National Pokédex number?",
+    "choices": [
+      "#718",
+      "#731",
+      "#711",
+      "#707"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/718/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 718,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-791",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Solgaleo's National Pokédex number?",
+    "choices": [
+      "#791",
+      "#809",
+      "#807",
+      "#789"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/791/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 791,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-792",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Lunala's National Pokédex number?",
+    "choices": [
+      "#792",
+      "#800",
+      "#785",
+      "#779"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/792/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 792,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-800",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Necrozma's National Pokédex number?",
+    "choices": [
+      "#800",
+      "#815",
+      "#784",
+      "#799"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/800/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 800,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-888",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Zacian's National Pokédex number?",
+    "choices": [
+      "#888",
+      "#902",
+      "#865",
+      "#890"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/888/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 888,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-889",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Zamazenta's National Pokédex number?",
+    "choices": [
+      "#889",
+      "#883",
+      "#903",
+      "#894"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/889/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 889,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-890",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Eternatus's National Pokédex number?",
+    "choices": [
+      "#890",
+      "#904",
+      "#909",
+      "#903"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/890/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 890,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-898",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Calyrex's National Pokédex number?",
+    "choices": [
+      "#898",
+      "#923",
+      "#913",
+      "#895"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/898/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 898,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-1007",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Koraidon's National Pokédex number?",
+    "choices": [
+      "#1007",
+      "#995",
+      "#998",
+      "#1009"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1007/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 1007,
+    "dexDirection": "number"
+  },
+  {
+    "id": "pokemon:dex-number-1008",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "pokedex",
+    "question": "What is Miraidon's National Pokédex number?",
+    "choices": [
+      "#1008",
+      "#994",
+      "#1014",
+      "#983"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "PokéAPI",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1008/",
+      "license": "BSD-3-Clause"
+    },
+    "dexNumber": 1008,
+    "dexDirection": "number"
+  }
+]

@@ -38,6 +38,7 @@ spam, or ambiguity.
 
 ### 🎲 Contests
 - Advent: public daily claims December 1–24, per-server role/thread/host settings, dated DM reports, and role counts
+- Trivia: varied Pokémon and TPPC multiple-choice rounds, first-answer locking, scoring, and [documented question sources](docs/trivia-sources.md)
 - RNG tools: `roll`, `choose`, `elim`, `awesome`
 - Reaction-based contests (`choose` supports `winners=<n>`, default 1)
 - Whispers (hidden phrases + optional prizes)
