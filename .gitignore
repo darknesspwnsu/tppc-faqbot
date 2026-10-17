@@ -135,6 +135,7 @@ dist
 
 # local/generated analysis artifacts
 analysis/*.csv
+analysis/marketpoll/
 
 **/.DS_Store
 docs/user-manual-wiki.md

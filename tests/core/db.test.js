@@ -71,6 +71,8 @@ describe("db.js", () => {
     const createStatements = execute.mock.calls.map((call) => call[0]);
     expect(createStatements).toEqual(
       expect.arrayContaining([
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS advent_settings/),
+        expect.stringMatching(/CREATE TABLE IF NOT EXISTS advent_claims[\s\S]*PRIMARY KEY \(guild_id, claim_date, user_id\)[\s\S]*DEFAULT CHARACTER SET utf8mb4/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_ids/),
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS user_texts/),
         expect.stringMatching(/ALTER TABLE user_texts/),
@@ -96,6 +98,37 @@ describe("db.js", () => {
         expect.stringMatching(/CREATE TABLE IF NOT EXISTS scheduled_contest_commands/),
       ])
     );
+  });
+
+  it.each([0, 2])("converts Advent claim columns only when their charset needs migration (count=%s)", async (legacyColumns) => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("TABLE_NAME = 'advent_claims'")) return [[{ total: legacyColumns }]];
+      return [[]];
+    });
+    const { initDb } = await loadDbModule({
+      env: { DB_HOST: "127.0.0.1", DB_USER: "bot", DB_NAME: "tppc" },
+      pool: { execute },
+    });
+    await initDb();
+    expect(execute).toHaveBeenCalledWith(
+      expect.stringContaining("CHARACTER_SET_NAME <> 'utf8mb4'"), ["tppc"]
+    );
+    const conversions = execute.mock.calls.filter(([sql]) => sql.includes("ALTER TABLE advent_claims"));
+    expect(conversions).toHaveLength(legacyColumns ? 1 : 0);
+    if (legacyColumns) expect(conversions[0][0]).toContain("CONVERT TO CHARACTER SET utf8mb4");
+  });
+
+  it("does not finish DB initialization if the Advent charset conversion fails", async () => {
+    const execute = vi.fn(async (sql) => {
+      if (sql.includes("TABLE_NAME = 'advent_claims'")) return [[{ total: 1 }]];
+      if (sql.includes("ALTER TABLE advent_claims")) throw new Error("migration failed");
+      return [[]];
+    });
+    const { initDb } = await loadDbModule({
+      env: { DB_HOST: "127.0.0.1", DB_USER: "bot", DB_NAME: "tppc" },
+      pool: { execute },
+    });
+    await expect(initDb()).rejects.toThrow("migration failed");
   });
 
   it("wraps CRUD helpers with execute calls", async () => {

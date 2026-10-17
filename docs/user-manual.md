@@ -449,6 +449,68 @@ Tracks unique responders in the current channel (admin/privileged only).
 - `!startReading [phrase]` — optional phrase filter (case‑insensitive)
 - `!endReading` — ends and prints the participant list (no pings)
 
+### Advent (`!claim`, `/claim`, `!advent`, `/advent`)
+
+Advent claims are open **December 1–24** each year in TPPC time
+(`America/New_York`), closing at midnight at the start of December 25.
+Dates are fixed and cannot be changed through a command.
+
+Use `!claim` or `/claim` in the configured **public Advent thread**. You must
+currently hold the participant role; staff and the host also need the role to
+claim. Claims in DMs, private threads, and other channels are rejected. Text and
+slash commands share a single claim per user per TPPC calendar date. Slash claim
+responses, including failed/duplicate attempts, are public. Accepted claims are
+stored in MySQL and survive restarts; later role changes do not remove history.
+The submission time determines the claim date even if saving finishes after
+midnight. Reports for a finished day wait up to 15 seconds for that day's claims
+already being processed by this bot to finish. If they are still being saved,
+the bot asks the reporter to retry and does not send an incomplete report.
+
+**Privileged users and the configured Advent host** can use:
+
+- `!advent claims` or `/advent claims` — DM yesterday's report.
+- `!advent claims today` or `/advent claims date:today` — today's report so far.
+- `!advent claims 2026-12-24` or `/advent claims date:2026-12-24` — one specific
+  day's report, including previous years. Reports remain available after Advent.
+- `!advent config` or `/advent config` — view this server's settings.
+- `!advent config role <role ID or mention>` — change the participant role.
+- `!advent config channel <thread ID or mention>` — change the public claim thread.
+- `!advent config host <user ID or mention>` — change the host.
+- `/advent config role:@role channel:#thread host:@user` — update any combination
+  of these settings together. All supplied values are validated before saving.
+- `!advent help` — full Advent command reference.
+- `!rolecount <role ID or mention>` or `/rolecount role_id:<ID>` — fetch the full
+  server member list and count current members with that role, including bots.
+  Counts for all roles share a snapshot cached for 30 seconds, with the snapshot
+  time shown in the reply. Discord cooldown responses state how long to wait.
+
+Each report covers **one day** and includes the accepted claim total and a CSV
+attachment with display names, usernames, Discord user IDs, claim timestamps,
+and links to the original text commands or public slash replies. Names are saved
+at claim time. The report does not recheck current roles. Enable server DMs to
+receive reports; claimant data is not posted publicly if delivery fails.
+Reports include an "as of" timestamp; delayed Discord delivery can appear in a
+later report. Today's report is always a snapshot and does not wait for ongoing
+claims.
+Discord IDs have an apostrophe text prefix in the CSV to preserve their full
+precision in Excel.
+
+Initial IDs are placeholders in `configs/advent.js`: role `00000`, thread
+`11111`, host `22222`. A privileged user must configure real IDs before use.
+Optional checked-in defaults can be supplied per guild in `ADVENT_BY_GUILD`;
+runtime updates persist in MySQL per server and take precedence. The host can
+manage Advent without being on Spectreon's privileged list. Replacing the host
+removes the previous host's Advent access unless they have privileged access.
+
+Normal per-guild command exposure still applies (`advent.claim`,
+`advent.manage`, `advent.rolecount` for text commands; `claim`, `advent`,
+`rolecount` for slash commands). If deployment-level `ALLOWED_CHANNEL_IDS` is
+set, include the Advent thread ID to allow text claims there. Full role counts
+require the bot's Server Members intent to be enabled in the Discord Developer
+Portal; failed member fetches return an error instead of a partial count.
+Claim history uses `utf8mb4` for Unicode names, including emoji. Startup checks
+existing claim columns and converts older character sets only when needed.
+
 ### TPPC Lottery (`!lotto`)
 Companion for the weekly forum lottery (admin starts tracking; users generate combos).
 - `!lotto set <postnumber>` — start tracking from a forum post number (admin only)

@@ -70,6 +70,54 @@ export async function initDb() {
   const db = getDb();
   await execDb(
     db,
+    `CREATE TABLE IF NOT EXISTS advent_settings (
+      guild_id VARCHAR(32) NOT NULL,
+      role_id VARCHAR(32) NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      host_id VARCHAR(32) NOT NULL,
+      updated_by VARCHAR(32) NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id)
+    ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    [],
+    "init.advent_settings"
+  );
+  await execDb(
+    db,
+    `CREATE TABLE IF NOT EXISTS advent_claims (
+      guild_id VARCHAR(32) NOT NULL,
+      claim_date CHAR(10) NOT NULL,
+      user_id VARCHAR(32) NOT NULL,
+      username VARCHAR(128) NOT NULL,
+      display_name VARCHAR(128) NOT NULL,
+      claimed_at_ms BIGINT UNSIGNED NOT NULL,
+      channel_id VARCHAR(32) NOT NULL,
+      source_id VARCHAR(32) NOT NULL,
+      PRIMARY KEY (guild_id, claim_date, user_id)
+    ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    [],
+    "init.advent_claims"
+  );
+  {
+    const [rows] = await execDb(
+      db,
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'advent_claims'
+         AND CHARACTER_SET_NAME IS NOT NULL AND CHARACTER_SET_NAME <> 'utf8mb4'`,
+      [process.env.DB_NAME],
+      "init.advent_claims_charset_check"
+    );
+    if (Number(rows?.[0]?.total || 0) > 0) {
+      await execDb(
+        db,
+        "ALTER TABLE advent_claims CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        [],
+        "init.advent_claims_charset"
+      );
+    }
+  }
+  await execDb(
+    db,
     `
     CREATE TABLE IF NOT EXISTS user_ids (
       guild_id VARCHAR(32) NOT NULL,

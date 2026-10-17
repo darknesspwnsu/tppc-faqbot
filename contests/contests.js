@@ -12,6 +12,7 @@ import { registerPollContest } from "./pollcontest.js";
 import { registerGiveaway } from "./giveaway.js";
 import { registerLotto } from "./lotto.js";
 import { registerCustomLeaderboards } from "./custom_leaderboard.js";
+import { registerAdvent } from "./advent.js";
 import {
   registerScheduledCommands,
   registerScheduledCommandsScheduler,
@@ -19,6 +20,7 @@ import {
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 
 const CONTEST_MODULES = [
+  { id: "advent", register: registerAdvent },
   { id: "rng", register: registerRng },
   { id: "reaction_contests", register: registerReactionContests },
   { id: "whispers", register: registerWhispers },

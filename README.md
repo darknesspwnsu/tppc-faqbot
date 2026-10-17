@@ -37,6 +37,7 @@ spam, or ambiguity.
 ---
 
 ### 🎲 Contests
+- Advent: public daily claims December 1–24, per-server role/thread/host settings, dated DM reports, and role counts
 - RNG tools: `roll`, `choose`, `elim`, `awesome`
 - Reaction-based contests (`choose` supports `winners=<n>`, default 1)
 - Whispers (hidden phrases + optional prizes)
@@ -156,6 +157,9 @@ Slash command exposure can be controlled per guild in `configs/command_exposure.
 
 ## 🧪 Requirements
 
+MarketPoll data can be audited with `npm run marketpoll:audit -- --env /secure/path/production.env`.
+See [the audit guide](docs/marketpoll-audit.md) for read-only production access, options, and report outputs.
+
 - **Node.js 20.19+** (22 LTS recommended; `.nvmrc` pinned to `22.12.0`)
 - **Discord.js v14**
 - **MySQL / MariaDB** (required for most features)
@@ -212,6 +216,7 @@ The bot automatically creates required tables:
 * `rpg_leaderboards` — cached RPG leaderboards
 * `rpg_pokedex` — cached pokedex payloads
 * `contests` / `contest_entries` — giveaways and contest state
+* `advent_settings` / `advent_claims` — per-server Advent settings and permanent daily claim history
 
 If DB is unavailable, some features safely degrade (e.g. promos fall back to memory).
 

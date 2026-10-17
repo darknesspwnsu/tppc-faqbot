@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../contests/rng.js", () => ({ registerRng: vi.fn() }));
+vi.mock("../../contests/advent.js", () => ({ registerAdvent: vi.fn() }));
 vi.mock("../../contests/reaction_contests.js", () => ({ registerReactionContests: vi.fn() }));
 vi.mock("../../contests/whispers.js", () => ({ registerWhispers: vi.fn() }));
 vi.mock("../../contests/reading.js", () => ({ registerReading: vi.fn() }));
@@ -16,6 +17,7 @@ vi.mock("../../contests/scheduled_commands.js", () => ({
 
 import { registerContests, listContests } from "../../contests/contests.js";
 import { registerRng } from "../../contests/rng.js";
+import { registerAdvent } from "../../contests/advent.js";
 import { registerReactionContests } from "../../contests/reaction_contests.js";
 import { registerWhispers } from "../../contests/whispers.js";
 import { registerReading } from "../../contests/reading.js";
@@ -29,6 +31,7 @@ import { registerScheduledCommands } from "../../contests/scheduled_commands.js"
 describe("contests registry", () => {
   it("lists contest modules in order", () => {
     expect(listContests()).toEqual([
+      "advent",
       "rng",
       "reaction_contests",
       "whispers",
@@ -46,6 +49,7 @@ describe("contests registry", () => {
     const register = vi.fn();
     registerContests(register);
 
+    expect(registerAdvent).toHaveBeenCalledWith(register);
     expect(registerRng).toHaveBeenCalledWith(register);
     expect(registerReactionContests).toHaveBeenCalledWith(register);
     expect(registerWhispers).toHaveBeenCalledWith(register);

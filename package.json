@@ -13,6 +13,7 @@
     "stop:dev:docker": "./scripts/stop-dev.sh",
     "sync:swap-status": "node scripts/sync_swap_status_data.js",
     "faq:eval": "node scripts/faq_eval.js",
+    "marketpoll:audit": "node scripts/audit_marketpoll.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest",
