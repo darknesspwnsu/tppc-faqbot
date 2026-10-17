@@ -58,8 +58,8 @@ describe("trivia helpers", () => {
     }
     for (const difficulty of ["easy", "medium", "hard"]) {
       const general = questions.filter((q) => q.difficulty === difficulty && q.topic !== "pokedex");
-      expect(general.length).toBeGreaterThan(50);
-      expect(new Set(general.map((q) => q.topic)).size).toBeGreaterThanOrEqual(8);
+      expect(general.length).toBeGreaterThanOrEqual(difficulty === "hard" ? 8 : 50);
+      expect(new Set(general.map((q) => q.topic)).size).toBeGreaterThanOrEqual(difficulty === "hard" ? 5 : 8);
     }
     for (const topic of ["characters", "trainers", "places", "games", "evolution", "items", "moves", "abilities", "anime"]) {
       expect(questions.some((q) => q.topic === topic)).toBe(true);
@@ -93,6 +93,37 @@ describe("trivia helpers", () => {
       expect(buildPokemonQuestion(difficulty).topic).not.toBe("pokedex");
       expect(buildPokemonQuestion(difficulty)).toMatchObject({ category: "pokemon", difficulty });
     }
+  });
+
+  it("keeps the dex probability when either question group has exhausted its recent pool", () => {
+    const random = vi.spyOn(Math, "random");
+    for (const difficulty of ["easy", "medium", "hard"]) {
+      const candidates = loadCuratedQuestions().filter((q) => q.category === "pokemon" && q.difficulty === difficulty);
+      const generalHistory = candidates.filter((q) => q.topic !== "pokedex").map((q) => q.id);
+      random.mockReturnValue(0.5);
+      const general = buildPokemonQuestion(difficulty, generalHistory);
+      expect(general.topic).not.toBe("pokedex");
+      expect(general.id).not.toBe(generalHistory.at(-1));
+      const dexHistory = candidates.filter((q) => q.topic === "pokedex").map((q) => q.id);
+      random.mockReturnValue(0.1);
+      const dex = buildPokemonQuestion(difficulty, dexHistory);
+      expect(dex.topic).toBe("pokedex");
+      expect(dex.id).not.toBe(dexHistory.at(-1));
+    }
+  });
+
+  it("rates basic evolution and Gym specialities as easy across all generations", () => {
+    const questions = loadCuratedQuestions();
+    for (const q of questions.filter((q) => /pokemon:(preevolution|gym-type)-/.test(q.id))) {
+      expect(q.difficulty, q.id).toBe("easy");
+    }
+    for (const q of questions.filter((q) => /pokemon:(badge|evolution-trade|regional-type)-/.test(q.id))) {
+      expect(q.difficulty, q.id).toBe("medium");
+    }
+    expect(questions.find((q) => q.id === "pokemon:preevolution-461").difficulty).toBe("easy");
+    expect(questions.find((q) => q.id === "pokemon:gym-type-grant").difficulty).toBe("easy");
+    expect(questions.find((q) => q.id === "pokemon:evolution-stone-135").difficulty).toBe("easy");
+    expect(questions.find((q) => q.id === "pokemon:hidden-ability-38").difficulty).toBe("medium");
   });
 
   it("keeps every non-dex topic reachable without weighting by bank size", () => {

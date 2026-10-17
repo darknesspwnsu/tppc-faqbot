@@ -48,6 +48,23 @@ Standard, regional, Mega, and Primal forms are distinguished where relevant.
 Reversed dual-type order cannot create two correct choices. Answer choices are
 shuffled on every round.
 
+Difficulty is stored on each question; it is never randomly assigned at runtime.
+The picker can randomly select a difficulty when configured for `all`, but each
+question retains its reviewed rating. Generation alone is not a difficulty rule:
+
+- **Easy:** direct evolution recognition, Gym type specialities, common move and
+  Pokémon types, basic characters and game regions, and familiar evolution stones.
+- **Medium:** specific badges or locations, trade items, less familiar stones,
+  regional or misleading types, Hidden Abilities, and type-effectiveness details.
+- **Hard:** obscure details such as Goldenrod Gym's layout, Pokémon Conquest's
+  kingdom count or perfect links, precise release history, and unusual stat trivia.
+  Dex landmarks keep their separately configured recognition/distractor tiers.
+
+The hard general bank is deliberately smaller than the easier banks. It cycles
+older questions when exhausted rather than inflating easy questions to fill a
+quota. The 15% dex draw is made before recent-question filtering, so exhausting
+the general bank cannot force additional dex rounds.
+
 Excluded source entries include an incorrect claim that Rhyhorn was the first
 Pokémon designed, ambiguous anime counts, outdated publishing information,
 unqualified move-availability questions, and Kukui/Hau described as reigning

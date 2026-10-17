@@ -59,7 +59,7 @@
   {
     "id": "pokemon:professor-sinnoh",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which professor introduces new Trainers to the Sinnoh region?",
     "choices": [
@@ -78,7 +78,7 @@
   {
     "id": "pokemon:professor-unova",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which professor introduces new Trainers to the Unova region?",
     "choices": [
@@ -97,7 +97,7 @@
   {
     "id": "pokemon:professor-kalos",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which professor introduces new Trainers to the Kalos region?",
     "choices": [
@@ -116,7 +116,7 @@
   {
     "id": "pokemon:professor-alola",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which professor introduces new Trainers to the Alola region?",
     "choices": [
@@ -192,7 +192,7 @@
   {
     "id": "pokemon:team-team-galactic",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who leads Team Galactic in the original games set in Sinnoh?",
     "choices": [
@@ -211,7 +211,7 @@
   {
     "id": "pokemon:team-team-flare",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who leads Team Flare in the original games set in Kalos?",
     "choices": [
@@ -230,7 +230,7 @@
   {
     "id": "pokemon:team-team-skull",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who leads Team Skull in the original games set in Alola?",
     "choices": [
@@ -249,7 +249,7 @@
   {
     "id": "pokemon:team-aether-foundation",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is president of the Aether Foundation in Pokémon Sun and Moon?",
     "choices": [
@@ -572,7 +572,7 @@
   {
     "id": "pokemon:gym-type-roxanne",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Rustboro City Gym, which type does Roxanne specialize in?",
     "choices": [
@@ -591,7 +591,7 @@
   {
     "id": "pokemon:gym-type-brawly",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Dewford Town Gym, which type does Brawly specialize in?",
     "choices": [
@@ -610,7 +610,7 @@
   {
     "id": "pokemon:gym-type-wattson",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Mauville City Gym, which type does Wattson specialize in?",
     "choices": [
@@ -629,7 +629,7 @@
   {
     "id": "pokemon:gym-type-flannery",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Lavaridge Town Gym, which type does Flannery specialize in?",
     "choices": [
@@ -648,7 +648,7 @@
   {
     "id": "pokemon:gym-type-norman",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Petalburg City Gym, which type does Norman specialize in?",
     "choices": [
@@ -667,7 +667,7 @@
   {
     "id": "pokemon:gym-type-winona",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Fortree City Gym, which type does Winona specialize in?",
     "choices": [
@@ -686,7 +686,7 @@
   {
     "id": "pokemon:gym-type-tate-and-liza",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Mossdeep City Gym, which type does Tate and Liza specialize in?",
     "choices": [
@@ -705,7 +705,7 @@
   {
     "id": "pokemon:gym-type-wallace",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Sootopolis City Gym, which type does Wallace specialize in?",
     "choices": [
@@ -724,7 +724,7 @@
   {
     "id": "pokemon:gym-type-juan",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Sootopolis City Gym, which type does Juan specialize in?",
     "choices": [
@@ -743,7 +743,7 @@
   {
     "id": "pokemon:gym-type-roark",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Oreburgh City Gym, which type does Roark specialize in?",
     "choices": [
@@ -762,7 +762,7 @@
   {
     "id": "pokemon:gym-type-gardenia",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Eterna City Gym, which type does Gardenia specialize in?",
     "choices": [
@@ -781,7 +781,7 @@
   {
     "id": "pokemon:gym-type-maylene",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Veilstone City Gym, which type does Maylene specialize in?",
     "choices": [
@@ -800,7 +800,7 @@
   {
     "id": "pokemon:gym-type-crasher-wake",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Pastoria City Gym, which type does Crasher Wake specialize in?",
     "choices": [
@@ -819,7 +819,7 @@
   {
     "id": "pokemon:gym-type-fantina",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Hearthome City Gym, which type does Fantina specialize in?",
     "choices": [
@@ -838,7 +838,7 @@
   {
     "id": "pokemon:gym-type-byron",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Canalave City Gym, which type does Byron specialize in?",
     "choices": [
@@ -857,7 +857,7 @@
   {
     "id": "pokemon:gym-type-candice",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Snowpoint City Gym, which type does Candice specialize in?",
     "choices": [
@@ -876,7 +876,7 @@
   {
     "id": "pokemon:gym-type-volkner",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Sunyshore City Gym, which type does Volkner specialize in?",
     "choices": [
@@ -895,7 +895,7 @@
   {
     "id": "pokemon:gym-type-cilan",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Striaton City Gym, which type does Cilan specialize in?",
     "choices": [
@@ -914,7 +914,7 @@
   {
     "id": "pokemon:gym-type-chili",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Striaton City Gym, which type does Chili specialize in?",
     "choices": [
@@ -933,7 +933,7 @@
   {
     "id": "pokemon:gym-type-cress",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Striaton City Gym, which type does Cress specialize in?",
     "choices": [
@@ -952,7 +952,7 @@
   {
     "id": "pokemon:gym-type-lenora",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Nacrene City Gym, which type does Lenora specialize in?",
     "choices": [
@@ -971,7 +971,7 @@
   {
     "id": "pokemon:gym-type-burgh",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Castelia City Gym, which type does Burgh specialize in?",
     "choices": [
@@ -990,7 +990,7 @@
   {
     "id": "pokemon:gym-type-elesa",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Nimbasa City Gym, which type does Elesa specialize in?",
     "choices": [
@@ -1009,7 +1009,7 @@
   {
     "id": "pokemon:gym-type-clay",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Driftveil City Gym, which type does Clay specialize in?",
     "choices": [
@@ -1028,7 +1028,7 @@
   {
     "id": "pokemon:gym-type-skyla",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Mistralton City Gym, which type does Skyla specialize in?",
     "choices": [
@@ -1047,7 +1047,7 @@
   {
     "id": "pokemon:gym-type-brycen",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Icirrus City Gym, which type does Brycen specialize in?",
     "choices": [
@@ -1066,7 +1066,7 @@
   {
     "id": "pokemon:gym-type-drayden",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Opelucid City Gym, which type does Drayden specialize in?",
     "choices": [
@@ -1085,7 +1085,7 @@
   {
     "id": "pokemon:gym-type-iris",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Opelucid City Gym, which type does Iris specialize in?",
     "choices": [
@@ -1104,7 +1104,7 @@
   {
     "id": "pokemon:gym-type-cheren",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Aspertia City Gym, which type does Cheren specialize in?",
     "choices": [
@@ -1123,7 +1123,7 @@
   {
     "id": "pokemon:gym-type-roxie",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Virbank City Gym, which type does Roxie specialize in?",
     "choices": [
@@ -1142,7 +1142,7 @@
   {
     "id": "pokemon:gym-type-marlon",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Humilau City Gym, which type does Marlon specialize in?",
     "choices": [
@@ -1161,7 +1161,7 @@
   {
     "id": "pokemon:gym-type-viola",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Santalune City Gym, which type does Viola specialize in?",
     "choices": [
@@ -1180,7 +1180,7 @@
   {
     "id": "pokemon:gym-type-grant",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Cyllage City Gym, which type does Grant specialize in?",
     "choices": [
@@ -1199,7 +1199,7 @@
   {
     "id": "pokemon:gym-type-korrina",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Shalour City Gym, which type does Korrina specialize in?",
     "choices": [
@@ -1218,7 +1218,7 @@
   {
     "id": "pokemon:gym-type-ramos",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Coumarine City Gym, which type does Ramos specialize in?",
     "choices": [
@@ -1237,7 +1237,7 @@
   {
     "id": "pokemon:gym-type-clemont",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Lumiose City Gym, which type does Clemont specialize in?",
     "choices": [
@@ -1256,7 +1256,7 @@
   {
     "id": "pokemon:gym-type-valerie",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Laverre City Gym, which type does Valerie specialize in?",
     "choices": [
@@ -1275,7 +1275,7 @@
   {
     "id": "pokemon:gym-type-olympia",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Anistar City Gym, which type does Olympia specialize in?",
     "choices": [
@@ -1294,7 +1294,7 @@
   {
     "id": "pokemon:gym-type-wulfric",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "trainers",
     "question": "At the Snowbelle City Gym, which type does Wulfric specialize in?",
     "choices": [
@@ -1579,7 +1579,7 @@
   {
     "id": "pokemon:badge-roark",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Roark award for defeating the Oreburgh City Gym?",
     "choices": [
@@ -1598,7 +1598,7 @@
   {
     "id": "pokemon:badge-fantina",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Fantina award for defeating the Hearthome City Gym?",
     "choices": [
@@ -1617,7 +1617,7 @@
   {
     "id": "pokemon:badge-volkner",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Volkner award for defeating the Sunyshore City Gym?",
     "choices": [
@@ -1636,7 +1636,7 @@
   {
     "id": "pokemon:badge-elesa",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Elesa award for defeating the Nimbasa City Gym?",
     "choices": [
@@ -1655,7 +1655,7 @@
   {
     "id": "pokemon:badge-skyla",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Skyla award for defeating the Mistralton City Gym?",
     "choices": [
@@ -1674,7 +1674,7 @@
   {
     "id": "pokemon:badge-korrina",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Korrina award for defeating the Shalour City Gym?",
     "choices": [
@@ -1693,7 +1693,7 @@
   {
     "id": "pokemon:badge-clemont",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Clemont award for defeating the Lumiose City Gym?",
     "choices": [
@@ -1712,7 +1712,7 @@
   {
     "id": "pokemon:badge-valerie",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "trainers",
     "question": "Which badge does Valerie award for defeating the Laverre City Gym?",
     "choices": [
@@ -1826,7 +1826,7 @@
   {
     "id": "pokemon:town-ecruteak-city",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Ecruteak City?",
     "choices": [
@@ -1845,7 +1845,7 @@
   {
     "id": "pokemon:town-blackthorn-city",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Blackthorn City?",
     "choices": [
@@ -1864,7 +1864,7 @@
   {
     "id": "pokemon:town-littleroot-town",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "places",
     "question": "In which region would you visit Littleroot Town?",
     "choices": [
@@ -1921,7 +1921,7 @@
   {
     "id": "pokemon:town-twinleaf-town",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "places",
     "question": "In which region would you visit Twinleaf Town?",
     "choices": [
@@ -1978,7 +1978,7 @@
   {
     "id": "pokemon:town-nuvema-town",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Nuvema Town?",
     "choices": [
@@ -1997,7 +1997,7 @@
   {
     "id": "pokemon:town-castelia-city",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Castelia City?",
     "choices": [
@@ -2016,7 +2016,7 @@
   {
     "id": "pokemon:town-opelucid-city",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Opelucid City?",
     "choices": [
@@ -2035,7 +2035,7 @@
   {
     "id": "pokemon:town-vaniville-town",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Vaniville Town?",
     "choices": [
@@ -2054,7 +2054,7 @@
   {
     "id": "pokemon:town-lumiose-city",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "places",
     "question": "In which region would you visit Lumiose City?",
     "choices": [
@@ -2073,7 +2073,7 @@
   {
     "id": "pokemon:town-anistar-city",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Anistar City?",
     "choices": [
@@ -2092,7 +2092,7 @@
   {
     "id": "pokemon:town-iki-town",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "In which region would you visit Iki Town?",
     "choices": [
@@ -2111,7 +2111,7 @@
   {
     "id": "pokemon:town-po-town",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "places",
     "question": "In which region would you visit Po Town?",
     "choices": [
@@ -2168,7 +2168,7 @@
   {
     "id": "pokemon:landmark-seafoam-islands",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Seafoam Islands?",
     "choices": [
@@ -2206,7 +2206,7 @@
   {
     "id": "pokemon:landmark-ruins-of-alph",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Ruins of Alph?",
     "choices": [
@@ -2225,7 +2225,7 @@
   {
     "id": "pokemon:landmark-ilex-forest",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Ilex Forest?",
     "choices": [
@@ -2244,7 +2244,7 @@
   {
     "id": "pokemon:landmark-burned-tower",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Burned Tower?",
     "choices": [
@@ -2263,7 +2263,7 @@
   {
     "id": "pokemon:landmark-whirl-islands",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Whirl Islands?",
     "choices": [
@@ -2282,7 +2282,7 @@
   {
     "id": "pokemon:landmark-lake-of-rage",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Lake of Rage?",
     "choices": [
@@ -2377,7 +2377,7 @@
   {
     "id": "pokemon:landmark-sky-pillar",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "places",
     "question": "Which region is home to Sky Pillar?",
     "choices": [
@@ -2472,7 +2472,7 @@
   {
     "id": "pokemon:landmark-spear-pillar",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "places",
     "question": "Which region is home to Spear Pillar?",
     "choices": [
@@ -2491,7 +2491,7 @@
   {
     "id": "pokemon:landmark-chargestone-cave",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Chargestone Cave?",
     "choices": [
@@ -2510,7 +2510,7 @@
   {
     "id": "pokemon:landmark-celestial-tower",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Celestial Tower?",
     "choices": [
@@ -2529,7 +2529,7 @@
   {
     "id": "pokemon:landmark-dragonspiral-tower",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Dragonspiral Tower?",
     "choices": [
@@ -2548,7 +2548,7 @@
   {
     "id": "pokemon:landmark-frost-cavern",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Frost Cavern?",
     "choices": [
@@ -2567,7 +2567,7 @@
   {
     "id": "pokemon:landmark-brooklet-hill",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Brooklet Hill?",
     "choices": [
@@ -2586,7 +2586,7 @@
   {
     "id": "pokemon:landmark-vast-poni-canyon",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Vast Poni Canyon?",
     "choices": [
@@ -2605,7 +2605,7 @@
   {
     "id": "pokemon:landmark-mount-lanakila",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "places",
     "question": "Which region is home to Mount Lanakila?",
     "choices": [
@@ -2700,7 +2700,7 @@
   {
     "id": "pokemon:game-region-unova",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "games",
     "question": "What is the main region explored in Pokémon Black and White?",
     "choices": [
@@ -2719,7 +2719,7 @@
   {
     "id": "pokemon:game-region-kalos",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "games",
     "question": "What is the main region explored in Pokémon X and Y?",
     "choices": [
@@ -2738,7 +2738,7 @@
   {
     "id": "pokemon:game-region-alola",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "games",
     "question": "What is the main region explored in Pokémon Sun and Moon?",
     "choices": [
@@ -2757,7 +2757,7 @@
   {
     "id": "pokemon:champion-red-&-blue",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Red and Blue's League challenge?",
     "choices": [
@@ -2776,7 +2776,7 @@
   {
     "id": "pokemon:champion-gold-&-silver",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Gold and Silver's League challenge?",
     "choices": [
@@ -2795,7 +2795,7 @@
   {
     "id": "pokemon:champion-ruby-&-sapphire",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Ruby and Sapphire's League challenge?",
     "choices": [
@@ -2814,7 +2814,7 @@
   {
     "id": "pokemon:champion-emerald",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Emerald's League challenge?",
     "choices": [
@@ -2833,7 +2833,7 @@
   {
     "id": "pokemon:champion-diamond-&-pearl",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Diamond and Pearl's League challenge?",
     "choices": [
@@ -2852,7 +2852,7 @@
   {
     "id": "pokemon:champion-black-2-&-white-2",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon Black 2 and White 2's League challenge?",
     "choices": [
@@ -2871,7 +2871,7 @@
   {
     "id": "pokemon:champion-x-&-y",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Who is the Pokémon League Champion faced at the end of Pokémon X and Y's League challenge?",
     "choices": [
@@ -2890,7 +2890,7 @@
   {
     "id": "pokemon:rival-barry",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which of these Trainers is a rival in Pokémon Diamond and Pearl?",
     "choices": [
@@ -2909,7 +2909,7 @@
   {
     "id": "pokemon:rival-hugh",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which of these Trainers is a rival in Pokémon Black 2 and White 2?",
     "choices": [
@@ -2928,7 +2928,7 @@
   {
     "id": "pokemon:rival-silver",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "characters",
     "question": "Which of these Trainers is a rival in Pokémon Gold and Silver?",
     "choices": [
@@ -3004,7 +3004,7 @@
   {
     "id": "pokemon:type-249",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What is the type combination of Lugia?",
     "choices": [
@@ -3023,7 +3023,7 @@
   {
     "id": "pokemon:type-302",
     "category": "pokemon",
-    "difficulty": "easy",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What is the type combination of Sableye?",
     "choices": [
@@ -3080,7 +3080,7 @@
   {
     "id": "pokemon:type-448",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Lucario?",
     "choices": [
@@ -3137,7 +3137,7 @@
   {
     "id": "pokemon:type-452",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Drapion?",
     "choices": [
@@ -3175,7 +3175,7 @@
   {
     "id": "pokemon:type-487",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Giratina in either of its regular formes?",
     "choices": [
@@ -3194,7 +3194,7 @@
   {
     "id": "pokemon:type-635",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Hydreigon?",
     "choices": [
@@ -3213,7 +3213,7 @@
   {
     "id": "pokemon:type-781",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What is the type combination of Dhelmise?",
     "choices": [
@@ -3232,7 +3232,7 @@
   {
     "id": "pokemon:type-887",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Dragapult?",
     "choices": [
@@ -3251,7 +3251,7 @@
   {
     "id": "pokemon:type-858",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Hatterene?",
     "choices": [
@@ -3270,7 +3270,7 @@
   {
     "id": "pokemon:type-849",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Toxtricity?",
     "choices": [
@@ -3289,7 +3289,7 @@
   {
     "id": "pokemon:type-823",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Corviknight?",
     "choices": [
@@ -3308,7 +3308,7 @@
   {
     "id": "pokemon:type-867",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "types",
     "question": "What is the type combination of Runerigus?",
     "choices": [
@@ -3327,7 +3327,7 @@
   {
     "id": "pokemon:regional-type-raichu-alola",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What are Alolan Raichu's types?",
     "choices": [
@@ -3346,7 +3346,7 @@
   {
     "id": "pokemon:regional-type-weezing-galar",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What are Galarian Weezing's types?",
     "choices": [
@@ -3365,7 +3365,7 @@
   {
     "id": "pokemon:regional-type-slowbro-galar",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What are Galarian Slowbro's types?",
     "choices": [
@@ -3384,7 +3384,7 @@
   {
     "id": "pokemon:regional-type-zoroark-hisui",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "types",
     "question": "What are Hisuian Zoroark's types?",
     "choices": [
@@ -3498,7 +3498,7 @@
   {
     "id": "pokemon:preevolution-169",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Crobat?",
     "choices": [
@@ -3517,7 +3517,7 @@
   {
     "id": "pokemon:preevolution-196",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Espeon?",
     "choices": [
@@ -3536,7 +3536,7 @@
   {
     "id": "pokemon:preevolution-208",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Steelix?",
     "choices": [
@@ -3555,7 +3555,7 @@
   {
     "id": "pokemon:preevolution-212",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Scizor?",
     "choices": [
@@ -3574,7 +3574,7 @@
   {
     "id": "pokemon:preevolution-242",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Blissey?",
     "choices": [
@@ -3593,7 +3593,7 @@
   {
     "id": "pokemon:preevolution-282",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Gardevoir?",
     "choices": [
@@ -3612,7 +3612,7 @@
   {
     "id": "pokemon:preevolution-330",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Flygon?",
     "choices": [
@@ -3631,7 +3631,7 @@
   {
     "id": "pokemon:preevolution-350",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Milotic?",
     "choices": [
@@ -3650,7 +3650,7 @@
   {
     "id": "pokemon:preevolution-373",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Salamence?",
     "choices": [
@@ -3669,7 +3669,7 @@
   {
     "id": "pokemon:preevolution-445",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Garchomp?",
     "choices": [
@@ -3688,7 +3688,7 @@
   {
     "id": "pokemon:preevolution-448",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Lucario?",
     "choices": [
@@ -3707,7 +3707,7 @@
   {
     "id": "pokemon:preevolution-461",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Weavile?",
     "choices": [
@@ -3726,7 +3726,7 @@
   {
     "id": "pokemon:preevolution-472",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Gliscor?",
     "choices": [
@@ -3745,7 +3745,7 @@
   {
     "id": "pokemon:preevolution-478",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Froslass?",
     "choices": [
@@ -3764,7 +3764,7 @@
   {
     "id": "pokemon:preevolution-609",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Chandelure?",
     "choices": [
@@ -3783,7 +3783,7 @@
   {
     "id": "pokemon:preevolution-637",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Volcarona?",
     "choices": [
@@ -3802,7 +3802,7 @@
   {
     "id": "pokemon:preevolution-681",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Aegislash?",
     "choices": [
@@ -3821,7 +3821,7 @@
   {
     "id": "pokemon:preevolution-887",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Dragapult?",
     "choices": [
@@ -3840,7 +3840,7 @@
   {
     "id": "pokemon:preevolution-979",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Annihilape?",
     "choices": [
@@ -3859,7 +3859,7 @@
   {
     "id": "pokemon:preevolution-983",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "evolution",
     "question": "Which Pokémon evolves directly into Kingambit?",
     "choices": [
@@ -3878,7 +3878,7 @@
   {
     "id": "pokemon:evolution-stone-26",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Pikachu into Raichu?",
     "choices": [
@@ -3897,7 +3897,7 @@
   {
     "id": "pokemon:evolution-stone-59",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Growlithe into Arcanine?",
     "choices": [
@@ -3916,7 +3916,7 @@
   {
     "id": "pokemon:evolution-stone-134",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Eevee into Vaporeon?",
     "choices": [
@@ -3935,7 +3935,7 @@
   {
     "id": "pokemon:evolution-stone-135",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Eevee into Jolteon?",
     "choices": [
@@ -3954,7 +3954,7 @@
   {
     "id": "pokemon:evolution-stone-136",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Eevee into Flareon?",
     "choices": [
@@ -3973,7 +3973,7 @@
   {
     "id": "pokemon:evolution-stone-38",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Vulpix into Ninetales?",
     "choices": [
@@ -3992,7 +3992,7 @@
   {
     "id": "pokemon:evolution-stone-31",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Nidorina into Nidoqueen?",
     "choices": [
@@ -4011,7 +4011,7 @@
   {
     "id": "pokemon:evolution-stone-36",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "items",
     "question": "Which stone can evolve Clefairy into Clefable?",
     "choices": [
@@ -4049,7 +4049,7 @@
   {
     "id": "pokemon:evolution-stone-407",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Roselia into Roserade?",
     "choices": [
@@ -4068,7 +4068,7 @@
   {
     "id": "pokemon:evolution-stone-468",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Togetic into Togekiss?",
     "choices": [
@@ -4087,7 +4087,7 @@
   {
     "id": "pokemon:evolution-stone-475",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve male Kirlia into Gallade?",
     "choices": [
@@ -4106,7 +4106,7 @@
   {
     "id": "pokemon:evolution-stone-478",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve female Snorunt into Froslass?",
     "choices": [
@@ -4125,7 +4125,7 @@
   {
     "id": "pokemon:evolution-stone-681",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Doublade into Aegislash?",
     "choices": [
@@ -4144,7 +4144,7 @@
   {
     "id": "pokemon:evolution-stone-429",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Misdreavus into Mismagius?",
     "choices": [
@@ -4163,7 +4163,7 @@
   {
     "id": "pokemon:evolution-stone-430",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Murkrow into Honchkrow?",
     "choices": [
@@ -4182,7 +4182,7 @@
   {
     "id": "pokemon:evolution-stone-609",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "Which stone can evolve Lampent into Chandelure?",
     "choices": [
@@ -4315,7 +4315,7 @@
   {
     "id": "pokemon:evolution-trade-474",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "When evolving Porygon2 into Porygon-Z by trading, which item must it hold?",
     "choices": [
@@ -4334,7 +4334,7 @@
   {
     "id": "pokemon:evolution-trade-477",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "When evolving Dusclops into Dusknoir by trading, which item must it hold?",
     "choices": [
@@ -4353,7 +4353,7 @@
   {
     "id": "pokemon:evolution-trade-367",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "When evolving Clamperl into Huntail by trading, which item must it hold?",
     "choices": [
@@ -4372,7 +4372,7 @@
   {
     "id": "pokemon:evolution-trade-368",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "items",
     "question": "When evolving Clamperl into Gorebyss by trading, which item must it hold?",
     "choices": [
@@ -4391,7 +4391,7 @@
   {
     "id": "pokemon:hidden-ability-658",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Greninja's Hidden Ability?",
     "choices": [
@@ -4467,7 +4467,7 @@
   {
     "id": "pokemon:hidden-ability-286",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Breloom's Hidden Ability?",
     "choices": [
@@ -4486,7 +4486,7 @@
   {
     "id": "pokemon:hidden-ability-472",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Gliscor's Hidden Ability?",
     "choices": [
@@ -4524,7 +4524,7 @@
   {
     "id": "pokemon:hidden-ability-663",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Talonflame's Hidden Ability?",
     "choices": [
@@ -4543,7 +4543,7 @@
   {
     "id": "pokemon:hidden-ability-302",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Sableye's Hidden Ability?",
     "choices": [
@@ -4562,7 +4562,7 @@
   {
     "id": "pokemon:hidden-ability-196",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Espeon's Hidden Ability?",
     "choices": [
@@ -4581,7 +4581,7 @@
   {
     "id": "pokemon:hidden-ability-38",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Ninetales's Hidden Ability?",
     "choices": [
@@ -4600,7 +4600,7 @@
   {
     "id": "pokemon:hidden-ability-186",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Politoed's Hidden Ability?",
     "choices": [
@@ -4619,7 +4619,7 @@
   {
     "id": "pokemon:hidden-ability-497",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Serperior's Hidden Ability?",
     "choices": [
@@ -4638,7 +4638,7 @@
   {
     "id": "pokemon:hidden-ability-727",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Incineroar's Hidden Ability?",
     "choices": [
@@ -4657,7 +4657,7 @@
   {
     "id": "pokemon:hidden-ability-65",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "What is Alakazam's Hidden Ability?",
     "choices": [
@@ -4676,7 +4676,7 @@
   {
     "id": "pokemon:ability-383",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Groudon in its standard form normally have?",
     "choices": [
@@ -4695,7 +4695,7 @@
   {
     "id": "pokemon:ability-382",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Kyogre in its standard form normally have?",
     "choices": [
@@ -4714,7 +4714,7 @@
   {
     "id": "pokemon:ability-384",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Rayquaza in its standard form normally have?",
     "choices": [
@@ -4733,7 +4733,7 @@
   {
     "id": "pokemon:ability-491",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "Which Ability does Darkrai normally have?",
     "choices": [
@@ -4752,7 +4752,7 @@
   {
     "id": "pokemon:ability-289",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Slaking normally have?",
     "choices": [
@@ -4771,7 +4771,7 @@
   {
     "id": "pokemon:ability-486",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "abilities",
     "question": "Which Ability does Regigigas normally have?",
     "choices": [
@@ -4790,7 +4790,7 @@
   {
     "id": "pokemon:ability-571",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Zoroark normally have?",
     "choices": [
@@ -4809,7 +4809,7 @@
   {
     "id": "pokemon:ability-778",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "easy",
     "topic": "abilities",
     "question": "Which Ability does Mimikyu normally have?",
     "choices": [
@@ -4923,7 +4923,7 @@
   {
     "id": "pokemon:move-type-dragon-pulse",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Dragon Pulse?",
     "choices": [
@@ -4942,7 +4942,7 @@
   {
     "id": "pokemon:move-type-stone-edge",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Stone Edge?",
     "choices": [
@@ -4961,7 +4961,7 @@
   {
     "id": "pokemon:move-type-iron-head",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Iron Head?",
     "choices": [
@@ -4980,7 +4980,7 @@
   {
     "id": "pokemon:move-type-dark-pulse",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Dark Pulse?",
     "choices": [
@@ -4999,7 +4999,7 @@
   {
     "id": "pokemon:move-type-moonblast",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Moonblast?",
     "choices": [
@@ -5018,7 +5018,7 @@
   {
     "id": "pokemon:move-type-scald",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Scald?",
     "choices": [
@@ -5037,7 +5037,7 @@
   {
     "id": "pokemon:move-type-psyshock",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Psyshock?",
     "choices": [
@@ -5056,7 +5056,7 @@
   {
     "id": "pokemon:move-type-aura-sphere",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Aura Sphere?",
     "choices": [
@@ -5075,7 +5075,7 @@
   {
     "id": "pokemon:move-type-sludge-bomb",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Sludge Bomb?",
     "choices": [
@@ -5094,7 +5094,7 @@
   {
     "id": "pokemon:move-type-tri-attack",
     "category": "pokemon",
-    "difficulty": "medium",
+    "difficulty": "easy",
     "topic": "moves",
     "question": "What type is the move Tri Attack?",
     "choices": [
@@ -5113,7 +5113,7 @@
   {
     "id": "pokemon:move-type-counter",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "moves",
     "question": "What type is the move Counter?",
     "choices": [
@@ -5132,7 +5132,7 @@
   {
     "id": "pokemon:move-type-mirror-coat",
     "category": "pokemon",
-    "difficulty": "hard",
+    "difficulty": "medium",
     "topic": "moves",
     "question": "What type is the move Mirror Coat?",
     "choices": [

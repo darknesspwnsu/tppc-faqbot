@@ -166,18 +166,21 @@ function availableQuestions(candidates, recentIds = []) {
 }
 
 function buildPokemonQuestion(difficulty, recentIds = []) {
-  const candidates = availableQuestions(loadCuratedQuestions().filter(
+  const candidates = loadCuratedQuestions().filter(
     (question) => question.category === "pokemon" && question.difficulty === difficulty
-  ), recentIds);
+  );
   const dex = candidates.filter((question) => question.topic === "pokedex");
   const general = candidates.filter((question) => question.topic !== "pokedex");
+  // Pick the group before filtering history: exhausting a small general pool
+  // must not turn the next round into a guaranteed dex question.
   if (dex.length && (!general.length || Math.random() < POKEMON_DEX_CHANCE)) {
-    return randomizeChoices(chooseOne(dex));
+    return randomizeChoices(chooseOne(availableQuestions(dex, recentIds)));
   }
   if (!general.length) return null;
+  const available = availableQuestions(general, recentIds);
   // A large trainer or type sub-pool must not drown out the other topics.
-  const topic = chooseOne([...new Set(general.map((question) => question.topic))]);
-  return randomizeChoices(chooseOne(general.filter((question) => question.topic === topic)));
+  const topic = chooseOne([...new Set(available.map((question) => question.topic))]);
+  return randomizeChoices(chooseOne(available.filter((question) => question.topic === topic)));
 }
 
 function resolveQuestionSelection({ category = "all", difficulty = "all", recentIds = [] } = {}) {
