@@ -4,7 +4,7 @@ import { isAdminOrPrivileged } from "../auth.js";
 import { sendDm } from "../shared/dm.js";
 import { logger } from "../shared/logger.js";
 import { clearTimer, startTimeout } from "../shared/timer_utils.js";
-import { ADVENT_FIRST_DAY, ADVENT_LAST_DAY, ADVENT_TIME_ZONE } from "../configs/advent.js";
+import { ADVENT_DEFAULT_PERIOD, ADVENT_TIME_ZONE, getAdventClaimPeriod } from "../configs/advent.js";
 import { getAdventSettings, updateAdventSettings, insertAdventClaim, getAdventClaims } from "./advent_store.js";
 
 const memberRequests = new Map();
@@ -19,19 +19,28 @@ function eventDate(atMs) {
   return DateTime.fromMillis(atMs, { zone: ADVENT_TIME_ZONE });
 }
 
-function isClaimDate(date) {
-  return date.isValid && date.month === 12 && date.day >= ADVENT_FIRST_DAY && date.day <= ADVENT_LAST_DAY;
+function isClaimDate(date, period = ADVENT_DEFAULT_PERIOD) {
+  const day = date.month * 100 + date.day;
+  return date.isValid && day >= period.startMonth * 100 + period.startDay &&
+    day <= period.endMonth * 100 + period.endDay;
 }
 
-function reportDate(raw, atMs) {
+function periodText(period = ADVENT_DEFAULT_PERIOD) {
+  const start = DateTime.fromObject({ year: 2000, month: period.startMonth, day: period.startDay });
+  const end = DateTime.fromObject({ year: 2000, month: period.endMonth, day: period.endDay });
+  return `${start.toFormat("MMMM d")}–${end.toFormat(period.startMonth === period.endMonth ? "d" : "MMMM d")}`;
+}
+
+function reportDate(raw, atMs, period = ADVENT_DEFAULT_PERIOD) {
   const input = String(raw || "yesterday").trim().toLowerCase();
   const today = eventDate(atMs);
   let date;
   if (input === "today") date = today;
   else if (input === "yesterday") date = today.minus({ days: 1 });
   else if (/^\d{4}-\d{2}-\d{2}$/.test(input)) date = DateTime.fromISO(input, { zone: ADVENT_TIME_ZONE });
-  if (!date || !isClaimDate(date)) {
-    throw new AdventInputError("Choose one Advent date (December 1–24): `today`, `yesterday`, or `YYYY-MM-DD`. Include the year for older events.");
+  if (!date || !(isClaimDate(date, period) || (period.devOverride && isClaimDate(date)))) {
+    const dates = `${periodText(period)}${period.devOverride ? ` or ${periodText()}` : ""}`;
+    throw new AdventInputError(`Choose one Advent date (${dates}): \`today\`, \`yesterday\`, or \`YYYY-MM-DD\`. Include the year for older events.`);
   }
   return date.toISODate();
 }
@@ -74,19 +83,19 @@ function claimsCsv(guildId, date, rows) {
   return Buffer.from(`\uFEFF${header.join(",")}\r\n${lines.join("\r\n")}\r\n`, "utf8");
 }
 
-function settingsText(settings) {
+function settingsText(settings, period = ADVENT_DEFAULT_PERIOD) {
   return [
     "**Advent settings**",
     `Participant role: <@&${settings.roleId}> (\`${settings.roleId}\`)`,
     `Claim thread: <#${settings.channelId}> (\`${settings.channelId}\`)`,
     `Host: <@${settings.hostId}> (\`${settings.hostId}\`)`,
-    "Claims: December 1–24, TPPC time (America/New_York).",
+    `Claims: ${periodText(period)}, TPPC time (America/New_York).${period.devOverride ? " **DEV TEST OVERRIDE**" : ""}`,
   ].join("\n");
 }
 
-function helpText(prefix = "!") {
+function helpText(prefix = "!", period = ADVENT_DEFAULT_PERIOD) {
   return [
-    "**Advent** — claim publicly once per TPPC date, December 1–24.",
+    `**Advent** — claim publicly once per TPPC date, ${periodText(period)}.${period.devOverride ? " **DEV TEST OVERRIDE**" : ""}`,
     `• \`${prefix}claim\` or \`/claim\` — claim in the configured Advent thread; the participant role is required.`,
     "**Privileged users / Advent host:**",
     `• \`${prefix}advent claims [today|yesterday|YYYY-MM-DD]\` or \`/advent claims\` — DM one day's report (default: yesterday).`,
@@ -141,7 +150,10 @@ async function claim(ctx) {
   if (ctx.source.channelId !== settings.channelId || !isPublicThread(ctx.source.channel)) {
     throw new AdventInputError(`Claims must be posted publicly in the Advent thread: <#${settings.channelId}>.`);
   }
-  if (!isClaimDate(date)) throw new AdventInputError("Advent claims are open December 1–24 in TPPC time, closing at midnight on December 25.");
+  if (!isClaimDate(date, ctx.period)) {
+    const closing = date.set({ month: ctx.period.endMonth, day: ctx.period.endDay }).plus({ days: 1 }).toFormat("MMMM d");
+    throw new AdventInputError(`Advent claims are open ${periodText(ctx.period)} in TPPC time, closing at midnight on ${closing}.`);
+  }
   // Fetch fresh membership; a stale cache must not keep a removed role eligible.
   const member = await ctx.guild.members.fetch({ user: ctx.user.id, force: true });
   if (!member.roles.cache.has(settings.roleId)) throw new AdventInputError("You need the Advent participant role to claim.");
@@ -186,7 +198,7 @@ async function waitForClaims(guildId, date) {
 
 async function report(ctx, rawDate) {
   await requireManager(ctx);
-  const date = reportDate(rawDate, ctx.atMs);
+  const date = reportDate(rawDate, ctx.atMs, ctx.period);
   if (date < eventDate(Date.now()).toISODate()) await waitForClaims(ctx.guildId, date);
   const rows = await getAdventClaims({ guildId: ctx.guildId, date });
   const reportedAt = eventDate(Date.now());
@@ -205,7 +217,7 @@ async function report(ctx, rawDate) {
 
 async function configure(ctx, patch) {
   const settings = await requireManager(ctx);
-  if (!Object.keys(patch).length) return respond(ctx, settingsText(settings));
+  if (!Object.keys(patch).length) return respond(ctx, settingsText(settings, ctx.period));
   for (const id of Object.values(patch)) {
     if (!parseId(id)) throw new AdventInputError("Provide a valid Discord ID or mention.");
   }
@@ -223,7 +235,7 @@ async function configure(ctx, patch) {
     if (!host || host.user.bot) throw new AdventInputError("Choose a human member of this server as the Advent host.");
   }
   await updateAdventSettings({ guildId: ctx.guildId, settings, patch, updatedBy: ctx.user.id });
-  return respond(ctx, `✅ Updated this server's Advent settings.\n${settingsText(await getAdventSettings(ctx.guildId))}`);
+  return respond(ctx, `✅ Updated this server's Advent settings.\n${settingsText(await getAdventSettings(ctx.guildId), ctx.period)}`);
 }
 
 function memberCooldownError(retryAt) {
@@ -292,7 +304,12 @@ async function countRole(ctx, rawRoleId) {
 
 function run(ctx, name, fn) {
   const action = { name, run: fn };
-  if (name !== "claim" || !ctx.guildId || !isClaimDate(eventDate(ctx.atMs))) return execute(ctx, action);
+  try {
+    ctx.period = getAdventClaimPeriod(ctx.source.client?.user?.id);
+  } catch (err) {
+    return execute(ctx, { name, run: () => { throw new AdventInputError(err.message); } });
+  }
+  if (name !== "claim" || !ctx.guildId || !isClaimDate(eventDate(ctx.atMs), ctx.period)) return execute(ctx, action);
   // Register synchronously, before even the slash deferral can yield to a
   // midnight report. This only tracks processing; it adds no approval stage.
   const key = `${ctx.guildId}:${eventDate(ctx.atMs).toISODate()}`;
@@ -346,7 +363,7 @@ export function registerAdvent(register) {
           if (!field || !id || args.length !== 2) throw new AdventInputError("Use `advent config role|channel|host <ID or mention>`. Event dates are fixed.");
           return configure(ctx, { [field]: id });
         }
-        return respond(ctx, helpText(cmd?.startsWith("?") ? "?" : "!"));
+        return respond(ctx, helpText(cmd?.startsWith("?") ? "?" : "!", ctx.period));
       });
     },
     help: "!advent — Advent settings and dated claim reports (privileged / host)",

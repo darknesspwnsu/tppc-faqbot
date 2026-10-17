@@ -465,6 +465,14 @@ Advent claims are open **December 1–24** each year in TPPC time
 (`America/New_York`), closing at midnight at the start of December 25.
 Dates are fixed and cannot be changed through a command.
 
+For the identified Spectreon (Dev) bot, set `ADVENT_DEV_CLAIM_PERIOD=10-01..10-25`
+in `.env.development.local` and restart to test October 1–25 instead. This inclusive
+range uses TPPC time and must stay within one calendar year. The production bot
+ignores this variable even if it is set. Dev settings show **DEV TEST OVERRIDE**;
+role, thread, daily-limit, and access checks still apply. Dev reports accept dates
+in the test period as well as historical December 1–24 dates. Remove the variable
+and restart to return the dev bot to December 1–24.
+
 Use `!claim` or `/claim` in the configured **public Advent thread**. You must
 currently hold the participant role; staff and the host also need the role to
 claim. Claims in DMs, private threads, and other channels are rejected. Text and

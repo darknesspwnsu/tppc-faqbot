@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChannelType } from "discord.js";
+import { ADVENT_DEV_BOT_ID } from "../../configs/advent.js";
 
 const mocks = vi.hoisted(() => ({
   getAdventSettings: vi.fn(), updateAdventSettings: vi.fn(), insertAdventClaim: vi.fn(), getAdventClaims: vi.fn(),
@@ -76,7 +77,7 @@ beforeEach(async () => {
   register.slash = (def, handler) => slash.set(def.name, { def, handler });
   mod.registerAdvent(register);
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
 
 describe("public Advent claims", () => {
   it("shares one daily claim between text and slash commands and links the public reply", async () => {
@@ -441,6 +442,77 @@ describe("role counts", () => {
     await bang("rolecount", src, "55555");
     expect(output(src)).toContain("**1** member(s)");
     expect(src.guild.members.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("dev-only Advent test period", () => {
+  function devSource(options) {
+    const src = source(options);
+    src.client = { user: { id: ADVENT_DEV_BOT_ID } };
+    return src;
+  }
+
+  beforeEach(() => vi.stubEnv("ADVENT_DEV_CLAIM_PERIOD", "10-01..10-25"));
+
+  it.each([
+    ["2026-10-01T03:59:59Z", false], ["2026-10-01T04:00:00Z", true],
+    ["2026-10-26T03:59:59Z", true], ["2026-10-26T04:00:00Z", false],
+  ])("uses TPPC midnight boundaries for the override at %s", async (time, allowed) => {
+    const src = devSource({ timestamp: Date.parse(time) });
+    await bang("claim", src);
+    expect(mocks.insertAdventClaim).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    if (!allowed) expect(output(src)).toContain("October 1–25");
+  });
+
+  it("shares the October daily limit between text and slash claims and exports October reports", async () => {
+    vi.setSystemTime(new Date("2026-10-17T12:00:00Z"));
+    const first = devSource(); await bang("claim", first);
+    expect(output(first)).toContain("claimed for **2026-10-17**");
+    const second = devSource(); await interaction("claim", second);
+    expect(output(second)).toContain("already claimed");
+    expect(claims.size).toBe(1);
+    await bang("advent", devSource({ userId: SETTINGS.hostId }), "claims today");
+    expect(mocks.getAdventClaims).toHaveBeenCalledWith({ guildId: "12345", date: "2026-10-17" });
+    await bang("advent", devSource({ userId: SETTINGS.hostId }), "claims 2025-12-24");
+    expect(mocks.getAdventClaims).toHaveBeenLastCalledWith({ guildId: "12345", date: "2025-12-24" });
+  });
+
+  it("does not bypass membership and labels the configured test period", async () => {
+    vi.setSystemTime(new Date("2026-10-17T12:00:00Z"));
+    const src = devSource(); src.guild.members.fetch.mockResolvedValue(member("88888", []));
+    await bang("claim", src);
+    expect(output(src)).toContain("participant role");
+    expect(mocks.insertAdventClaim).not.toHaveBeenCalled();
+    const host = devSource({ userId: SETTINGS.hostId }); await bang("advent", host, "config");
+    expect(output(host)).toContain("October 1–25");
+    expect(output(host)).toContain("DEV TEST OVERRIDE");
+  });
+
+  it("keeps the production client on December despite a configured override", async () => {
+    const src = source({ timestamp: Date.parse("2026-10-17T12:00:00Z") });
+    src.client = { user: { id: "production-bot" } };
+    await bang("claim", src);
+    expect(output(src)).toContain("December 1–24");
+    expect(mocks.insertAdventClaim).not.toHaveBeenCalled();
+    vi.stubEnv("ADVENT_DEV_CLAIM_PERIOD", "invalid");
+    const december = source(); december.client = src.client;
+    await bang("claim", december);
+    expect(output(december)).toContain("claimed for **2026-12-10**");
+  });
+
+  it("waits for dev-period claims before exporting a closed day", async () => {
+    vi.setSystemTime(new Date("2026-10-26T04:00:01Z"));
+    const started = deferred(), finish = deferred();
+    const claimant = devSource({ timestamp: Date.parse("2026-10-26T03:59:59Z") });
+    claimant.deferReply.mockImplementation(async () => { started.resolve(); await finish.promise; claimant.deferred = true; });
+    const claimTask = interaction("claim", claimant);
+    await started.promise;
+    const reportTask = bang("advent", devSource({ userId: SETTINGS.hostId }), "claims");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getAdventClaims).not.toHaveBeenCalled();
+    finish.resolve(); await Promise.all([claimTask, reportTask]);
+    expect(output(claimant)).toContain("claimed for **2026-10-25**");
+    expect(mocks.getAdventClaims).toHaveBeenCalledWith({ guildId: "12345", date: "2026-10-25" });
   });
 });
 

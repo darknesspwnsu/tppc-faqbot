@@ -199,6 +199,7 @@ Common variables:
 | `SLASH_GUILD_ID`              | Guild-only slash registration (dev) |
 | `BOT_DEFAULT_NICKNAME`        | Default guild nickname for this deployment |
 | `BOT_NICKNAME_OVERRIDE`       | Force a nickname regardless of seasonal rules |
+| `ADVENT_DEV_CLAIM_PERIOD`     | Dev bot only: inclusive test dates, e.g. `10-01..10-25`; production ignores it |
 | `DB_HOST / DB_USER / DB_NAME` | MySQL connection                    |
 | `RARITY_JSON_URL`             | Live rarity JSON source             |
 | `RARITY_REFRESH_MS`           | Retry interval during refresh window |
