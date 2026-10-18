@@ -40,7 +40,7 @@ describe("trivia helpers", () => {
   });
 
   it("loads a varied Pokemon bank at every difficulty without silently dropping entries", () => {
-    const raw = ["pokemon_trivia_questions.json", "opentdb_pokemon_questions.json"]
+    const raw = ["pokemon_trivia_questions.json", "pokemon_hard_trivia_questions.json", "opentdb_pokemon_questions.json"]
       .flatMap((file) => JSON.parse(fs.readFileSync(new URL(`../../data/${file}`, import.meta.url), "utf8")));
     const questions = loadCuratedQuestions().filter((question) => question.category === "pokemon");
     expect(questions.length).toBeGreaterThan(350);
@@ -50,7 +50,11 @@ describe("trivia helpers", () => {
     for (const row of raw) {
       expect(normalizeQuestion(row), row.id).not.toBeNull();
       expect(new URL(row.source.url).protocol).toBe("https:");
-      expect(row.source.license).toBeTruthy();
+      if (row.source.referenceOnly) {
+        expect(row.source.reviewedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      } else {
+        expect(row.source.license).toBeTruthy();
+      }
       // Reversing a dual type's order must not create a second correct option.
       if (row.topic === "types") {
         expect(new Set(row.choices.map((choice) => choice.split("/").sort().join("/"))).size).toBe(4);
@@ -58,12 +62,37 @@ describe("trivia helpers", () => {
     }
     for (const difficulty of ["easy", "medium", "hard"]) {
       const general = questions.filter((q) => q.difficulty === difficulty && q.topic !== "pokedex");
-      expect(general.length).toBeGreaterThanOrEqual(difficulty === "hard" ? 8 : 50);
-      expect(new Set(general.map((q) => q.topic)).size).toBeGreaterThanOrEqual(difficulty === "hard" ? 5 : 8);
+      expect(general.length).toBeGreaterThanOrEqual(difficulty === "hard" ? 100 : 50);
+      expect(new Set(general.map((q) => q.topic)).size).toBeGreaterThanOrEqual(8);
     }
     for (const topic of ["characters", "trainers", "places", "games", "evolution", "items", "moves", "abilities", "anime"]) {
       expect(questions.some((q) => q.topic === topic)).toBe(true);
     }
+  });
+
+  it("adds a substantial hard pool with mechanics, historical rules, world details, and spin-offs", () => {
+    const hard = JSON.parse(fs.readFileSync(new URL("../../data/pokemon_hard_trivia_questions.json", import.meta.url), "utf8"));
+    expect(hard.length).toBeGreaterThanOrEqual(100);
+    for (const q of hard) {
+      expect(q).toMatchObject({ category: "pokemon", difficulty: "hard" });
+      expect(q.topic).not.toBe("pokedex");
+      expect(q.id).not.toMatch(/pokemon:(preevolution|gym-type)-/);
+      expect(renderQuestion(q, 30_000).length, q.id).toBeLessThanOrEqual(2000);
+      expect(renderResult({ question: q, winners: [], responseCount: 0 }).length, q.id).toBeLessThanOrEqual(2000);
+    }
+    for (const topic of ["battle-history", "moves", "abilities", "items", "evolution", "places", "games", "characters"]) {
+      expect(hard.filter((q) => q.topic === topic).length).toBeGreaterThanOrEqual(2);
+    }
+    const correct = (id) => {
+      const q = hard.find((q) => q.id === `pokemon:hard:${id}`);
+      return q.choices[q.answerIndex];
+    };
+    expect(correct("psychup")).toBe("Focus Energy's critical-hit boost");
+    expect(correct("punchingglove")).toBe("Punching Glove");
+    expect(correct("ironball")).toBe("Neutral (1×)");
+    expect(correct("rby-ghost-psychic")).toBe("It has no effect");
+    expect(correct("emerald-registeel")).toBe("Flash");
+    expect(correct("basculegion-recoil")).toBe("At least 294 HP");
   });
 
   it("restricts every dex question to its configured landmark and direction", () => {

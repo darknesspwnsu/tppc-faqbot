@@ -461,6 +461,8 @@ Pokédex landmarks: recognizable Pokémon or memorable numbers. Other topics
 are selected evenly so larger sections do not dominate. Each server avoids its
 last 20 questions where the selected pool allows; this memory resets on restart.
 Question banks are bundled locally, with source credits shown after each round.
+Hard rounds include historical battle quirks, move/Ability/item interactions,
+unusual evolution conditions, challenge rules, and spin-off details.
 See [trivia sources](trivia-sources.md) for provenance and editing guidance.
 
 Use `!trivia status` to view settings and `!trivia leaderboard` to view scores.

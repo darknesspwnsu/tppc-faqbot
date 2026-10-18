@@ -1,8 +1,8 @@
 # Pokémon trivia sources
 
-The bundled Pokémon bank contains 396 reviewed multiple-choice questions: 324
-general questions and 72 National Pokédex landmarks. Runtime selection gives
-dex questions a 15% chance, then selects other topics evenly. The bank is local;
+The bundled Pokémon bank contains 496 reviewed multiple-choice questions: 424
+general questions (including 108 hard questions) and 72 National Pokédex landmarks.
+Runtime selection gives dex questions a 15% chance, then selects other topics evenly. The bank is local;
 rounds do not scrape websites or depend on a trivia API being available.
 
 ## Provenance and licenses
@@ -31,6 +31,25 @@ rounds do not scrape websites or depend on a trivia API being available.
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), as required by
   [Open Trivia DB's data terms](https://opentdb.com/api_config.php). Result
   messages credit Open Trivia DB, identify adaptations, and link that license.
+- [Pokémon Showdown](https://github.com/smogon/pokemon-showdown), by Guangcong
+  Luo and contributors, supplies the mechanics references for 70 new hard
+  questions. Battle data and generation-specific overrides were read at commit
+  `f0e61e58ad297885578231746036438e1b42f40a`. Each question links to the relevant
+  file and line at that revision. The MIT notice is retained in
+  [PokemonShowdown-MIT.txt](../data/licenses/PokemonShowdown-MIT.txt).
+- [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Main_Page) supplies
+  factual references for 30 new hard questions covering unusual evolution
+  conditions, Regi puzzles, Battle Frontier rules, and spin-offs. Each links to
+  its reference article and records a review date of 2026-10-18. These questions
+  and distractors use original wording; article prose and existing quizzes are
+  not reproduced. Their metadata uses `referenceOnly: true` to distinguish a
+  factual citation from adapted licensed question text.
+
+The 100 new hard questions are bundled separately in
+[pokemon_hard_trivia_questions.json](../data/pokemon_hard_trivia_questions.json).
+They use the repository's license for original wording. Upstream license notices
+are retained for the referenced code/data, while Open Trivia DB adaptations keep
+their own separate share-alike licensing.
 
 Source metadata accompanies every Pokémon question and appears after the answer
 window closes. Each PokeQuiz question links to the pinned database; PokéAPI
@@ -56,14 +75,17 @@ question retains its reviewed rating. Generation alone is not a difficulty rule:
   Pokémon types, basic characters and game regions, and familiar evolution stones.
 - **Medium:** specific badges or locations, trade items, less familiar stones,
   regional or misleading types, Hidden Abilities, and type-effectiveness details.
-- **Hard:** obscure details such as Goldenrod Gym's layout, Pokémon Conquest's
-  kingdom count or perfect links, precise release history, and unusual stat trivia.
+- **Hard:** generation-specific battle quirks, non-obvious move/Ability/item
+  interactions, precise evolution conditions, challenge rules, and spin-off
+  details, alongside the existing obscure world and history questions.
   Dex landmarks keep their separately configured recognition/distractor tiers.
 
-The hard general bank is deliberately smaller than the easier banks. It cycles
-older questions when exhausted rather than inflating easy questions to fill a
-quota. The 15% dex draw is made before recent-question filtering, so exhausting
-the general bank cannot force additional dex rounds.
+Hard questions name the game or generation whenever a rule changed. The review
+checks exceptions (for example, Ring Target versus Levitate, and Punching Glove
+versus Unseen Fist), plausible distractors, and exactly one correct choice.
+Basic pre-evolutions, Gym specialities, and ordinary type recall stay in their
+existing easier tiers. The 15% dex draw is made before recent-question filtering,
+so exhausting the general bank cannot force additional dex rounds.
 
 Excluded source entries include an incorrect claim that Rhyhorn was the first
 Pokémon designed, ambiguous anime counts, outdated publishing information,
@@ -74,13 +96,17 @@ name as correct across versions. The existing TPPC questions are unchanged.
 ## Editing and refreshing
 
 General questions and dex landmarks live in
-[pokemon_trivia_questions.json](../data/pokemon_trivia_questions.json).
+[pokemon_trivia_questions.json](../data/pokemon_trivia_questions.json), with
+the expanded hard bank in
+[pokemon_hard_trivia_questions.json](../data/pokemon_hard_trivia_questions.json).
 Open Trivia DB adaptations remain in their separate file so provenance and
 share-alike licensing stay explicit. No bulk online refresh runs automatically.
 
 Each entry needs a stable unique `id`, `category: "pokemon"`, `difficulty`
 (`easy`, `medium`, or `hard`), a `topic`, a question, four distinct choices,
-`answerIndex` (zero-based), and `source` metadata (`name`, `url`, `license`).
+`answerIndex` (zero-based), and `source` metadata (`name`, `url`, plus `license`
+for adapted code/data or `referenceOnly: true` and `reviewedOn` for original
+questions based on factual references).
 Verify that exactly one choice is correct, including equivalent type orders or
 alternate spellings. Updating an answer must also update its source and scope.
 

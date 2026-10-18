@@ -38,11 +38,11 @@ describe("trivia answer locking", () => {
     vi.restoreAllMocks();
   });
 
-  async function startRound(guildId = "guild") {
+  async function startRound(guildId = "guild", difficulty = "easy") {
     await command({
       message: { guildId, channelId: "channel", author: { id: "host" }, reply: vi.fn(),
         client: { channels: { fetch: vi.fn(async () => channel) } } },
-      rest: "run now pokemon easy", cmd: "!trivia",
+      rest: `run now pokemon ${difficulty}`, cmd: "!trivia",
     });
     return channel.send.mock.lastCall[0].components[0].components
       .map((button) => button.data.custom_id);
@@ -107,15 +107,17 @@ describe("trivia answer locking", () => {
 
   it("remembers twenty posted questions per guild independently", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0.5);
-    const posted = [];
-    for (let round = 0; round < 21; round += 1) {
-      await startRound("variety-guild");
-      const question = channel.send.mock.lastCall[0].content.split("\n")[1];
-      expect(posted.slice(-20)).not.toContain(question);
-      posted.push(question);
-      await vi.advanceTimersByTimeAsync(30_000);
+    for (const difficulty of ["easy", "hard"]) {
+      const posted = [];
+      for (let round = 0; round < 21; round += 1) {
+        await startRound(`variety-guild-${difficulty}`, difficulty);
+        const question = channel.send.mock.lastCall[0].content.split("\n")[1];
+        expect(posted.slice(-20)).not.toContain(question);
+        posted.push(question);
+        await vi.advanceTimersByTimeAsync(30_000);
+      }
+      await startRound(`independent-guild-${difficulty}`, difficulty);
+      expect(channel.send.mock.lastCall[0].content.split("\n")[1]).toBe(posted[0]);
     }
-    await startRound("independent-guild");
-    expect(channel.send.mock.lastCall[0].content.split("\n")[1]).toBe(posted[0]);
   });
 });

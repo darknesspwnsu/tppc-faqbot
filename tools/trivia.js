@@ -20,7 +20,12 @@ import { clearTimer, startInterval, startTimeout } from "../shared/timer_utils.j
 import { parseDurationSeconds } from "../shared/time_utils.js";
 import { POKEMON_DEX_CHANCE, POKEMON_DEX_LANDMARKS, TRIVIA_RECENT_QUESTION_LIMIT } from "../configs/trivia.js";
 
-const CURATED_FILES = ["data/trivia_questions.json", "data/pokemon_trivia_questions.json", "data/opentdb_pokemon_questions.json"].map((file) => path.resolve(file));
+const CURATED_FILES = [
+  "data/trivia_questions.json",
+  "data/pokemon_trivia_questions.json",
+  "data/pokemon_hard_trivia_questions.json",
+  "data/opentdb_pokemon_questions.json",
+].map((file) => path.resolve(file));
 
 const DEFAULT_CADENCE_MINUTES = 180;
 const DEFAULT_DURATION_SECONDS = 30;

@@ -1,0 +1,1932 @@
+[
+  {
+    "id": "pokemon:hard:rby-crit-speed",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, which species base stat determines the normal critical-hit rate?",
+    "choices": [
+      "Speed",
+      "Attack",
+      "Special",
+      "Defense"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/scripts.ts#L819",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-focus-energy",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, what does the Focus Energy bug do to a normal move's critical-hit chance?",
+    "choices": [
+      "Reduces it to roughly one quarter",
+      "Doubles it",
+      "Quadruples it",
+      "Guarantees the next hit is critical"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/scripts.ts#L822",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-counter-types",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, Counter can retaliate against damaging moves of which two types?",
+    "choices": [
+      "Normal and Fighting",
+      "Normal and Ground",
+      "Fighting and Rock",
+      "Any two physical types"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L146",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-toxic-seed",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, why can Leech Seed damage increase each turn on a badly poisoned target?",
+    "choices": [
+      "It shares Toxic's increasing damage counter",
+      "Toxic lowers the target's Defense each turn",
+      "Leech Seed gains STAB from poison",
+      "Bad poison doubles Grass-type damage"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L436",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-substitute-ko",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, what happens if a Pokémon with 100 maximum HP uses Substitute at exactly 25 HP?",
+    "choices": [
+      "It faints while creating the substitute",
+      "The move fails without spending HP",
+      "It survives with 1 HP",
+      "It spends only 24 HP"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L803",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-recover-overflow",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, why can Recover fail at 100/355 HP despite the user being injured?",
+    "choices": [
+      "A bug occurs when exactly 255 HP is missing",
+      "Recover requires at least half HP",
+      "Recover cannot work with odd maximum HP",
+      "Recover fails below one third HP"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L639",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-conversion",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, what does Conversion copy to determine the user's new typing?",
+    "choices": [
+      "The opponent's current types",
+      "The type of the user's first move",
+      "The type of the last attack received",
+      "A random type from the user's moves"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L138",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-ghost-psychic",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, what happens when Lick is used against a pure Psychic-type Pokémon?",
+    "choices": [
+      "It has no effect",
+      "It is super effective",
+      "It deals neutral damage",
+      "It is resisted"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/typechart.ts#L110",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:gsc-failed-belly-drum",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Gold and Silver, what can Belly Drum do when the user starts at neutral Attack and has too little HP to pay its cost?",
+    "choices": [
+      "Fail but still raise Attack by two stages",
+      "Fail but still maximize Attack",
+      "Halve its remaining HP and raise Attack once",
+      "Do nothing at all"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen2/moves.ts#L19",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rse-beat-up-stats",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Ruby and Sapphire, which stats does each Beat Up strike use, rather than ordinary modified battle stats?",
+    "choices": [
+      "The party member's base Attack and the target's base Defense",
+      "The user's current Attack and target's Defense",
+      "The party member's base Special Attack and target's base Special Defense",
+      "The user's Speed and target's Speed"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen3/moves.ts#L31",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-haze-status",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, besides resetting stat changes, Haze can do what to the opponent?",
+    "choices": [
+      "Cure its major status condition",
+      "Remove its secondary type",
+      "Restore all of its PP",
+      "Force it to switch out"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/moves.ts#L366",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:rby-hyper-beam-ko",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "battle-history",
+    "question": "In Red and Blue, what happens to Hyper Beam's recharge requirement if it knocks out its target?",
+    "choices": [
+      "The recharge turn is skipped",
+      "The user must recharge for two turns",
+      "The next Pokémon inherits the recharge turn",
+      "Recharge still happens normally"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/mods/gen1/conditions.ts#L276",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:flyingpress",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In X and Y, how effective is Flying Press against a pure Rock-type target, considering both of its attack types?",
+    "choices": [
+      "Neutral (1×)",
+      "Super effective (2×)",
+      "Doubly super effective (4×)",
+      "Resisted (½×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L5938",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:freezedry",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "Ignoring Abilities and other modifiers, how effective is Freeze-Dry against a Water/Ground Pokémon?",
+    "choices": [
+      "4×",
+      "¼×",
+      "1×",
+      "2×"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L6161",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:burnup",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, after a pure Fire-type Pokémon successfully uses Burn Up, what typing does it have until it switches out?",
+    "choices": [
+      "No type",
+      "Normal",
+      "Fire/Flying",
+      "Its original Fire type"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L2092",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:doubleshock",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Scarlet and Violet, what happens to a pure Electric-type user after Double Shock successfully hits?",
+    "choices": [
+      "It loses its Electric type until it switches out",
+      "It becomes Normal-type until it switches out",
+      "It permanently loses its Ability",
+      "It must recharge on the next turn"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L3948",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:forestscurse",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In X and Y, Forest's Curse adds Grass to Scizor's Bug/Steel typing. Ignoring other effects, what is its resulting Fire weakness?",
+    "choices": [
+      "8×",
+      "2×",
+      "4×",
+      "16×"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L6128",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:powder",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, what happens when a Pokémon affected by Powder attempts a Fire-type move that turn?",
+    "choices": [
+      "The move fails and it loses about one quarter of its maximum HP",
+      "The move becomes Bug-type",
+      "The move succeeds but burns its user",
+      "Only the move's power is halved"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L13656",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:shelltrap",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, what kind of enemy hit arms Shell Trap so it can fire later that turn?",
+    "choices": [
+      "A physical-category attack, even one without contact",
+      "Any contact move, including status moves",
+      "Any special-category attack",
+      "Any Fire-type attack"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L16272",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:beakblast",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, when can Beak Blast burn an attacker?",
+    "choices": [
+      "When it makes contact with the user during the heating phase",
+      "Only after Beak Blast deals damage",
+      "Only if it uses a Fire-type move",
+      "Only if it knocks the user out"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L1119",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:craftyshield",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In X and Y doubles, Crafty Shield protects the user's side against which kind of targeted move?",
+    "choices": [
+      "Status moves",
+      "Only spread damaging moves",
+      "Only priority damaging moves",
+      "Only physical contact moves"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L3143",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:matblock",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In X and Y, when is Mat Block eligible to succeed, aside from other blocking effects?",
+    "choices": [
+      "Only on the user's first turn after entering battle",
+      "Only after the user takes damage",
+      "Only when the user is at full HP",
+      "Only after another ally uses Protect"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L10985",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:powertrick",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "A Pokémon has +2 Attack before using Power Trick. Which values does Power Trick swap?",
+    "choices": [
+      "Its Attack and Defense stat values, leaving the stages attached to their original stats",
+      "Its Attack and Defense stages only",
+      "Its base Attack and base Special Attack",
+      "Its Attack with the opponent's Defense"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L13808",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:guardsplit",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "What does Guard Split average between its user and target?",
+    "choices": [
+      "Their Defense and Special Defense values before stat-stage modifiers",
+      "Their defensive stat stages only",
+      "Their HP and Defense",
+      "Their base stats while ignoring IVs and EVs"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L7952",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:topsyturvy",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "A target has +3 Attack and −2 Defense. What does Topsy-Turvy do to those stages?",
+    "choices": [
+      "Changes them to −3 Attack and +2 Defense",
+      "Resets both to zero",
+      "Changes them to +2 Attack and −3 Defense",
+      "Swaps the actual Attack and Defense values"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L19651",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:psychup",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Scarlet and Violet, which extra effect can Psych Up copy along with ordinary stat stages?",
+    "choices": [
+      "Focus Energy's critical-hit boost",
+      "A Substitute",
+      "The target's Ability",
+      "The target's current type changes"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L14208",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:painsplit",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "A Magic Guard Pokémon at high HP is hit by Pain Split from a low-HP foe. Can Pain Split lower its HP?",
+    "choices": [
+      "Yes; setting HP with Pain Split is not blocked by Magic Guard",
+      "No; Magic Guard blocks all status moves",
+      "No; Magic Guard blocks every form of HP loss",
+      "Only if the foe has Mold Breaker"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L13125",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:psychicfangs",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Scarlet and Violet, Psychic Fangs hits a target protected by Substitute and Reflect. What happens to Reflect?",
+    "choices": [
+      "It is removed even if the Substitute takes the hit",
+      "It remains until the Substitute is destroyed",
+      "Its remaining duration is doubled",
+      "Only Light Screen can be removed this way"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L14057",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:courtchange",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sword and Shield singles, one side has Tailwind and the other does not. What does Court Change do to Tailwind?",
+    "choices": [
+      "Moves it to the opposite side",
+      "Cancels it on both sides",
+      "Leaves it on the original side",
+      "Turns it into Trick Room"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L3032",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:haze",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Scarlet and Violet, which move can reset an opponent's stat stages without first breaking its Substitute?",
+    "choices": [
+      "Haze",
+      "Clear Smog",
+      "Acid Spray",
+      "Lunge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L8159",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:gastroacid",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "With no Ability Shield involved, which of these Abilities can Gastro Acid suppress?",
+    "choices": [
+      "Wonder Guard",
+      "Multitype",
+      "Stance Change",
+      "Schooling"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L6429",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:thousandarrows",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, which Ground-type move can hit and ground an otherwise immune airborne target?",
+    "choices": [
+      "Thousand Arrows",
+      "Thousand Waves",
+      "Precipice Blades",
+      "High Horsepower"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L19327",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:instruct",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, which of these moves is explicitly ineligible to be repeated through Instruct?",
+    "choices": [
+      "Hyper Beam",
+      "Thunderbolt",
+      "Swords Dance",
+      "Recover"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L9643",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:skydrop",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Sun and Moon, why will Sky Drop fail to lift an otherwise eligible target weighing exactly 200 kg?",
+    "choices": [
+      "Targets weighing 200 kg or more are too heavy",
+      "Only targets over 300 kg are too heavy",
+      "Sky Drop cannot lift any fully evolved Pokémon",
+      "Only the user's own weight matters"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L16676",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:triage",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, what priority bracket does Triage give an otherwise ordinary Giga Drain?",
+    "choices": [
+      "+3",
+      "+1",
+      "+2",
+      "+4"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L5174",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:neuroforce",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Ultra Sun and Ultra Moon, what extra damage multiplier does Neuroforce apply to a super-effective hit?",
+    "choices": [
+      "1.25×",
+      "1.1×",
+      "1.5×",
+      "2×"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L2895",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:fluffy",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, ignoring all other effects, how does Fluffy change damage from a Fire-type contact move?",
+    "choices": [
+      "Its two modifiers cancel, leaving damage unchanged",
+      "It halves the damage",
+      "It doubles the damage",
+      "It makes the target immune"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L1459",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:waterbubble",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, beyond resisting Fire damage and preventing burns, what does Water Bubble do offensively?",
+    "choices": [
+      "Doubles the power of the holder's Water-type attacks",
+      "Raises Water-type attacks by 20%",
+      "Makes Water moves ignore Protect",
+      "Makes all Water moves physical"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L5379",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:punkrock",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sword and Shield, how does Punk Rock affect incoming damage from Boomburst?",
+    "choices": [
+      "Halves it",
+      "Reduces it by one quarter",
+      "Leaves it unchanged",
+      "Makes the holder immune"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L3590",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:shadowshield",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, which defensive Ability has damage reduction that Mold Breaker cannot bypass?",
+    "choices": [
+      "Shadow Shield",
+      "Multiscale",
+      "Fur Coat",
+      "Filter"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L4145",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:fullmetalbody",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, which Ability still prevents an opponent from lowering the holder's stats even if that opponent has Mold Breaker?",
+    "choices": [
+      "Full Metal Body",
+      "Clear Body",
+      "White Smoke",
+      "Keen Eye"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L1559",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:myceliummight",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Scarlet and Violet, which immunity still stops Spore used with Mycelium Might?",
+    "choices": [
+      "A Grass-type target's powder immunity",
+      "Insomnia",
+      "Vital Spirit",
+      "Good as Gold"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L2795",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:dancer",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "Which of these moves does NOT trigger Dancer in Sun and Moon?",
+    "choices": [
+      "Rain Dance",
+      "Dragon Dance",
+      "Swords Dance",
+      "Quiver Dance"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L829",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:magicguard",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sword and Shield, which HP loss can still affect a Pokémon with Magic Guard?",
+    "choices": [
+      "Struggle recoil",
+      "Life Orb recoil",
+      "Sandstorm damage",
+      "Rocky Helmet damage"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L2466",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:symbiosis",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In X and Y doubles, which ally event can trigger Symbiosis to pass the holder's item to that ally?",
+    "choices": [
+      "The ally consumes its Berry",
+      "The ally loses its item to Knock Off",
+      "The ally loses its item to Thief",
+      "The ally gives its item away with Trick"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L4839",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:sheerforce",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sword and Shield, which move can gain Sheer Force's boost and avoid Life Orb recoil because of that interaction?",
+    "choices": [
+      "Flamethrower",
+      "Close Combat",
+      "Earthquake",
+      "Stone Edge"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L4203",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:poisonheal",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "A badly poisoned Pokémon has Poison Heal. Ignoring other effects and rounding, how much HP does it recover each turn?",
+    "choices": [
+      "⅛ of maximum HP, regardless of Toxic's counter",
+      "An increasing amount matching Toxic damage",
+      "¹⁄₁₆ of maximum HP",
+      "¼ of maximum HP"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L3332",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:prankster",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, Sableye faces a Dark-type foe. Which Prankster-boosted move can still work because it targets Sableye itself?",
+    "choices": [
+      "Calm Mind",
+      "Will-O-Wisp",
+      "Taunt",
+      "Confuse Ray"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L3426",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:schooling",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, what minimum level must Wishiwashi reach before Schooling can activate, even at full HP?",
+    "choices": [
+      "Level 20",
+      "Level 10",
+      "Level 25",
+      "Level 30"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L4045",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:disguise",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sword and Shield, how much of Mimikyu's maximum HP is lost when a hit breaks Disguise?",
+    "choices": [
+      "⅛",
+      "None",
+      "¹⁄₁₆",
+      "¼"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L970",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:weakarmor",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "How did Weak Armor's Speed boost change from Generation VI to Generation VII?",
+    "choices": [
+      "From +1 stage to +2 stages",
+      "From +2 stages to +1 stage",
+      "From no boost to +1 stage",
+      "It did not change"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/abilities.ts#L5450",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:pokemon-parental-bond",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "abilities",
+    "question": "In Sun and Moon, what fraction of normal damage does Parental Bond's second strike deal, before rounding and other effects?",
+    "choices": [
+      "One quarter",
+      "One half",
+      "One third",
+      "Full damage"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/sim/battle-actions.ts#L1792",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:ringtarget",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, which immunity does Ring Target leave intact?",
+    "choices": [
+      "Levitate's immunity to Ground",
+      "A Normal type's immunity to Ghost",
+      "A Flying type's immunity to Ground",
+      "A Ground type's immunity to Electric"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L5251",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:ironball",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, ignoring other effects, how effective is an ordinary Ground-type attack against Skarmory holding Iron Ball?",
+    "choices": [
+      "Neutral (1×)",
+      "No effect",
+      "Super effective (2×)",
+      "Doubly super effective (4×)"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L3062",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:roomservice",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sword and Shield, what does the held item Room Service do when it activates under Trick Room?",
+    "choices": [
+      "Lowers the holder's Speed by one stage",
+      "Raises the holder's Speed by one stage",
+      "Extends Trick Room by three turns",
+      "Makes the holder ignore Trick Room"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L5334",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:ejectpack",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sword and Shield, why can using Close Combat cause its user's Eject Pack to activate?",
+    "choices": [
+      "The user lowers its own stats",
+      "The opponent takes super-effective damage",
+      "The user made contact",
+      "Close Combat always consumes held items"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L1717",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:lightball",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "When Fling successfully applies a Light Ball's item effect to an eligible target, what status does it inflict?",
+    "choices": [
+      "Paralysis",
+      "Burn",
+      "Bad poison",
+      "Sleep"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L3439",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:mentalherb",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, which of these does Mental Herb NOT cure?",
+    "choices": [
+      "Confusion",
+      "Infatuation",
+      "Taunt",
+      "Encore"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L3907",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:powerherb",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, which two-turn move cannot have its lifting turn skipped using Power Herb?",
+    "choices": [
+      "Sky Drop",
+      "Fly",
+      "Solar Beam",
+      "Phantom Force"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L4799",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:utilityumbrella",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sword and Shield, Utility Umbrella shields its holder from which pair of weather effects, rather than all weather?",
+    "choices": [
+      "Sunlight and rain",
+      "Sandstorm and hail",
+      "Sunlight and sandstorm",
+      "Rain and hail"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L7464",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:bigroot",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, Big Root affects Leech Seed in which way?",
+    "choices": [
+      "Increases HP recovered without increasing HP drained from the target",
+      "Increases both damage and recovery equally",
+      "Increases damage but not recovery",
+      "Extends Leech Seed to five turns"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L482",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:metronome",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "From Generation V onward, what is the maximum damage multiplier from repeatedly using the same move with the Metronome held item?",
+    "choices": [
+      "2×",
+      "1.5×",
+      "2.5×",
+      "3×"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L4011",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:punchingglove",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Scarlet and Violet, which held item can stop Urshifu's Surging Strikes from bypassing Protect through Unseen Fist?",
+    "choices": [
+      "Punching Glove",
+      "Protective Pads",
+      "Choice Band",
+      "Mystic Water"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L4962",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:safetygoggles",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sword and Shield doubles, Safety Goggles let a Pokémon ignore which redirection move, while not doing the same for Follow Me?",
+    "choices": [
+      "Rage Powder",
+      "Ally Switch",
+      "Helping Hand",
+      "After You"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L5482",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:stickybarb",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, when can Sticky Barb transfer from its holder to an attacking opponent?",
+    "choices": [
+      "The opponent makes contact and holds no item",
+      "Any damaging move hits the holder",
+      "Only after the holder faints",
+      "The opponent uses a status move"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L6136",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:destinyknot",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Outside breeding, what can Destiny Knot do when its holder becomes infatuated with an eligible opponent?",
+    "choices": [
+      "Infatuate that opponent too, without curing the holder",
+      "Cure the holder's infatuation",
+      "Prevent the holder from being infatuated",
+      "Reflect every status condition"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L1402",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:luminousmoss",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In X and Y, a holder survives a Water-type hit and consumes Luminous Moss. Which stat rises?",
+    "choices": [
+      "Special Defense",
+      "Defense",
+      "Special Attack",
+      "Speed"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L3579",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:marangaberry",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In X and Y, what triggers a Maranga Berry and what does it raise?",
+    "choices": [
+      "A special-category hit; Special Defense",
+      "A physical-category hit; Defense",
+      "A super-effective hit; Attack",
+      "An Electric-type hit; Speed"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L3805",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:flung-salac",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Sun and Moon, if Fling hits a foe with a Salac Berry and the Berry effect is not blocked, whose Speed is boosted?",
+    "choices": [
+      "The target's",
+      "The user's",
+      "Both Pokémon's",
+      "Neither Pokémon's"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/moves.ts#L5736",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:starfberry",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "Which stat is NOT among the five that a Starf Berry can randomly raise?",
+    "choices": [
+      "Accuracy",
+      "Attack",
+      "Defense",
+      "Speed"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Pokémon Showdown",
+      "url": "https://github.com/smogon/pokemon-showdown/blob/f0e61e58ad297885578231746036438e1b42f40a/data/items.ts#L6013",
+      "license": "MIT"
+    }
+  },
+  {
+    "id": "pokemon:hard:runerigus-damage",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Sword and Shield, how much damage from attacks must Galarian Yamask accumulate without fainting before the Dusty Bowl arch can evolve it?",
+    "choices": [
+      "At least 49 HP",
+      "At least 39 HP",
+      "At least 59 HP",
+      "At least 99 HP"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Runerigus_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:basculegion-recoil",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Legends: Arceus, how much recoil damage must White-Striped Basculin accumulate without fainting to become eligible for evolution?",
+    "choices": [
+      "At least 294 HP",
+      "At least 194 HP",
+      "At least 249 HP",
+      "At least 394 HP"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Basculegion_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:wyrdeer-style",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Legends: Arceus, which move/style requirement makes Stantler eligible to evolve?",
+    "choices": [
+      "Use Psyshield Bash in agile style 20 times",
+      "Use Psyshield Bash in strong style 20 times",
+      "Use Zen Headbutt in agile style 20 times",
+      "Use Psyshield Bash in agile style 10 times"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Wyrdeer_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:overqwil-style",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Legends: Arceus, which move/style requirement makes Hisuian Qwilfish eligible to evolve?",
+    "choices": [
+      "Use Barb Barrage in strong style 20 times",
+      "Use Barb Barrage in agile style 20 times",
+      "Use Poison Jab in strong style 20 times",
+      "Use Barb Barrage in strong style 10 times"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Overqwil_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:sirfetchd-crits",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Sword and Shield, Galarian Farfetch'd becomes eligible to evolve after landing how many critical hits in a single battle?",
+    "choices": [
+      "Three",
+      "Two",
+      "Four",
+      "Five"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Sirfetch%27d_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:wurmple-branch",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Ruby and Sapphire, what hidden property determines whether Wurmple evolves into Silcoon or Cascoon?",
+    "choices": [
+      "Its personality value",
+      "Its friendship",
+      "Its Attack and Defense comparison",
+      "The time of day"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Wurmple_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:shedinja-gen3-ball",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "In Ruby, Sapphire, and Emerald, which requirement for obtaining Shedinja is absent, unlike in Generation IV?",
+    "choices": [
+      "Having an extra regular Poké Ball in the Bag",
+      "Having an empty party slot",
+      "Evolving Nincada through a level-up",
+      "Having Nincada reach at least level 20"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Nincada_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:dudunsparce-segments",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "evolution",
+    "question": "For a randomly generated Dunsparce in Scarlet and Violet, what is the chance it evolves into Three-Segment Dudunsparce?",
+    "choices": [
+      "1%",
+      "2%",
+      "5%",
+      "10%"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Dudunsparce_(Pok%C3%A9mon)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:sealed-chamber-order",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In Ruby and Sapphire, which party order opens the sealed Regi chambers when the final inscription is read?",
+    "choices": [
+      "Relicanth first, Wailord last",
+      "Wailord first, Relicanth last",
+      "Relicanth first, Wailmer last",
+      "Wailmer first, Relicanth last"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Sealed_Chamber",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:emerald-registeel",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In Emerald, which field move opens Registeel's chamber when used in the center of the Ancient Tomb?",
+    "choices": [
+      "Flash",
+      "Fly",
+      "Strength",
+      "Rock Smash"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Ancient_Tomb",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:rs-regice",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In Ruby and Sapphire, what must the player do after reading the Island Cave inscription to open Regice's room?",
+    "choices": [
+      "Wait without moving for two minutes",
+      "Walk one lap around the room",
+      "Use Flash in the center",
+      "Use Dive in front of the inscription"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Island_Cave",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:emerald-regirock",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In Emerald, after taking the prescribed steps in the Desert Ruins, which move opens Regirock's chamber?",
+    "choices": [
+      "Rock Smash",
+      "Strength",
+      "Dig",
+      "Flash"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Desert_Ruins",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:frontier-luck-symbol",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Emerald, which Battle Frontier facility awards the Luck Symbol?",
+    "choices": [
+      "Battle Pike",
+      "Battle Pyramid",
+      "Battle Palace",
+      "Battle Dome"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Frontier_(Generation_III)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:frontier-knowledge-symbol",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Emerald, which Battle Frontier facility awards the Knowledge Symbol?",
+    "choices": [
+      "Battle Factory",
+      "Battle Arena",
+      "Battle Tower",
+      "Battle Palace"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Frontier_(Generation_III)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:frontier-gold-berry",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "items",
+    "question": "In Emerald, which Berry does Scott award after all seven gold Frontier Symbols are earned?",
+    "choices": [
+      "Starf Berry",
+      "Lansat Berry",
+      "Enigma Berry",
+      "Liechi Berry"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Frontier_(Generation_III)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:arena-judging",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Emerald's Battle Arena, what are the three judging categories if neither Pokémon faints within three turns?",
+    "choices": [
+      "Mind, Skill, and Body",
+      "Power, Speed, and Spirit",
+      "Attack, Defense, and Stamina",
+      "Courage, Technique, and Luck"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Arena",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:palace-nature",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Emerald's Battle Palace, what determines a Pokémon's preferences for attacking, defending, or supporting moves?",
+    "choices": [
+      "Its Nature",
+      "Its friendship",
+      "Its highest base stat",
+      "Its Trainer's number of Symbols"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Palace",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:dome-entrants",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Emerald, how many Trainers, including the player, enter each Battle Dome tournament?",
+    "choices": [
+      "16",
+      "8",
+      "12",
+      "32"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Battle_Dome",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:xd-lugia-purify",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Pokémon XD, what setup allows the Purify Chamber to purify Shadow Lugia?",
+    "choices": [
+      "All nine Sets have maximum tempo",
+      "One Set has maximum tempo",
+      "All nine Sets contain a Psychic-type",
+      "Lugia is surrounded by the three legendary birds"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Shadow_Lugia",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:colosseum-hooh",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In Pokémon Colosseum, what must be purified in addition to completing the required 100-Trainer Mt. Battle challenge to obtain Ho-Oh?",
+    "choices": [
+      "All 48 Shadow Pokémon",
+      "Only the three legendary beasts",
+      "Only the starter Espeon and Umbreon",
+      "All Pokémon used in the Mt. Battle party"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Mt._Battle",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:ranger-manaphy-limit",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "After its Manaphy Egg has been sent, can restarting the original Pokémon Ranger through normal in-game options provide another?",
+    "choices": [
+      "No; the distribution limit survives an ordinary restart",
+      "Yes, once per new save",
+      "Yes, once per calendar year",
+      "Yes, after the Ranger Browser is completed"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9mon_Ranger_(game)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:pokewalker-watt",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "On the Pokéwalker bundled with HeartGold and SoulSilver, how many recorded steps earn one watt through walking?",
+    "choices": [
+      "20",
+      "10",
+      "50",
+      "100"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9walker",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:pokewalker-level-cap",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "How many levels can a Pokémon gain during one Pokéwalker Stroll before it must return to the game?",
+    "choices": [
+      "One",
+      "Two",
+      "Five",
+      "There is no per-Stroll limit"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9walker",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:pokewalker-type-bonus",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "On the Pokéwalker, bringing an advantageous type reduces required Pokémon encounter step counts by what percentage?",
+    "choices": [
+      "25%",
+      "10%",
+      "20%",
+      "50%"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9walker",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:snap-river-switch",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "places",
+    "question": "In the original Nintendo 64 Pokémon Snap, a hidden Porygon presses a switch on the River course to unlock which course?",
+    "choices": [
+      "Cave",
+      "Valley",
+      "Volcano",
+      "Rainbow Cloud"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/River_(Snap)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:stadium-amnesia-psyduck",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "In the original international Pokémon Stadium, which unusual move does the Psyduck reward for registering all 151 Pokémon in the Hall of Fame know?",
+    "choices": [
+      "Amnesia",
+      "Psychic",
+      "Hypnosis",
+      "Future Sight"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9mon_Stadium_(English)",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:channel-jirachi",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "games",
+    "question": "Which standalone GameCube spin-off, in its PAL version, can transfer Jirachi to Ruby or Sapphire?",
+    "choices": [
+      "Pokémon Channel",
+      "Pokémon Colosseum",
+      "Pokémon XD: Gale of Darkness",
+      "Pokémon Box Ruby & Sapphire"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9mon_Channel",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:box-pichu-move",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "moves",
+    "question": "In Pokémon Box Ruby & Sapphire, which unusual move does the Pichu Egg reward for storing 1,499 Pokémon know?",
+    "choices": [
+      "Surf",
+      "Fly",
+      "Waterfall",
+      "Dive"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9mon_Box_Ruby_%26_Sapphire",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:iggy-mentor",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "In Explorers of Sky's Igglybuff the Prodigy episode, which Pokémon species is Igglybuff's exploration mentor, later revealed to be an outlaw?",
+    "choices": [
+      "Armaldo",
+      "Kabutops",
+      "Bastiodon",
+      "Rampardos"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Igglybuff_the_Prodigy",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  },
+  {
+    "id": "pokemon:hard:castle-valet",
+    "category": "pokemon",
+    "difficulty": "hard",
+    "topic": "characters",
+    "question": "In Platinum's Battle Castle, which character actually battles as the Frontier Brain while serving Caitlin?",
+    "choices": [
+      "Darach",
+      "Thorton",
+      "Darach and Caitlin together",
+      "Palmer"
+    ],
+    "answerIndex": 0,
+    "source": {
+      "name": "Bulbapedia",
+      "url": "https://bulbapedia.bulbagarden.net/wiki/Darach",
+      "referenceOnly": true,
+      "reviewedOn": "2026-10-18"
+    }
+  }
+]
