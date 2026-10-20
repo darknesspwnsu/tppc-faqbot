@@ -269,3 +269,9 @@ register(
 * Minimal moderator overhead
 * Clean UX for both casual users and power users
 * Easily extensible without rewriting core systems
+
+## Cosmetic shop and list randomizer
+
+Use `!shuffle` to randomize a public list, `!shop` to buy or refund cosmetic
+roles with points, and `!shopadmin` to configure listings live.
+See [setup and command examples](docs/cosmetic-shop.md).

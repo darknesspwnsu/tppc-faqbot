@@ -2,6 +2,7 @@
 import mysql from "mysql2/promise";
 import "dotenv/config";
 import { logger } from "./shared/logger.js";
+import { SHOP_SCHEMA } from "./tools/shop_schema.js";
 
 let pool;
 
@@ -68,6 +69,7 @@ async function execDb(db, sql, params, label) {
 
 export async function initDb() {
   const db = getDb();
+  for (const sql of SHOP_SCHEMA) await execDb(db, sql, [], "init.shop");
   await execDb(
     db,
     `CREATE TABLE IF NOT EXISTS advent_settings (

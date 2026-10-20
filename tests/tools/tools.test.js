@@ -21,6 +21,8 @@ const registerTrivia = vi.fn();
 const registerTriviaScheduler = vi.fn();
 const registerLoot = vi.fn();
 const registerLootScheduler = vi.fn();
+const registerShuffle = vi.fn();
+const registerShop = vi.fn();
 
 vi.mock("../../tools/links.js", () => ({ registerLinks }));
 vi.mock("../../tools/promo.js", () => ({ registerPromo, registerPromoScheduler }));
@@ -50,6 +52,8 @@ vi.mock("../../tools/pokemon_scramble.js", () => ({
 }));
 vi.mock("../../tools/trivia.js", () => ({ registerTrivia, registerTriviaScheduler }));
 vi.mock("../../tools/loot.js", () => ({ registerLoot, registerLootScheduler }));
+vi.mock("../../tools/shuffle.js", () => ({ registerShuffle }));
+vi.mock("../../tools/shop.js", () => ({ registerShop }));
 
 function makeRegistry() {
   const register = vi.fn();
@@ -80,6 +84,8 @@ describe("tools/tools.js", () => {
     expect(registerPokemonScramble).toHaveBeenCalledWith(reg.register);
     expect(registerTrivia).toHaveBeenCalledWith(reg.register);
     expect(registerLoot).toHaveBeenCalledWith(reg.register);
+    expect(registerShuffle).toHaveBeenCalledWith(reg.register);
+    expect(registerShop).toHaveBeenCalledWith(reg.register);
     expect(registerLevel4Rarity).toHaveBeenCalledWith(reg.register, "Tools");
   }, 15_000);
 });

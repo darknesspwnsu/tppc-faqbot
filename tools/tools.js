@@ -16,11 +16,15 @@ import { registerMarketPoll, registerMarketPollScheduler } from "./marketpoll.js
 import { registerPokemonScramble, registerPokemonScrambleScheduler } from "./pokemon_scramble.js";
 import { registerTrivia, registerTriviaScheduler } from "./trivia.js";
 import { registerLoot, registerLootScheduler } from "./loot.js";
+import { registerShuffle } from "./shuffle.js";
+import { registerShop } from "./shop.js";
 import { logRegisterFailure } from "../shared/logging_helpers.js";
 import { registerScheduler } from "../shared/scheduler_registry.js";
 import { scheduleMetricsCleanup } from "../shared/metrics.js";
 
 const TOOL_MODULES = [
+  { id: "shuffle", register: registerShuffle },
+  { id: "shop", register: registerShop },
   { id: "links", register: registerLinks },
   { id: "promo", register: registerPromo, registerScheduler: registerPromoScheduler },
   { id: "calculator", register: registerCalculator },

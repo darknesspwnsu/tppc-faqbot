@@ -1,0 +1,38 @@
+export const SHOP_SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS shop_items (
+    guild_id VARCHAR(32) NOT NULL,
+    item_id VARCHAR(32) NOT NULL,
+    role_id VARCHAR(32) NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    price INT UNSIGNED NOT NULL,
+    currency VARCHAR(16) NOT NULL,
+    refund_percent INT UNSIGNED NOT NULL DEFAULT 100,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    updated_by VARCHAR(32) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, item_id),
+    UNIQUE KEY shop_role (guild_id, role_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS shop_purchases (
+    guild_id VARCHAR(32) NOT NULL,
+    user_id VARCHAR(32) NOT NULL,
+    item_id VARCHAR(32) NOT NULL,
+    role_id VARCHAR(32) NOT NULL,
+    price INT UNSIGNED NOT NULL,
+    currency VARCHAR(16) NOT NULL,
+    refund_percent INT UNSIGNED NOT NULL,
+    state VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, user_id, item_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS shop_events (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    guild_id VARCHAR(32) NOT NULL,
+    user_id VARCHAR(32) NOT NULL,
+    item_id VARCHAR(32) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    currency VARCHAR(16) NOT NULL,
+    amount INT UNSIGNED NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+];
