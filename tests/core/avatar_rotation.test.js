@@ -98,7 +98,7 @@ describe("avatar_rotation", () => {
       {
         id: "default",
         ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
-        file: "assets/avatars/default.png",
+        file: "assets/avatars/default-v2.png",
         nickname: "Spectreon",
       },
     ];
@@ -116,7 +116,7 @@ describe("avatar_rotation", () => {
       {
         id: "default",
         ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
-        file: "assets/avatars/default.png",
+        file: "assets/avatars/default-v2.png",
       },
     ];
 
@@ -125,7 +125,7 @@ describe("avatar_rotation", () => {
       defaultNickname: "Spectreon (Dev)",
     });
     expect(choice).toEqual({
-      file: "assets/avatars/default.png",
+      file: "assets/avatars/default-v2.png",
       nickname: "Spectreon (Dev)",
       ruleId: "default",
     });
@@ -158,7 +158,7 @@ describe("avatar_rotation", () => {
       {
         id: "default",
         ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
-        file: "assets/avatars/default.png",
+        file: "assets/avatars/default-v2.png",
       },
     ];
 
@@ -167,7 +167,7 @@ describe("avatar_rotation", () => {
       defaultNickname: undefined,
     });
     expect(choice).toEqual({
-      file: "assets/avatars/default.png",
+      file: "assets/avatars/default-v2.png",
       nickname: "Spectreon",
       ruleId: "default",
     });

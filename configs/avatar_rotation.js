@@ -41,6 +41,6 @@ export const AVATAR_ROTATION_RULES = [
   {
     id: "default",
     ranges: [{ start: { month: 0, day: 1 }, end: { month: 11, day: 31 } }],
-    file: "assets/avatars/default.png",
+    file: "assets/avatars/default-v2.png",
   },
 ];
