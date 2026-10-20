@@ -57,6 +57,15 @@ function lastCall(mockFn) {
 }
 
 describe("commands registry", () => {
+  it("preserves a multiline list after a newline or tab command separator", async () => {
+    const handler = vi.fn(async () => {});
+    registerTrades.mockImplementation(register => register.expose({ logicalId: "shuffle", name: "shuffle", handler }));
+    const reg = buildCommandRegistry({});
+    for (const content of ["!shuffle\nAlice Smith\nBob", "!shuffle\tAlice Smith\nBob"]) {
+      await reg.dispatchMessage(makeMessage({ guildId: "g0", content }));
+      expect(handler).toHaveBeenLastCalledWith(expect.objectContaining({ rest: "Alice Smith\nBob" }));
+    }
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     registerTrades.mockReset();

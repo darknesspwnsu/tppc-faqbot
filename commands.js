@@ -635,7 +635,7 @@ export function buildCommandRegistry({ client } = {}) {
     else if (content.startsWith("!!!")) body = content.slice(3);
     if (body == null) return null;
 
-    const spaceIdx = body.indexOf(" ");
+    const spaceIdx = body.search(/\s/);
     const bareCmd = (spaceIdx === -1 ? body : body.slice(0, spaceIdx)).toLowerCase();
     const rest = spaceIdx === -1 ? "" : body.slice(spaceIdx + 1);
     if (!bareCmd) return null;
@@ -693,7 +693,7 @@ export function buildCommandRegistry({ client } = {}) {
         const devContent = content.slice(1);
         isBang = devContent.startsWith("!");
         isQ = devContent.startsWith("?");
-        const spaceIdx = devContent.indexOf(" ");
+        const spaceIdx = devContent.search(/\s/);
         cmd = (spaceIdx === -1 ? devContent : devContent.slice(0, spaceIdx)).toLowerCase();
         rest = spaceIdx === -1 ? "" : devContent.slice(spaceIdx + 1);
         entry = bang.get(cmd);
@@ -702,7 +702,7 @@ export function buildCommandRegistry({ client } = {}) {
         isQ = false;
       }
     } else if (isBang || isQ) {
-      const spaceIdx = content.indexOf(" ");
+      const spaceIdx = content.search(/\s/);
       cmd = (spaceIdx === -1 ? content : content.slice(0, spaceIdx)).toLowerCase();
       rest = spaceIdx === -1 ? "" : content.slice(spaceIdx + 1);
       entry = bang.get(cmd);
